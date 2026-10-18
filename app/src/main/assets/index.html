@@ -415,11 +415,13 @@ const PARENT={
       <input aria-label="Reward" value="${esc(r.name)}" data-rw="name" data-id="${r.id}" style="flex:1;min-width:150px">
       <input aria-label="Cost" type="number" min="1" max="999" value="${r.cost}" data-rw="cost" data-id="${r.id}" style="width:90px">
       <button class="iconbtn" data-act="delReward" data-id="${r.id}" aria-label="Remove reward">${IC.trash}</button></div>`).join("")}</div>
-    <button class="btn ghost" data-act="addReward">Add reward</button>`},
+    <button class="btn ghost" data-act="addReward">Add reward</button>
+    <div class="panel stack"><b>Same shop on every tablet</b><p class="muted" style="margin:0">Send this shop to another tablet as a message, or load one someone sent you.</p>
+      <div class="row"><button class="btn" data-act="shareShop">Share this shop</button><button class="btn ghost" data-act="loadShop">Load a shop</button></div></div>`},
   kids(){return `<div class="stack">${S.kids.map(k=>{const th=T(k);return `<div class="panel stack">
       <div class="spread"><input aria-label="Name" value="${esc(k.name)}" data-kn="${k.id}" style="flex:1"><span class="chip">${esc(th.label)}</span></div>
       <div class="spread"><span><b>${k.credits}</b> ${esc(th.cur)} · ${esc(th.ranks[rankOf(k.earned||0)])} (${k.earned||0} earned)</span>
-      <span class="row"><button class="btn ghost small" data-act="adj" data-id="${k.id}" data-d="-1">−1</button><button class="btn ghost small" data-act="adj" data-id="${k.id}" data-d="1">+1</button></span></div>
+      <span class="row"><button class="btn ghost small" data-act="adj" data-id="${k.id}" data-d="-1">−1</button><button class="btn ghost small" data-act="adj" data-id="${k.id}" data-d="1">+1</button><button class="btn ghost small" data-act="adj" data-id="${k.id}" data-d="5">+5</button></span></div>
       <button class="btn bad small" data-act="delKid" data-id="${k.id}" style="align-self:flex-start">Remove ${esc(k.name)}</button></div>`}).join("")}</div>
     <div class="panel row"><input id="newkid" placeholder="Add a child's name" maxlength="20" style="flex:1;min-width:160px"><button class="btn" data-act="addKid">Add</button></div>`},
   settings(){return `<div class="panel stack"><b>Grown-up PIN</b><p class="muted" style="margin:0">Keeps children out of this area.</p><button class="btn ghost" data-act="changePin">Change PIN</button></div>
@@ -559,6 +561,34 @@ const ACT={
   changePin(){pinPad("New PIN","Choose 4 digits",p=>{S.pin=p;save();overlayClose();toast("PIN changed")})},
   resetAll(){confirmSheet("Delete everything?","This can't be undone.",()=>{try{localStorage.removeItem(KEY)}catch(e){}indexedDB.deleteDatabase("tq_media");load();home()})}
 };
+/* ---------- Shop sharing ---------- */
+const SHOP_TAG="TQSHOP1:";
+function encodeShop(){const list=S.rewards.map(r=>({i:r.icon,n:r.name,c:r.cost}));return SHOP_TAG+btoa(unescape(encodeURIComponent(JSON.stringify(list))))}
+function decodeShop(text){const m=String(text).replace(/\s+/g,"").match(/TQSHOP1:([A-Za-z0-9+/=]+)/);if(!m)return null;
+  try{const list=JSON.parse(decodeURIComponent(escape(atob(m[1]))));if(!Array.isArray(list))return null;
+    return list.filter(x=>x&&x.n).slice(0,60).map(x=>({id:uid(),icon:String(x.i||"⭐").slice(0,4),name:String(x.n).slice(0,60),cost:Math.max(1,Math.min(999,parseInt(x.c)||1))}))}catch(e){return null}}
+function shareMessage(){return "Tidy Quest reward shop ("+S.rewards.length+" rewards). To use it: open Tidy Quest → lock → Grown-ups → Rewards → Load a shop, then paste this whole message.\n\n"+encodeShop()}
+async function copyText(text){try{if(window.AndroidTTS&&AndroidTTS.copy){AndroidTTS.copy(text);return true}}catch(e){}
+  try{await navigator.clipboard.writeText(text);return true}catch(e){return false}}
+Object.assign(ACT,{
+  shareShop(){const msg=shareMessage();const el=overlay(`<div class="stack"><h2 class="display">Share this shop</h2>
+    <p class="muted" style="margin:0">Send this to the other tablet's grown-up, by WhatsApp, text or email. They paste it into <b>Load a shop</b>.</p>
+    <textarea id="shopcode" readonly rows="5" style="width:100%;font:13px/1.4 monospace;border:2px solid var(--line);border-radius:12px;padding:10px;background:var(--bg);color:var(--ink)">${esc(msg)}</textarea>
+    <div class="row">${window.AndroidTTS&&AndroidTTS.share?`<button class="btn" id="sendshop">Send…</button>`:""}<button class="btn ghost" id="copyshop">Copy</button><button class="btn ghost" data-close>Done</button></div></div>`);
+    const s=el.querySelector("#sendshop");if(s)s.onclick=()=>{try{AndroidTTS.share(msg)}catch(e){toast("Couldn't open sharing. Use Copy instead.")}};
+    el.querySelector("#copyshop").onclick=async()=>{if(await copyText(msg))toast("Copied. Paste it into a message.");else{const t=el.querySelector("#shopcode");t.focus();t.select();toast("Press and hold to copy")}}},
+  loadShop(){const el=overlay(`<div class="stack"><h2 class="display">Load a shop</h2>
+    <p class="muted" style="margin:0">Paste the whole message you were sent.</p>
+    <textarea id="shopin" rows="5" placeholder="Paste here" style="width:100%;font:13px/1.4 monospace;border:2px solid var(--line);border-radius:12px;padding:10px;background:var(--panel);color:var(--ink)"></textarea>
+    <div class="row"><button class="btn" id="readshop">Next</button><button class="btn ghost" data-close>Cancel</button></div></div>`);
+    el.querySelector("#readshop").onclick=()=>{const list=decodeShop(el.querySelector("#shopin").value);
+      if(!list||!list.length){toast("That doesn't look like a Tidy Quest shop. Paste the whole message.");return}
+      const sh=overlay(`<div class="stack"><h2 class="display">${list.length} rewards</h2>
+        <div class="stack" style="gap:6px">${list.map(r=>`<div class="spread"><span>${esc(r.icon)} ${esc(r.name)}</span><b>${r.cost}</b></div>`).join("")}</div>
+        <button class="btn" id="replshop">Replace my shop with these</button><button class="btn ghost" id="addshop">Add these to my shop</button><button class="btn ghost" data-close>Cancel</button></div>`);
+      sh.querySelector("#replshop").onclick=()=>{S.rewards=list;save();overlayClose();render();toast("Shop loaded")};
+      sh.querySelector("#addshop").onclick=()=>{const have=new Set(S.rewards.map(r=>r.name.toLowerCase()));S.rewards.push(...list.filter(r=>!have.has(r.name.toLowerCase())));save();overlayClose();render();toast("Rewards added")}}}
+});
 function keepTitle(){const t=$("#dtitle");if(t&&draft)draft.title=t.value.trim()}
 function confirmSheet(title,sub,yes){overlay(`<div class="stack"><h2 class="display">${esc(title)}</h2><p class="muted" style="margin:0">${esc(sub)}</p>
   <div class="row"><button class="btn bad" id="cyes">Yes, delete</button><button class="btn ghost" data-close>Keep it</button></div></div>`).querySelector("#cyes").onclick=()=>{overlayClose();yes()}}

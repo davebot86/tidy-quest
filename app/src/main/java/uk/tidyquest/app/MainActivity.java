@@ -2,6 +2,8 @@ package uk.tidyquest.app;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -102,6 +104,24 @@ public class MainActivity extends Activity {
             @JavascriptInterface
             public void speak(String text) {
                 if (tts != null) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "tq");
+            }
+
+            @JavascriptInterface
+            public void share(String text) {
+                runOnUiThread(() -> {
+                    Intent send = new Intent(Intent.ACTION_SEND);
+                    send.setType("text/plain");
+                    send.putExtra(Intent.EXTRA_TEXT, text);
+                    startActivity(Intent.createChooser(send, "Send the shop"));
+                });
+            }
+
+            @JavascriptInterface
+            public void copy(String text) {
+                runOnUiThread(() -> {
+                    ClipboardManager cm = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                    if (cm != null) cm.setPrimaryClip(ClipData.newPlainText("Tidy Quest shop", text));
+                });
             }
         }, "AndroidTTS");
 

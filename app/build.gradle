@@ -10,14 +10,24 @@ android {
         applicationId 'uk.tidyquest.app'
         minSdk 26
         targetSdk 34
-        versionCode 1
-        versionName '0.1-trial'
+        versionCode 2
+        versionName '0.2-trial'
+    }
+
+    // Fixed trial key so updates install over the top and keep each family's data.
+    signingConfigs {
+        trial {
+            storeFile file('trial.keystore')
+            storePassword 'tidyquest'
+            keyAlias 'trial'
+            keyPassword 'tidyquest'
+        }
     }
 
     buildTypes {
         release {
             minifyEnabled false
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.trial
         }
     }
 
