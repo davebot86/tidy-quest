@@ -56,6 +56,7 @@ h2.display{font-size:clamp(22px,5vw,30px)}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:0 22px;border-radius:999px;
   background:var(--accent);color:var(--accent-ink);font-weight:800;font-size:18px}
 .btn.big{min-height:68px;font-size:22px;width:100%}
+.btn svg{width:26px;height:26px;flex:none}
 .btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
 .btn.small{min-height:40px;padding:0 14px;font-size:15px}
 .btn.good{background:var(--good);color:#fff}
@@ -140,7 +141,31 @@ body.parent{--bg:#f3f1ec;--panel:#fff;--ink:#22211f;--muted:#6c6862;--line:#e1dd
 .overlay{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.72);display:grid;place-items:center;
   padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
 .sheet{background:var(--panel);color:var(--ink);border-radius:24px;padding:22px;width:min(520px,100%);max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:14px}
-.camwrap video{width:100%;border-radius:16px;background:#000;max-height:60vh;object-fit:cover}
+.cam{position:fixed;inset:0;z-index:55;background:#000;color:#fff;display:flex;flex-direction:column;
+  padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+.cam-top{display:flex;align-items:center;gap:12px;padding:12px 16px}
+.cam-x{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;font-size:20px}
+.cam-title{flex:1;font-weight:800;font-size:18px}
+.cam-time{font-weight:800;color:#ff5a52;font-variant-numeric:tabular-nums}
+.cam-view{flex:1;min-height:0;position:relative;display:grid;place-items:center;overflow:hidden}
+.cam-view video{width:100%;height:100%;object-fit:cover}
+.cam-view video.mirror{transform:scaleX(-1)}
+.cam-msg{position:absolute;color:rgba(255,255,255,.7)}
+.cam-bar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:20px 24px 28px;gap:16px}
+.cam-side{justify-self:center;min-width:72px;height:44px;border-radius:999px;background:rgba(255,255,255,.14);color:#fff;font-weight:800;font-size:15px;padding:0 16px}
+.shutter{width:84px;height:84px;border-radius:50%;border:5px solid #fff;display:grid;place-items:center;background:transparent}
+.shutter i{width:66px;height:66px;border-radius:50%;background:#fff;transition:all .2s}
+.shutter.vid i{background:#ff3b30}
+.shutter.rec i{width:30px;height:30px;border-radius:8px}
+.shutter:active i{transform:scale(.9)}
+.cam.flash .cam-view{animation:flash .25s}
+@keyframes flash{0%{opacity:.2}100%{opacity:1}}
+.photo-slot{position:relative}
+.retake{position:absolute;right:12px;bottom:12px;background:rgba(0,0,0,.6);color:#fff;padding:8px 14px;border-radius:999px;font-weight:800;font-size:14px}
+.media-box{width:100%;border-radius:12px;background:#000;max-height:50vh}
+.reward .rphoto{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:12px;max-width:100%}
+.ideas{display:flex;flex-wrap:wrap;gap:8px}
+.ideas button{padding:8px 12px;border-radius:999px;background:var(--bg);border:2px dashed var(--line);font-weight:800;font-size:14px}
 .celebrate{text-align:center}
 .celebrate .big{font-size:clamp(30px,8vw,48px)}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:60}
@@ -186,6 +211,15 @@ const THEMES={
     cheers:["What a finish!","Man of the match!","Top bins!"],wave:"square",notes:[294,370,440,587],swatch:["#0f5a32","#f6e05e"]}
 };
 const RANK_AT=[0,10,25,50,90,150,250];
+/* Job types: tidying plus challenges that build the whole child. */
+const TYPES={
+  tidy:{label:"Tidy up",proof:"photo",ideas:["Tidy the bedroom","Toys away in the lounge","Clothes in the washing basket","Make your bed","Clear the table"]},
+  active:{label:"Get active",proof:"video",ideas:["Ride your scooter to the park","Do a scooter stunt","Bike ride with a grown-up","20 star jumps","Kick a ball 50 times without stopping"]},
+  brave:{label:"Be brave & skills",proof:"video",ideas:["Learn a new scooter trick","Try a food you've never had","Swim a width","Tie your own shoelaces","Order your own drink at the café"]},
+  kind:{label:"Kindness",proof:"seen",ideas:["Help cook dinner","Make someone smile today","Write a thank-you card","Help carry the shopping","Share a toy without being asked"]},
+  learn:{label:"Learning",proof:"seen",ideas:["Read for 15 minutes","Practise your spellings","Learn 5 facts about an animal","Draw a map of your street","Count the change at the shop"]}
+};
+const PROOF={photo:"Photo",video:"Video",seen:"A grown-up saw it",none:"No proof"};
 const DEFAULT_REWARDS=[
   {icon:"🍮",name:"Pudding after tea",cost:5},
   {icon:"📺",name:"20 minutes extra screen time",cost:8},
@@ -202,6 +236,8 @@ function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2
 function load(){
   try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}
   if(!S){S={pin:null,kids:[],jobs:[],rewards:DEFAULT_REWARDS.map(r=>({...r,id:uid()})),requests:[]}}
+  S.device=S.device||("d"+uid());S.pendingIn=S.pendingIn||{};S.usedIn=S.usedIn||[];S.sent=S.sent||[];
+  S.jobs.forEach(j=>{if(!j.type)j.type="tidy";if(!j.proof)j.proof=j.afterReq?"photo":"none"});
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast("Couldn't save. The tablet may be low on space.")}}
 
@@ -341,7 +377,7 @@ VIEWS.hq=({kid:id})=>{const k=kid(id);if(!k){home();return""}setBodyTheme(k);con
   <div class="stack">${jobs.length?jobs.map(j=>`<button class="jobcard" data-act="job" data-id="${j.id}">
       ${j.photo?`<img class="thumb" data-media="${j.photo}" alt="">`:`<span class="thumb"></span>`}
       <span class="stack" style="gap:6px;min-width:0"><span class="t">${esc(j.title||th.job)}</span>
-        <span class="row" style="gap:6px">${j.status==="pending"?`<span class="chip wait">Waiting for a grown-up</span>`:`<span class="chip">${j.steps.length} step${j.steps.length===1?"":"s"}</span>`}${j.timer?`<span class="chip">Beat the clock</span>`:""}</span></span>
+        <span class="row" style="gap:6px">${j.type&&j.type!=="tidy"?`<span class="chip">${esc(TYPES[j.type].label)}</span>`:""}${j.status==="pending"?`<span class="chip wait">Waiting for a grown-up</span>`:`<span class="chip">${j.steps.length} step${j.steps.length===1?"":"s"}</span>`}${j.timer?`<span class="chip">Beat the clock</span>`:""}</span></span>
       <span class="chip prize">+${j.credits}</span></button>`).join(""):`<div class="panel empty display" style="font-size:22px">${esc(th.empty)}</div>`}</div>`};
 VIEWS.hq.after=({kid:id})=>{const k=kid(id);if(k&&k.rankUp){const th=T(k);const name=th.ranks[rankOf(k.earned)];delete k.rankUp;save();
   setTimeout(()=>{sfxFanfare(k);confetti(k);overlay(`<div class="celebrate stack" style="align-items:center">${badgeSVG(k)}<span class="label">Promotion</span><div class="display big">${esc(name)}</div><p>You've earned a new rank, ${esc(k.name)}!</p><button class="btn big" data-close>Brilliant</button></div>`);speak(`Promotion! You are now ${name}`)},300)}};
@@ -361,7 +397,9 @@ VIEWS.job=({id})=>{const j=S.jobs.find(x=>x.id===id);const k=kid(j.kid);setBodyT
   if(j.status==="pending")return `<div class="topbar"><button class="iconbtn" data-act="back" aria-label="Back">${IC.back}</button><h1 class="display grow">${esc(j.title||th.job)}</h1></div>
     <div class="panel empty stack" style="align-items:center"><h2 class="display">Report sent!</h2><p>A grown-up will check it and give you your ${esc(th.cur.toLowerCase())}.</p></div>`;
   return `
-  <div class="topbar"><button class="iconbtn" data-act="back" aria-label="Back">${IC.back}</button><div class="grow"><span class="label">${esc(th.job)} · +${j.credits} ${esc(th.cur)}</span><h1 class="display">${esc(j.title||th.job)}</h1></div></div>
+  <div class="topbar"><button class="iconbtn" data-act="back" aria-label="Back">${IC.back}</button><div class="grow"><span class="label">${esc(TYPES[j.type||"tidy"].label)} · +${j.credits} ${esc(th.cur)}</span><h1 class="display">${esc(j.title||th.job)}</h1></div></div>
+  ${j.proof==="photo"||j.proof==="video"?`<div class="panel row" style="gap:10px">${IC.cam.replace("<svg",'<svg style="width:28px;height:28px;flex:none"')}<b>When you finish, ${j.proof==="video"?"film a short video":"take a photo"} to show you did it.</b></div>`:""}
+  ${j.proof==="seen"?`<div class="panel"><b>A grown-up needs to see you do this one.</b></div>`:""}
   ${j.photo?`<img class="hero-photo" data-media="${j.photo}" alt="The mess to tidy">`:""}
   ${j.timer?`<div class="panel"><div class="clock" id="clock">${fmt(j.timer*60)}</div><p class="muted" style="text-align:center;margin:0">Finish in time for +${bonus(j)} bonus ${esc(th.cur.toLowerCase())}</p></div>`:""}
   ${!started?`<button class="btn big" data-act="startJob" data-id="${j.id}">${esc(th.start)}</button>`:""}
@@ -369,7 +407,7 @@ VIEWS.job=({id})=>{const j=S.jobs.find(x=>x.id===id);const k=kid(j.kid);setBodyT
       <button class="play" data-act="playStep" data-job="${j.id}" data-step="${s.id}" aria-label="Listen to step ${i+1}">${IC.play}</button>
       <div class="stext">${esc(s.text||("Step "+(i+1)))}</div>
       <button class="tick" data-act="tickStep" data-job="${j.id}" data-step="${s.id}" aria-label="Step ${i+1} done" ${started?"":"disabled"}>${IC.tick}</button></div>`}).join("")}</div>
-  ${started?`<button class="btn big" data-act="finishJob" data-id="${j.id}" ${allDone?"":"disabled"}>${esc(th.done.replace(/!.*$/,"!"))}</button>`:""}`};
+  ${started?`<button class="btn big" data-act="finishJob" data-id="${j.id}" ${allDone?"":"disabled"}>${{photo:IC.cam+" Take your proof photo",video:IC.cam+" Film your proof",seen:"Show a grown-up",none:esc(th.done.replace(/!.*$/,"!"))}[j.proof||"none"]}</button>`:""}`};
 VIEWS.job.after=({id})=>{const j=S.jobs.find(x=>x.id===id);if(j&&j.run&&j.timer)runClock(j)};
 function fmt(sec){sec=Math.max(0,Math.round(sec));return Math.floor(sec/60)+":"+String(sec%60).padStart(2,"0")}
 function bonus(j){return Math.max(1,Math.ceil(j.credits/2))}
@@ -383,11 +421,11 @@ VIEWS.shop=({kid:id})=>{const k=kid(id);setBodyTheme(k);const th=T(k);
   <div class="topbar"><button class="iconbtn" data-act="back" aria-label="Back">${IC.back}</button><h1 class="display grow">${esc(th.shop)}</h1></div>
   <div class="panel wallet"><b>${k.credits}</b><span class="label">${esc(th.cur)} to spend</span></div>
   ${mine.length?`<div class="panel stack"><span class="label">On its way</span>${mine.map(r=>`<div class="spread"><span>${esc(r.icon)} ${esc(r.name)}</span><span class="chip wait">Ask a grown-up</span></div>`).join("")}</div>`:""}
-  <div class="shopgrid">${S.rewards.map(r=>`<div class="reward"><span class="ico">${esc(r.icon)}</span><span class="n">${esc(r.name)}</span>
+  <div class="shopgrid">${S.rewards.map(r=>`<div class="reward">${r.photo?`<img class="rphoto" data-media="${r.photo}" alt="">`:`<span class="ico">${esc(r.icon)}</span>`}<span class="n">${esc(r.name)}</span>
     <button class="btn small" data-act="buy" data-kid="${k.id}" data-id="${r.id}" ${k.credits<r.cost?"disabled":""}>${r.cost} ${esc(th.cur)}</button></div>`).join("")}</div>`};
 
 /* ---------- Parent area ---------- */
-const PTABS=[["jobs","Jobs"],["check","To check"],["rewards","Rewards"],["kids","Children"],["settings","Settings"]];
+const PTABS=[["jobs","Jobs"],["check","To check"],["rewards","Rewards"],["kids","Children"],["link","Link tablets"],["settings","Settings"]];
 function pendingCount(){return S.jobs.filter(j=>j.status==="pending").length+S.requests.filter(r=>r.status==="asked").length}
 VIEWS.parent=({tab="jobs"})=>{setBodyTheme(null,true);const pc=pendingCount();
   const head=`<div class="spread"><h1 class="display">Grown-ups</h1><button class="btn ghost small" data-act="exitParent">Back to kids</button></div>
@@ -405,7 +443,9 @@ const PARENT={
     if(!jobs.length&&!reqs.length)return `<div class="panel empty muted">Nothing waiting. Finished jobs and reward requests appear here.</div>`;
     return `<div class="stack">${jobs.map(j=>{const k=kid(j.kid);const th=T(k);const earned=j.credits+(j.beat?bonus(j):0);return `<div class="panel stack">
       <div class="spread"><b>${esc(k.name)}: ${esc(j.title||"Job")}</b>${j.beat?`<span class="chip prize">Beat the clock</span>`:""}</div>
-      <div class="pair">${j.photo?`<figure style="margin:0"><img data-media="${j.photo}" alt="Before"><figcaption class="label">Before</figcaption></figure>`:""}${j.after?`<figure style="margin:0"><img data-media="${j.after}" alt="After"><figcaption class="label">After</figcaption></figure>`:""}</div>
+      <div class="pair">${j.photo?`<figure style="margin:0"><img data-media="${j.photo}" alt="Before"><figcaption class="label">Before</figcaption></figure>`:""}${j.after&&j.afterKind!=="video"?`<figure style="margin:0"><img data-media="${j.after}" alt="Proof"><figcaption class="label">Proof</figcaption></figure>`:""}</div>
+      ${j.after&&j.afterKind==="video"?`<video class="media-box" controls playsinline data-media="${j.after}"></video>`:""}
+      ${j.proof==="seen"?`<span class="chip">Did you see it happen?</span>`:""}
       <div class="row"><button class="btn good" data-act="approve" data-id="${j.id}">Approve +${earned} ${esc(th.cur)}</button><button class="btn bad" data-act="sendBack" data-id="${j.id}">Not done yet</button></div></div>`}).join("")}
       ${reqs.map(r=>{const k=kid(r.kid);return `<div class="panel spread"><span><b>${esc(k?k.name:"?")}</b> bought ${esc(r.icon)} ${esc(r.name)}</span>
       <span class="row"><button class="btn good small" data-act="given" data-id="${r.id}">Given</button><button class="btn bad small" data-act="refund" data-id="${r.id}">Refund</button></span></div>`}).join("")}</div>`},
@@ -414,7 +454,9 @@ const PARENT={
       <input aria-label="Icon" value="${esc(r.icon)}" data-rw="icon" data-id="${r.id}" style="width:64px;text-align:center;font-size:24px" maxlength="4">
       <input aria-label="Reward" value="${esc(r.name)}" data-rw="name" data-id="${r.id}" style="flex:1;min-width:150px">
       <input aria-label="Cost" type="number" min="1" max="999" value="${r.cost}" data-rw="cost" data-id="${r.id}" style="width:90px">
+      <button class="iconbtn" data-act="rPhoto" data-id="${r.id}" aria-label="Reward photo" style="overflow:hidden;padding:0">${r.photo?`<img data-media="${r.photo}" alt="" style="width:100%;height:100%;object-fit:cover">`:IC.cam}</button>
       <button class="iconbtn" data-act="delReward" data-id="${r.id}" aria-label="Remove reward">${IC.trash}</button></div>`).join("")}</div>
+    <p class="muted" style="margin:0">Tap the camera next to a reward to add a photo of the real thing. Photos stay on this tablet; sharing the shop sends the names, icons and prices.</p>
     <button class="btn ghost" data-act="addReward">Add reward</button>
     <div class="panel stack"><b>Same shop on every tablet</b><p class="muted" style="margin:0">Send this shop to another tablet as a message, or load one someone sent you.</p>
       <div class="row"><button class="btn" data-act="shareShop">Share this shop</button><button class="btn ghost" data-act="loadShop">Load a shop</button></div></div>`},
@@ -424,6 +466,14 @@ const PARENT={
       <span class="row"><button class="btn ghost small" data-act="adj" data-id="${k.id}" data-d="-1">−1</button><button class="btn ghost small" data-act="adj" data-id="${k.id}" data-d="1">+1</button><button class="btn ghost small" data-act="adj" data-id="${k.id}" data-d="5">+5</button></span></div>
       <button class="btn bad small" data-act="delKid" data-id="${k.id}" style="align-self:flex-start">Remove ${esc(k.name)}</button></div>`}).join("")}</div>
     <div class="panel row"><input id="newkid" placeholder="Add a child's name" maxlength="20" style="flex:1;min-width:160px"><button class="btn" data-act="addKid">Add</button></div>`},
+  link(){return `
+    <div class="panel stack"><b>Scan a code</b><p class="muted" style="margin:0">Scan a Tidy Quest code from another tablet: a family setup, a credits request or a credits transfer.</p>
+      <button class="btn" data-act="scanAny">${IC.cam} Scan a code</button></div>
+    <div class="panel stack"><b>Copy this setup to another tablet</b><p class="muted" style="margin:0">Sends your children, their styles and the reward shop. Credits never copy, so nothing can double up. Jobs, photos and voice notes stay here.</p>
+      <button class="btn ghost" data-act="showSetup">Show setup code</button></div>
+    <div class="panel stack"><b>Move credits to this tablet</b><p class="muted" style="margin:0">Use this tablet's code, then scan the code the other tablet shows back. Each transfer works once only.</p>
+      <div class="row">${S.kids.map(k=>`<button class="btn ghost small" data-act="receiveCredits" data-id="${k.id}">Receive for ${esc(k.name)}</button>`).join("")}</div></div>
+    ${S.sent.length?`<div class="panel stack"><span class="label">Sent from this tablet</span>${S.sent.slice(-5).reverse().map(x=>`<div class="spread"><span>${x.amt} credits for ${esc(x.name)}</span><span class="muted">${new Date(x.at).toLocaleDateString("en-GB")}</span></div>`).join("")}</div>`:""}`},
   settings(){return `<div class="panel stack"><b>Grown-up PIN</b><p class="muted" style="margin:0">Keeps children out of this area.</p><button class="btn ghost" data-act="changePin">Change PIN</button></div>
     <div class="panel stack"><b>Trial notes</b><p class="muted" style="margin:0">Everything is saved on this device only. Uninstalling the app deletes it.</p></div>
     <div class="panel stack"><b>Start again</b><p class="muted" style="margin:0">Deletes all children, jobs, photos and credits.</p><button class="btn bad" data-act="resetAll">Delete everything</button></div>`}
@@ -431,45 +481,68 @@ const PARENT={
 
 /* ---------- Job editor ---------- */
 let draft=null;
-VIEWS.edit=()=>{setBodyTheme(null,true);const d=draft;return `
+VIEWS.edit=()=>{setBodyTheme(null,true);const d=draft;const ty=TYPES[d.type];return `
   <div class="topbar"><button class="iconbtn" data-act="cancelEdit" aria-label="Back">${IC.back}</button><h1 class="display grow">${d.isNew?"New job":"Edit job"}</h1></div>
   <div class="stack">
     <span class="label">Who's it for</span>
     <div class="seg">${S.kids.map(k=>`<button class="${d.kid===k.id?"on":""}" data-act="dKid" data-id="${k.id}">${esc(k.name)}</button>`).join("")}</div>
-    <span class="label">1 · Photo of the mess</span>
-    <button class="photo-slot" data-act="snap" aria-label="Take photo">${d.photo?`<img data-media="${d.photo}" alt="Job photo">`:`<span class="stack" style="align-items:center">${IC.cam.replace("<svg",'<svg style="width:48px;height:48px"')}<b>Take photo</b></span>`}</button>
-    <label class="label" for="dtitle">Job name (optional)</label>
-    <input id="dtitle" value="${esc(d.title)}" placeholder="e.g. Tidy the lounge" maxlength="40">
-    <span class="label">2 · Steps, one voice note each</span>
+    <span class="label">What kind of job</span>
+    <div class="seg">${Object.entries(TYPES).map(([k,t])=>`<button class="${d.type===k?"on":""}" data-act="dType" data-t="${k}">${esc(t.label)}</button>`).join("")}</div>
+    <label class="label" for="dtitle">Job name</label>
+    <input id="dtitle" value="${esc(d.title)}" placeholder="${esc(ty.ideas[0])}" maxlength="40">
+    <div class="ideas" aria-label="Ideas">${ty.ideas.map(i=>`<button data-act="dIdea" data-v="${esc(i)}">${esc(i)}</button>`).join("")}</div>
+    <span class="label">${d.type==="tidy"?"Photo of the mess":"Photo (optional)"}</span>
+    <button class="photo-slot" data-act="snap" aria-label="${d.photo?"Retake photo":"Take photo"}">${d.photo?`<img data-media="${d.photo}" alt="Job photo"><span class="retake">Retake</span>`:`<span class="stack" style="align-items:center">${IC.cam.replace("<svg",'<svg style="width:48px;height:48px"')}<b>Take photo</b></span>`}</button>
+    <span class="label">Steps, one voice note each</span>
     <div class="stack">${d.steps.map((s,i)=>`<div class="pstep"><button class="play" style="width:48px;height:48px" data-act="pPlay" data-i="${i}" aria-label="Play step">${IC.play}</button>
       <span style="min-width:0"><b>Step ${i+1}</b> ${s.audio?'<span class="chip">voice</span>':""}<br><span class="muted">${esc(s.text||"No words added")}</span></span>
       <button class="iconbtn" data-act="pDel" data-i="${i}" aria-label="Remove step">${IC.trash}</button></div>`).join("")}</div>
     <button class="btn ghost" data-act="addStep">${IC.mic} Add a step</button>
-    <span class="label">3 · Reward</span>
+    <span class="label">Proof when it's done</span>
+    <div class="seg">${Object.entries(PROOF).map(([k,l])=>`<button class="${d.proof===k?"on":""}" data-act="dProof" data-v="${k}">${esc(l)}</button>`).join("")}</div>
+    <span class="label">Reward</span>
     <div class="panel stack">
       <div class="spread"><span>Credits for finishing</span><span class="row"><button class="btn ghost small" data-act="dCred" data-d="-1">−</button><b style="font-size:24px;min-width:2ch;text-align:center">${d.credits}</b><button class="btn ghost small" data-act="dCred" data-d="1">+</button></span></div>
       <div class="stack" style="gap:6px"><span>Beat the clock</span><div class="seg">${[0,5,10,15,20].map(m=>`<button class="${d.timer===m?"on":""}" data-act="dTimer" data-m="${m}">${m?m+" min":"Off"}</button>`).join("")}</div></div>
-      <div class="spread"><span>Ask for an "after" photo</span><div class="seg"><button class="${d.afterReq?"on":""}" data-act="dAfter" data-v="1">Yes</button><button class="${!d.afterReq?"on":""}" data-act="dAfter" data-v="0">No</button></div></div>
       <div class="spread"><span>Repeat every day</span><div class="seg"><button class="${d.repeat?"on":""}" data-act="dRepeat" data-v="1">Yes</button><button class="${!d.repeat?"on":""}" data-act="dRepeat" data-v="0">No</button></div></div>
     </div>
     <button class="btn big" data-act="saveJob">Save job</button>
     ${d.isNew?"":`<button class="btn bad" data-act="delJob">Delete job</button>`}
   </div>`};
 
-/* ---------- Camera ---------- */
-let camStream=null;
-function stopCam(){if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null}}
-function takePhoto(cb,title="Take a photo"){
-  const pickFile=()=>{const f=$("#filepick");f.value="";f.onchange=async()=>{if(f.files[0]){cb(await putMedia(await shrink(f.files[0])))}};f.click()};
+/* ---------- Camera (full screen, photo or video) ---------- */
+let camStream=null,camRec=null;
+function stopCam(){if(camRec&&camRec.state==="recording"){camRec.onstop=null;camRec.stop()}camRec=null;if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null}}
+function takePhoto(cb,title="Take a photo"){capture({mode:"photo",title},cb)}
+function capture({mode="photo",title="Take a photo",facing="environment"},cb){
+  const pickFile=()=>{const f=$("#filepick");f.accept=mode==="video"?"video/*":"image/*";f.value="";
+    f.onchange=async()=>{const file=f.files[0];if(!file)return;cb(await putMedia(mode==="video"?file:await shrink(file)),mode)};f.click()};
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){pickFile();return}
-  const el=overlay(`<div class="stack camwrap"><b>${esc(title)}</b><video id="cv" playsinline autoplay muted></video>
-    <button class="btn big" id="snapbtn">${IC.cam} Snap</button><div class="row"><button class="btn ghost small" id="galbtn">Choose from photos</button><button class="btn ghost small" data-close>Cancel</button></div></div>`,stopCam);
+  overlayClose();overlayEl=document.createElement("div");overlayEl.className="cam";overlayOnClose=stopCam;
+  overlayEl.innerHTML=`<div class="cam-top"><button class="cam-x" data-close aria-label="Close">✕</button><span class="cam-title">${esc(title)}</span><span class="cam-time" id="camtime"></span></div>
+    <div class="cam-view"><video id="cv" playsinline autoplay muted></video><div class="cam-msg" id="cammsg">Starting camera…</div></div>
+    <div class="cam-bar"><button class="cam-side" id="galbtn" aria-label="Choose from gallery">${mode==="video"?"Videos":"Photos"}</button>
+      <button class="shutter ${mode==="video"?"vid":""}" id="snapbtn" aria-label="${mode==="video"?"Start recording":"Take photo"}"><i></i></button>
+      <button class="cam-side" id="flipbtn" aria-label="Switch camera">Flip</button></div>`;
+  document.body.appendChild(overlayEl);const el=overlayEl;
+  const v=el.querySelector("#cv"),msg=el.querySelector("#cammsg"),shut=el.querySelector("#snapbtn"),timeEl=el.querySelector("#camtime");
+  const start=()=>{if(camStream)camStream.getTracks().forEach(t=>t.stop());
+    navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:1280}},audio:mode==="video"}).then(s=>{camStream=s;v.srcObject=s;msg.hidden=true;v.classList.toggle("mirror",facing==="user")})
+      .catch(()=>{overlayClose();pickFile()})};
+  start();
   el.querySelector("#galbtn").onclick=()=>{overlayClose();pickFile()};
-  navigator.mediaDevices.getUserMedia({video:{facingMode:"environment",width:{ideal:1600}},audio:false}).then(s=>{camStream=s;el.querySelector("#cv").srcObject=s})
-    .catch(()=>{overlayClose();pickFile()});
-  el.querySelector("#snapbtn").onclick=()=>{const v=el.querySelector("#cv");if(!v.videoWidth)return;const c=document.createElement("canvas");const sc=Math.min(1,1280/Math.max(v.videoWidth,v.videoHeight));
-    c.width=v.videoWidth*sc;c.height=v.videoHeight*sc;c.getContext("2d").drawImage(v,0,0,c.width,c.height);
-    c.toBlob(async b=>{overlayClose();cb(await putMedia(b))},"image/jpeg",.82)}}
+  el.querySelector("#flipbtn").onclick=()=>{if(camRec)return;facing=facing==="user"?"environment":"user";start()};
+  shut.onclick=()=>{if(!v.videoWidth)return;
+    if(mode==="photo"){const c=document.createElement("canvas");const sc=Math.min(1,1280/Math.max(v.videoWidth,v.videoHeight));
+      c.width=v.videoWidth*sc;c.height=v.videoHeight*sc;c.getContext("2d").drawImage(v,0,0,c.width,c.height);
+      el.classList.add("flash");c.toBlob(async b=>{overlayClose();cb(await putMedia(b),"photo")},"image/jpeg",.82);return}
+    if(camRec&&camRec.state==="recording"){camRec.stop();return}
+    const chunks=[];let opts={videoBitsPerSecond:1500000};try{camRec=new MediaRecorder(camStream,opts)}catch(e){camRec=new MediaRecorder(camStream)}
+    camRec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+    camRec.onstop=async()=>{clearInterval(t);const b=new Blob(chunks,{type:(camRec&&camRec.mimeType)||"video/webm"});camRec=null;overlayClose();cb(await putMedia(b),"video")};
+    camRec.start(500);shut.classList.add("rec");shut.setAttribute("aria-label","Stop recording");const t0=Date.now();
+    const t=setInterval(()=>{const s=(Date.now()-t0)/1000;timeEl.textContent="● "+fmt(s);if(s>=30&&camRec)camRec.stop()},250)};
+}
 function shrink(file){return new Promise(res=>{const img=new Image();img.onload=()=>{const sc=Math.min(1,1280/Math.max(img.width,img.height));const c=document.createElement("canvas");
   c.width=img.width*sc;c.height=img.height*sc;c.getContext("2d").drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(img.src);c.toBlob(b=>res(b||file),"image/jpeg",.82)};
   img.onerror=()=>res(file);img.src=URL.createObjectURL(file)})}
@@ -515,19 +588,21 @@ const ACT={
       const nextStep=j.steps.find(s=>!j.run.done.includes(s.id));if(nextStep)setTimeout(()=>playStep(j,nextStep),450);else speak(T(k).cheers[0])}
     save();const y=scrollY;render().then(()=>scrollTo(0,y))},
   finishJob(b){const j=S.jobs.find(x=>x.id===b.dataset.id);const k=kid(j.kid);const th=T(k);
-    const done=after=>{j.beat=!!(j.timer&&Date.now()<=j.run.start+j.timer*60000);j.after=after||null;j.status="pending";save();sfxFanfare(k);confetti(k);
+    const done=(after,kind)=>{j.beat=!!(j.timer&&Date.now()<=j.run.start+j.timer*60000);j.after=after||null;j.afterKind=kind||null;j.status="pending";save();sfxFanfare(k);confetti(k);
       const cheer=th.cheers[Math.floor(Math.random()*th.cheers.length)];speak(cheer);
       overlay(`<div class="celebrate stack" style="align-items:center"><div class="display big">${esc(th.done)}</div><p style="font-size:20px">${esc(cheer)}</p>
         ${j.beat?`<span class="chip prize">Beat the clock! +${bonus(j)} bonus</span>`:""}<p class="muted">Ask a grown-up to check it. Then you get your ${esc(th.cur.toLowerCase())}.</p><button class="btn big" data-close>Back to base</button></div>`,()=>{back()})};
-    if(j.afterReq)takePhoto(id=>done(id),"Show your tidy room!");else done()},
+    if(j.proof==="photo")capture({mode:"photo",title:"Photo proof: show what you did!"},(id,kind)=>done(id,kind));
+    else if(j.proof==="video")capture({mode:"video",title:"Video proof: film it!"},(id,kind)=>done(id,kind));
+    else done()},
   buy(b){const k=kid(b.dataset.kid);const r=S.rewards.find(x=>x.id===b.dataset.id);const th=T(k);if(k.credits<r.cost)return;
-    overlay(`<div class="stack" style="text-align:center;align-items:center"><span style="font-size:64px">${esc(r.icon)}</span><h2 class="display">${esc(r.name)}</h2><p>Spend ${r.cost} ${esc(th.cur.toLowerCase())}?</p>
+    overlay(`<div class="stack" style="text-align:center;align-items:center">${r.photo?`<img class="rphoto" data-media="${r.photo}" alt="" style="max-width:280px">`:`<span style="font-size:64px">${esc(r.icon)}</span>`}<h2 class="display">${esc(r.name)}</h2><p>Spend ${r.cost} ${esc(th.cur.toLowerCase())}?</p>
       <div class="row"><button class="btn" id="yesbuy">Yes please</button><button class="btn ghost" data-close>Not yet</button></div></div>`).querySelector("#yesbuy").onclick=()=>{
       k.credits-=r.cost;S.requests.push({id:uid(),kid:k.id,name:r.name,icon:r.icon,cost:r.cost,status:"asked",at:Date.now()});save();overlayClose();sfxFanfare(k);confetti(k);render();toast("Ask a grown-up for your "+r.name)}},
   parent(){pinPad("Grown-ups only","Enter your PIN",p=>{if(p!==S.pin)return false;overlayClose();go("parent",{tab:pendingCount()?"check":"jobs"})})},
   exitParent(){home()},
   ptab(b){view.args.tab=b.dataset.tab;render()},
-  newJob(){draft={isNew:true,id:uid(),kid:S.kids[0].id,title:"",photo:null,steps:[],credits:3,timer:0,afterReq:false,repeat:false,_new:[]};go("edit")},
+  newJob(){draft={isNew:true,id:uid(),kid:S.kids[0].id,type:"tidy",title:"",photo:null,steps:[],credits:3,timer:0,proof:"photo",repeat:false,_new:[]};go("edit")},
   editJob(b){const j=S.jobs.find(x=>x.id===b.dataset.id);draft={...JSON.parse(JSON.stringify(j)),isNew:false,_new:[],_old:j.photo};go("edit")},
   cancelEdit(){draft._new.forEach(delMedia);if(draft.photo&&draft.photo!==draft._old)delMedia(draft.photo);draft=null;back()},
   dKid(b){draft.kid=b.dataset.id;keepTitle();render()},
@@ -537,9 +612,11 @@ const ACT={
   pDel(b){keepTitle();draft.steps.splice(+b.dataset.i,1);render()},
   dCred(b){keepTitle();draft.credits=Math.min(50,Math.max(1,draft.credits+ +b.dataset.d));render()},
   dTimer(b){keepTitle();draft.timer=+b.dataset.m;render()},
-  dAfter(b){keepTitle();draft.afterReq=b.dataset.v==="1";render()},
+  dType(b){keepTitle();draft.type=b.dataset.t;draft.proof=TYPES[draft.type].proof;render()},
+  dIdea(b){draft.title=b.dataset.v;render()},
+  dProof(b){keepTitle();draft.proof=b.dataset.v;render()},
   dRepeat(b){keepTitle();draft.repeat=b.dataset.v==="1";render()},
-  saveJob(){keepTitle();if(!draft.photo&&!draft.steps.length){toast("Add a photo or at least one step");return}
+  saveJob(){keepTitle();if(!draft.title&&!draft.photo&&!draft.steps.length){toast("Give it a name, a photo or a step");return}
     const {isNew,_new,_old,...j}=draft;if(isNew){j.status="todo";j.created=Date.now();S.jobs.push(j)}
     else{const i=S.jobs.findIndex(x=>x.id===j.id);const old=S.jobs[i];old.steps.forEach(s=>{if(!j.steps.find(x=>x.id===s.id))delMedia(s.audio)});if(_old&&_old!==j.photo)delMedia(_old);S.jobs[i]=j}
     save();draft=null;toast("Job saved");back()},
@@ -553,7 +630,8 @@ const ACT={
   given(b){const r=S.requests.find(x=>x.id===b.dataset.id);r.status="given";S.requests=S.requests.filter(x=>x.status==="asked");save();render()},
   refund(b){const r=S.requests.find(x=>x.id===b.dataset.id);const k=kid(r.kid);if(k)k.credits+=r.cost;S.requests=S.requests.filter(x=>x!==r);save();toast("Credits returned");render()},
   addReward(){S.rewards.push({id:uid(),icon:"⭐",name:"New reward",cost:5});save();render()},
-  delReward(b){S.rewards=S.rewards.filter(r=>r.id!==b.dataset.id);save();render()},
+  delReward(b){const r=S.rewards.find(x=>x.id===b.dataset.id);if(r)delMedia(r.photo);S.rewards=S.rewards.filter(x=>x!==r);save();render()},
+  rPhoto(b){const r=S.rewards.find(x=>x.id===b.dataset.id);capture({mode:"photo",title:"Photo of: "+r.name},id=>{if(r.photo)delMedia(r.photo);r.photo=id;save();render()})},
   addKid(){const n=$("#newkid").value.trim();if(!n)return;const k={id:uid(),name:n,theme:"hero",credits:0,earned:0};S.kids.push(k);save();render()},
   delKid(b){const k=kid(b.dataset.id);confirmSheet(`Remove ${k.name}?`,"Their jobs and credits are deleted.",()=>{S.jobs.filter(j=>j.kid===k.id).forEach(j=>{delMedia(j.photo);delMedia(j.after);j.steps.forEach(s=>delMedia(s.audio))});
     S.jobs=S.jobs.filter(j=>j.kid!==k.id);S.requests=S.requests.filter(r=>r.kid!==k.id);S.kids=S.kids.filter(x=>x!==k);save();render()})},
@@ -586,8 +664,84 @@ Object.assign(ACT,{
       const sh=overlay(`<div class="stack"><h2 class="display">${list.length} rewards</h2>
         <div class="stack" style="gap:6px">${list.map(r=>`<div class="spread"><span>${esc(r.icon)} ${esc(r.name)}</span><b>${r.cost}</b></div>`).join("")}</div>
         <button class="btn" id="replshop">Replace my shop with these</button><button class="btn ghost" id="addshop">Add these to my shop</button><button class="btn ghost" data-close>Cancel</button></div>`);
-      sh.querySelector("#replshop").onclick=()=>{S.rewards=list;save();overlayClose();render();toast("Shop loaded")};
+      sh.querySelector("#replshop").onclick=()=>{const old=new Map(S.rewards.map(r=>[r.name.toLowerCase(),r]));
+        list.forEach(r=>{const o=old.get(r.name.toLowerCase());if(o&&o.photo){r.photo=o.photo;o.photo=null}});old.forEach(o=>delMedia(o.photo));
+        S.rewards=list;save();overlayClose();render();toast("Shop loaded")};
       sh.querySelector("#addshop").onclick=()=>{const have=new Set(S.rewards.map(r=>r.name.toLowerCase()));S.rewards.push(...list.filter(r=>!have.has(r.name.toLowerCase())));save();overlayClose();render();toast("Rewards added")}}}
+});
+/* ---------- QR link between tablets (no internet needed) ---------- */
+const QR_TAG="TQ1:";
+function packQR(obj){return QR_TAG+btoa(unescape(encodeURIComponent(JSON.stringify(obj))))}
+function unpackQR(text){const m=String(text||"").replace(/\s+/g,"").match(/TQ1:([A-Za-z0-9+/=]+)/);
+  if(m){try{return JSON.parse(decodeURIComponent(escape(atob(m[1]))))}catch(e){return null}}
+  const shop=decodeShop(text);return shop?{t:"shop",list:shop}:null}
+const bridge=()=>window.AndroidTTS||null;
+function showQR(text,title,sub,extra){const b=bridge();let img="";
+  try{if(b&&b.makeQR)img=b.makeQR(text)}catch(e){}
+  const el=overlay(`<div class="stack" style="align-items:center;text-align:center"><h2 class="display">${esc(title)}</h2><p class="muted" style="margin:0">${esc(sub)}</p>
+    ${img?`<img src="${img}" alt="QR code" style="width:min(320px,80vw);image-rendering:pixelated;background:#fff;padding:10px;border-radius:12px">`:""}
+    <details style="width:100%"><summary class="muted">Can't scan? Use the text code</summary>
+      <textarea readonly rows="4" style="width:100%;font:12px/1.4 monospace;margin-top:8px;border:2px solid var(--line);border-radius:12px;padding:8px;background:var(--bg);color:var(--ink)">${esc(text)}</textarea>
+      <button class="btn ghost small" data-copy>Copy text code</button></details>
+    ${extra||""}<button class="btn ghost" data-close>Close</button></div>`);
+  el.querySelector("[data-copy]").onclick=async()=>{toast(await copyText(text)?"Copied":"Press and hold the code to copy")};return el}
+function scanQR(cb){const b=bridge();
+  if(b&&b.scanQR){window.__onScan=t=>{window.__onScan=null;if(t)cb(t)};try{b.scanQR();return}catch(e){}}
+  const el=overlay(`<div class="stack"><h2 class="display">Enter a code</h2><p class="muted" style="margin:0">Paste the text code from the other tablet.</p>
+    <textarea id="qrin" rows="4" style="width:100%;font:12px/1.4 monospace;border:2px solid var(--line);border-radius:12px;padding:8px;background:var(--panel);color:var(--ink)"></textarea>
+    <div class="row"><button class="btn" id="qrgo">Use code</button><button class="btn ghost" data-close>Cancel</button></div></div>`);
+  el.querySelector("#qrgo").onclick=()=>{const t=el.querySelector("#qrin").value;overlayClose();cb(t)}}
+function findKidFor(id,name){return kid(id)||S.kids.find(k=>k.name.trim().toLowerCase()===String(name||"").trim().toLowerCase())}
+function handleCode(text){const d=unpackQR(text);
+  if(!d){toast("That isn't a Tidy Quest code.");return}
+  if(d.from&&d.from===S.device){toast("That code is from this tablet. Scan it on the other one.");return}
+  if(d.t==="shop"){S.rewards=d.list;save();render();toast("Shop loaded");return}
+  if(d.t==="setup")return applySetup(d);
+  if(d.t==="req")return sendCredits(d);
+  if(d.t==="give")return acceptCredits(d);
+  toast("This code needs a newer version of Tidy Quest.")}
+function applySetup(d){const added=[],matched=[];
+  d.kids.forEach(x=>{let k=findKidFor(x.id,x.name);
+    if(k){if(k.id!==x.id){S.jobs.forEach(j=>{if(j.kid===k.id)j.kid=x.id});S.requests.forEach(r=>{if(r.kid===k.id)r.kid=x.id});k.id=x.id}
+      k.name=x.name;k.theme=x.theme;matched.push(x.name)}
+    else{S.kids.push({id:x.id,name:x.name,theme:x.theme,credits:0,earned:0});added.push(x.name)}});
+  if(d.shop&&d.shop.length){const old=new Map(S.rewards.map(r=>[r.name.toLowerCase(),r]));
+    S.rewards=d.shop.map(x=>{const o=old.get(String(x.n).toLowerCase());return {id:uid(),icon:x.i,name:x.n,cost:x.c,photo:o?o.photo:null}});
+    const kept=new Set(S.rewards.map(r=>r.photo));old.forEach(o=>{if(o.photo&&!kept.has(o.photo))delMedia(o.photo)})}
+  save();render();
+  overlay(`<div class="stack"><h2 class="display">Setup copied</h2>
+    ${matched.length?`<p style="margin:0">Matched: <b>${esc(matched.join(", "))}</b></p>`:""}${added.length?`<p style="margin:0">Added: <b>${esc(added.join(", "))}</b></p>`:""}
+    <p class="muted" style="margin:0">Reward shop updated. Credits on this tablet haven't changed. Use <b>Move credits</b> to bring credits across.</p><button class="btn" data-close>Done</button></div>`)}
+function setupCode(){return packQR({t:"setup",from:S.device,kids:S.kids.map(k=>({id:k.id,name:k.name,theme:k.theme})),shop:S.rewards.map(r=>({i:r.icon,n:r.name,c:r.cost}))})}
+/* Credit transfer handshake: receiver shows a one-time request; sender deducts and shows a code locked to that request. */
+function receiveCode(k){const n="n"+uid();S.pendingIn[n]={kid:k.id,at:Date.now()};save();return packQR({t:"req",from:S.device,n,kid:k.id,name:k.name})}
+function sendCredits(d){const k=findKidFor(d.kid,d.name);
+  if(!k){toast(`There's no child called ${d.name} on this tablet. Copy the setup first.`);return}
+  const prev=S.sent.find(x=>x.n===d.n);
+  if(prev){showGive(prev);return}
+  if(k.credits<1){toast(`${k.name} has no credits on this tablet to send.`);return}
+  let amt=k.credits;
+  const el=overlay(`<div class="stack"><h2 class="display">Send ${esc(k.name)}'s credits</h2><p class="muted" style="margin:0">They come off this tablet as soon as you tap Send.</p>
+    <div class="spread"><button class="btn ghost" data-d="-5">−5</button><button class="btn ghost" data-d="-1">−1</button><b id="amt" style="font-size:40px;font-variant-numeric:tabular-nums">${amt}</b><button class="btn ghost" data-d="1">+1</button><button class="btn ghost" data-d="5">+5</button></div>
+    <p class="muted" style="margin:0;text-align:center">${k.credits} available</p>
+    <div class="row"><button class="btn" id="sendc">Send</button><button class="btn ghost" data-close>Cancel</button></div></div>`);
+  el.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{amt=Math.max(1,Math.min(k.credits,amt+ +b.dataset.d));el.querySelector("#amt").textContent=amt});
+  el.querySelector("#sendc").onclick=()=>{if(amt<1||amt>k.credits)return;k.credits-=amt;
+    const rec={n:d.n,to:d.from,kid:d.kid,name:k.name,amt,at:Date.now()};S.sent.push(rec);if(S.sent.length>50)S.sent.shift();save();overlayClose();render();showGive(rec)}}
+function showGive(rec){showQR(packQR({t:"give",from:S.device,to:rec.to,n:rec.n,kid:rec.kid,name:rec.name,amt:rec.amt}),`${rec.amt} credits for ${rec.name}`,"Now scan this on the tablet that asked for them.")}
+function acceptCredits(d){
+  if(d.to!==S.device){toast("This transfer was made for a different tablet.");return}
+  if(S.usedIn.includes(d.n)){toast("This transfer has already been added.");return}
+  const p=S.pendingIn[d.n];if(!p){toast("This tablet didn't ask for that transfer.");return}
+  const k=kid(p.kid);if(!k){toast("That child isn't on this tablet any more.");return}
+  k.credits+=d.amt;delete S.pendingIn[d.n];S.usedIn.push(d.n);if(S.usedIn.length>200)S.usedIn.shift();save();overlayClose();render();sfxFanfare(k);confetti(k);
+  overlay(`<div class="stack" style="text-align:center;align-items:center"><h2 class="display">+${d.amt} for ${esc(k.name)}</h2><p style="margin:0">${esc(k.name)} now has ${k.credits} credits on this tablet.</p><button class="btn" data-close>Done</button></div>`)}
+Object.assign(ACT,{
+  scanAny(){scanQR(handleCode)},
+  showSetup(){showQR(setupCode(),"Family setup","On the other tablet: Grown-ups → Link tablets → Scan a code.")},
+  receiveCredits(b){const k=kid(b.dataset.id);const el=showQR(receiveCode(k),`Receive credits for ${k.name}`,"1. Scan this on the other tablet (Link tablets → Scan a code). 2. Then scan the code it shows back.",
+    `<button class="btn" id="scanback">${IC.cam} Scan their code</button>`);
+    el.querySelector("#scanback").onclick=()=>{overlayClose();scanQR(handleCode)}}
 });
 function keepTitle(){const t=$("#dtitle");if(t&&draft)draft.title=t.value.trim()}
 function confirmSheet(title,sub,yes){overlay(`<div class="stack"><h2 class="display">${esc(title)}</h2><p class="muted" style="margin:0">${esc(sub)}</p>

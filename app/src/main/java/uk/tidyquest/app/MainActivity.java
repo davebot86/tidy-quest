@@ -6,7 +6,9 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.util.Base64;
 import android.net.Uri;
 import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
@@ -24,7 +26,19 @@ import android.webkit.WebViewClient;
 
 import androidx.webkit.WebViewAssetLoader;
 
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.EncodeHintType;
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
+import com.journeyapps.barcodescanner.BarcodeEncoder;
+import com.google.zxing.integration.android.IntentIntegrator;
+import com.google.zxing.integration.android.IntentResult;
+
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Locale;
 
 public class MainActivity extends Activity {
@@ -117,6 +131,31 @@ public class MainActivity extends Activity {
             }
 
             @JavascriptInterface
+            public String makeQR(String text) {
+                try {
+                    Map<EncodeHintType, Object> hints = new HashMap<>();
+                    hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.L);
+                    hints.put(EncodeHintType.MARGIN, 1);
+                    Bitmap bmp = new BarcodeEncoder().encodeBitmap(text, BarcodeFormat.QR_CODE, 640, 640, hints);
+                    ByteArrayOutputStream out = new ByteArrayOutputStream();
+                    bmp.compress(Bitmap.CompressFormat.PNG, 100, out);
+                    return "data:image/png;base64," + Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP);
+                } catch (Exception e) {
+                    return "";
+                }
+            }
+
+            @JavascriptInterface
+            public void scanQR() {
+                runOnUiThread(() -> new IntentIntegrator(MainActivity.this)
+                        .setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)
+                        .setPrompt("Point at the Tidy Quest code on the other tablet")
+                        .setBeepEnabled(false)
+                        .setOrientationLocked(false)
+                        .initiateScan());
+            }
+
+            @JavascriptInterface
             public void copy(String text) {
                 runOnUiThread(() -> {
                     ClipboardManager cm = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
@@ -164,6 +203,13 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onActivityResult(int code, int result, Intent data) {
+        IntentResult scan = IntentIntegrator.parseActivityResult(code, result, data);
+        if (scan != null) {
+            String text = scan.getContents();
+            String arg = text == null ? "null" : JSONObject.quote(text);
+            web.evaluateJavascript("window.__onScan && window.__onScan(" + arg + ")", null);
+            return;
+        }
         if (code == REQ_FILE && fileCallback != null) {
             Uri[] uris = null;
             if (result == RESULT_OK && data != null && data.getData() != null) uris = new Uri[]{data.getData()};
