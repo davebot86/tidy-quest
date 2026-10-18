@@ -1281,6 +1281,12 @@ const ACT={
     S.jobs=S.jobs.filter(j=>j.kid!==k.id);S.requests=S.requests.filter(r=>r.kid!==k.id);S.kids=S.kids.filter(x=>x!==k);S.kidGone.push(k.id);if(window.Sync)Sync.forget(k.id);save();render()})},
   adj(b){const k=kid(b.dataset.id);const d=+b.dataset.d;if(d<0&&k.credits<=0)return;post(k,{d,e:d,why:"grown-up"});save();render()},
   poster(b){posterSheet(kid(b.dataset.id),0)},
+  nameDev(b){const id=b.dataset.id;const el=overlay(`<div class="stack"><h2 class="display">Whose phone is this?</h2>
+      <div class="seg">${["Mummy's phone","Daddy's phone","Grandma's phone","Grandad's phone",`${S.kids[0]?S.kids[0].name+"'s tablet":"Kids' tablet"}`].map(n=>`<button data-n="${esc(n)}">${esc(n)}</button>`).join("")}</div>
+      <label class="label" for="dn">Or type a name</label><input id="dn" value="${esc(b.dataset.v||"")}" maxlength="24" placeholder="e.g. Mummy's phone">
+      <div class="row"><button class="btn" id="dnok">Save</button><button class="btn ghost" data-close>Cancel</button></div></div>`);
+    const done=n=>{if(!n)return;Sync.nick(id,n);overlayClose();toast("Named: "+n)};
+    el.querySelectorAll("[data-n]").forEach(x=>x.onclick=()=>done(x.dataset.n));el.querySelector("#dnok").onclick=()=>done(el.querySelector("#dn").value.trim())},
   editSays(b){saysEditor(kid(b.dataset.id))},
   alertPick(b){S.alertSound=b.dataset.v;save();render();if(b.dataset.v!=="off"&&b.dataset.v!=="world")playSound(b.dataset.v)},
   alertTest(b){playSound(b.dataset.v)},
@@ -1678,7 +1684,7 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
       db=firebase.firestore();ref=db.collection("families").doc(S.family);first=false;if(unsub)unsub();
       unsub=ref.onSnapshot({includeMetadataChanges:false},snap=>{q=q.then(()=>onSnap(snap)).catch(e=>console.log(e))},e=>{setState("error",e.message);unsub=null;retry=setTimeout(start,30000)});
     }catch(e){setState("error",e.message||String(e));retry=setTimeout(start,30000)}}
-  async function onSnap(snap){const data=snap.data()||{};lastData=data;let changed=false;const news=[];
+  async function onSnap(snap){const data=snap.data()||{};lastData=data;{const mine=data["nick_"+S.device];if(mine&&mine!==S.devName){S.devName=mine;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}}let changed=false;const news=[];
     for(const id of (data.gone||[]))if(!S.kidGone.includes(id)){S.kidGone.push(id);const k=kid(id);if(k){S.kids=S.kids.filter(x=>x!==k);changed=true}}
     for(const key of Object.keys(data)){if(key.slice(0,2)!=="k_")continue;const id=key.slice(2),txt=data[key];
       if(S.kidGone.includes(id)||last[id]===txt)continue;let d;try{d=JSON.parse(txt)}catch(e){continue}
@@ -1744,7 +1750,8 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
     return `<div class="stack" style="gap:8px;border-top:2px solid var(--line);padding-top:10px"><b>Family phones &amp; tablets</b>${devs.map(d=>{const me=d.id===S.device,age=Date.now()-(d.at||0);
       const seen=age<3*60000?"open now":age<86400000?"last open "+new Date(d.at).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}):"last open "+new Date(d.at).toLocaleDateString("en-GB",{day:"numeric",month:"short"});
       const old=(d.ver||0)<newest;const bits=[`${d.sent||0} sent`,`${d.recv||0} received`];if(d.wait)bits.push(`${d.wait} to go`);if(d.fail)bits.push(`${d.fail} didn't work`);if(d.big)bits.push(`${d.big} too long`);
-      return `<div style="font-size:15px;line-height:1.35"><b>${esc(d.name||"Unnamed phone")}</b>${me?" (this one)":""} <span class="muted">· ${d.ver?"v0."+(d.ver-1000):"old version"} · ${seen}</span>${old?` <span style="color:#b3261e;font-weight:900">needs update</span>`:""}
+      const nm=lastData["nick_"+d.id]||d.name||"";
+      return `<div style="font-size:15px;line-height:1.35"><b>${esc(nm||"Unnamed phone")}</b>${me?" (this one)":""} <button class="chip" style="cursor:pointer" data-act="nameDev" data-id="${esc(d.id)}" data-v="${esc(nm)}">${nm?"Rename":"Name it"}</button> <span class="muted">· ${d.ver?"v0."+(d.ver-1000):"old version"} · ${seen}</span>${old?` <span style="color:#b3261e;font-weight:900">needs update</span>`:""}
         <br><span class="muted">Photos &amp; videos: ${bits.join(" · ")}${d.now?" · "+esc(d.now):""}</span>${d.err?`<br><span class="muted" style="font-size:13px">${esc(d.err)}</span>`:""}</div>`}).join("")}</div>`}
   function mline(){const m=mst;const bits=[`${m.sent} sent`,`${m.recv} received`];if(m.wait)bits.push(`${m.wait} still to go`);if(m.big)bits.push(`${m.big} too long to send`);if(m.fail)bits.push(`${m.fail} didn't work`);
     return `<b>Photos &amp; videos:</b> ${bits.join(" · ")}${m.now?`<br><span class="muted">${esc(m.now)}</span>`:""}${m.err?`<br><span class="muted" style="font-size:13px">${esc(m.err).slice(0,120)}</span>`:""}`}
@@ -1795,9 +1802,11 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
         <div class="row" style="gap:8px"><button class="btn small" data-act="famPics">Sync photos now</button><button class="btn ghost small" data-act="famCode">Show family code</button><button class="btn ghost small" data-act="famLeave">Stop syncing here</button></div>`
       :`<p class="muted" style="margin:0">Link phones over the internet so points, stars, the shop and the history stay the same everywhere. Start the family on one phone, then join on the others.</p>
         <div class="row" style="gap:8px"><button class="btn small" data-act="famNew">Start a family</button><button class="btn ghost small" data-act="famJoin">Join a family</button></div>`}</div>`}
-  function setName(n){S.devName=n;save();report(true)}
+  function setName(n){S.devName=n;save();if(ref)ref.set({["nick_"+S.device]:n},{merge:true}).catch(()=>{});lastData["nick_"+S.device]=n;report(true)}
   function retryMedia(){tried.clear();mst.sent=0;mst.recv=0;mst.now="Checking…";showM();media()}
-  return {start,soon,push,forget,panel,joinPrompt,create,showCode,joinMenu,leave,status:st,retryMedia,mline,setName}})();
+  function nick(id,n){n=String(n||"").trim().slice(0,24);lastData["nick_"+id]=n;if(id===S.device){S.devName=n;save()}
+    if(ref)ref.set({["nick_"+id]:n},{merge:true}).catch(()=>{});report(true);const el=$("#syncpanel");if(el)el.outerHTML=panel()}
+  return {start,soon,push,forget,panel,joinPrompt,create,showCode,joinMenu,leave,status:st,retryMedia,mline,setName,nick}})();
 window.Sync=Sync;
 Object.assign(ACT,{famNew(){Sync.create()},famJoin(){Sync.joinMenu()},famCode(){Sync.showCode()},famLeave(){Sync.leave()},famPics(){Sync.retryMedia()}});
 /* ---------- Updates: the app checks for a newer trial build and installs it from inside the app ---------- */
