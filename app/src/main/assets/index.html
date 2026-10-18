@@ -296,6 +296,11 @@ body.parent{--world:#EEF1F4;--bg:#EEF1F4;--panel:#fff;--ink:#17202A;--muted:#5B6
 .tmedia video,.tmedia img{width:100%;height:100%;object-fit:cover}
 .tplay{position:absolute;inset:0;display:grid;place-items:center;color:#fff}
 .tplay svg{width:44px;height:44px;filter:drop-shadow(0 2px 6px #0008)}
+.pstrip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.pstrip img{width:96px;height:96px;object-fit:cover;border-radius:10px;flex:none}
+.pstrip.story figure{margin:0;flex:none;display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:700;color:var(--muted)}
+.pstrip.story img{width:120px;height:120px}
+.backers{font-size:14px;font-weight:700;color:var(--muted)}
 .hallstrip{display:flex;align-items:center;gap:12px;width:100%;text-align:left}
 .hallstrip .grow{flex:1;min-width:0}
 .celebrate{text-align:center}
@@ -304,6 +309,77 @@ body.parent{--world:#EEF1F4;--bg:#EEF1F4;--panel:#fff;--ink:#17202A;--muted:#5B6
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:60}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:70;background:#17202A;color:#fff;padding:12px 20px;border-radius:999px;font-weight:700;max-width:90vw}
 .empty{text-align:center;padding:26px 16px}
+
+/* ===== v0.8 visual layer: game-quality worlds =====
+   Each world: a saturated ground, warm paper (or deep glass) cards with a solid "lip",
+   one hero accent and a complementary gold/cyan for rewards. */
+body[data-theme="karate"]{--panel:#FFF7E8;--ink:#24170F;--muted:#7A6450;--line:#E6D3B0;--card-edge:#C9A86A;--accent:#C8322A;--accent-edge:#8A1C16;--accent-ink:#FFF7E8;--accent2:#E8B04B;--on-bg:#FFF3DC;--fig:#24170F;
+  background-color:#1C4B47;background-size:100px 50px;background-attachment:fixed;
+  background-image:radial-gradient(circle at 100% 150%,#1C4B47 24%,#235E58 24% 28%,#1C4B47 28% 36%,#235E58 36% 40%,transparent 40%),
+    radial-gradient(circle at 0 150%,#1C4B47 24%,#235E58 24% 28%,#1C4B47 28% 36%,#235E58 36% 40%,transparent 40%),
+    radial-gradient(circle at 50% 100%,#235E58 10%,#1C4B47 10% 23%,#235E58 23% 30%,#1C4B47 30% 43%,#235E58 43% 50%,#1C4B47 50% 63%,#235E58 63% 71%,transparent 71%),
+    radial-gradient(circle at 100% 50%,#235E58 5%,#1C4B47 5% 15%,#235E58 15% 20%,#1C4B47 20% 29%,#235E58 29% 34%,#1C4B47 34% 44%,#235E58 44% 49%,transparent 49%),
+    radial-gradient(circle at 0 50%,#235E58 5%,#1C4B47 5% 15%,#235E58 15% 20%,#1C4B47 20% 29%,#235E58 29% 34%,#1C4B47 34% 44%,#235E58 44% 49%,transparent 49%)}
+body[data-theme="army"]{--panel:#F1E7C8;--ink:#232A15;--muted:#5E5A40;--line:#D8C99C;--card-edge:#9C8A55;--accent:#E8742A;--accent-edge:#A24E14;--accent-ink:#1E1206;--accent2:#F2C14E;--on-bg:#F1E7C8;--fig:#232A15}
+body[data-theme="hero"]{--panel:#FFFFFF;--ink:#101633;--muted:#4A5280;--line:#C9D0F0;--card-edge:#101633;--accent:#E5332A;--accent-edge:#8E1A14;--accent-ink:#FFFFFF;--accent2:#FFD23F;--on-bg:#FFFFFF;--fig:#101633;
+  --world:radial-gradient(circle,rgba(255,255,255,.08) 2px,transparent 2.5px) 0 0/14px 14px,linear-gradient(#2338A8,#18267A)}
+body[data-theme="pop"]{--panel:#FFF5FB;--ink:#2A0F45;--muted:#7A5A8E;--line:#EBD3F2;--card-edge:#B46CD0;--accent:#FF2E93;--accent-edge:#A3125C;--accent-ink:#FFFFFF;--accent2:#31D7F2;--on-bg:#FFF5FB;--fig:#FF2E93;
+  --world:radial-gradient(50% 35% at 10% 0%,rgba(255,46,147,.45),transparent 70%),radial-gradient(50% 35% at 90% 5%,rgba(49,215,242,.35),transparent 70%),#2A0F45}
+body[data-theme="space"]{--panel:#16224F;--ink:#EAF1FF;--muted:#9DB0E0;--line:#2B3C7A;--card-edge:#0A1238;--accent:#FF8A3D;--accent-edge:#A9501A;--accent-ink:#1A0C02;--accent2:#5FE0FF;--on-bg:#EAF1FF;--fig:#5FE0FF}
+body[data-theme="football"]{--panel:#FFFFFF;--ink:#13261A;--muted:#4E6A57;--line:#D3E4D7;--card-edge:#14592C;--accent:#D62828;--accent-edge:#8E1414;--accent-ink:#FFFFFF;--accent2:#F2C14E;--on-bg:#FFFFFF;--fig:#13261A}
+body.parent{--card-edge:#D8DEE5;--accent-edge:#0A4F4A;--on-bg:#17202A}
+
+.on-world{color:var(--on-bg)}
+.section-title.on-world h2,.topbar .on-world h1,h1.on-world{text-shadow:0 2px 0 rgba(0,0,0,.25)}
+body.parent .section-title.on-world h2,body.parent h1{text-shadow:none}
+
+.panel,.quest,.move,.reward,.tcard{border:2px solid var(--card-edge);border-radius:20px;box-shadow:0 5px 0 var(--card-edge),0 18px 28px -18px rgba(0,0,0,.55)}
+body.parent .panel,body.parent .jobcard{box-shadow:0 2px 0 var(--card-edge);border-width:1px}
+.btn{border-radius:16px;box-shadow:0 5px 0 var(--accent-edge);letter-spacing:.01em}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--accent-edge)}
+.btn.ghost{background:var(--panel);border:2px solid var(--card-edge);box-shadow:0 4px 0 var(--card-edge)}
+.btn.good{box-shadow:0 5px 0 #13542F}
+.btn.bad{box-shadow:none}
+.iconbtn{border:2px solid var(--card-edge);box-shadow:0 3px 0 var(--card-edge)}
+.hai{border-radius:16px;box-shadow:0 5px 0 var(--accent-edge)}
+.hai:active{transform:translateY(4px);box-shadow:0 1px 0 var(--accent-edge)}
+.play{box-shadow:0 3px 0 var(--accent-edge)}
+
+/* Stage: the master stands in their world */
+.stage{min-height:214px;border-radius:24px;border:3px solid var(--card-edge);box-shadow:0 6px 0 var(--card-edge),0 22px 30px -20px rgba(0,0,0,.6);background:#000;padding:14px 14px 0;isolation:isolate}
+body[data-theme] .stage{background:#000}
+.stage .scene{position:absolute;inset:0;width:100%;height:100%;z-index:-1}
+.stage .mentor{width:130px;height:148px;filter:drop-shadow(0 6px 6px rgba(0,0,0,.35))}
+.stage .who{color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8)}
+.bubble{border:2px solid rgba(0,0,0,.12);border-radius:18px;box-shadow:0 5px 0 rgba(0,0,0,.25)}
+body[data-theme="karate"] .bubble{border-left:5px solid var(--accent);border-radius:6px 18px 18px 6px}
+body[data-theme="hero"] .stage{background:#000;border:3px solid #101633;box-shadow:6px 6px 0 #101633}
+
+/* Player card overlaps the stage */
+.me.player{position:relative;z-index:2;margin:-46px 12px 0;background:var(--panel);color:var(--ink);border:2px solid var(--card-edge);border-radius:20px;padding:14px;box-shadow:0 5px 0 var(--card-edge),0 18px 28px -18px rgba(0,0,0,.55)}
+.me.player h1{font-size:clamp(28px,7vw,40px)}
+.me.player .avatar{width:96px;height:106px}
+.meter{height:18px;background:rgba(0,0,0,.14);box-shadow:inset 0 2px 3px rgba(0,0,0,.2);border-radius:999px}
+.meter i{background:linear-gradient(var(--accent2),color-mix(in srgb,var(--accent2) 70%,#000));box-shadow:inset 0 3px 0 rgba(255,255,255,.45)}
+body[data-theme="karate"] .meter{border-radius:999px}
+body[data-theme="karate"] .meter i{border-radius:999px;background:linear-gradient(var(--belt,#f4f4f4),color-mix(in srgb,var(--belt,#f4f4f4) 75%,#000))}
+
+/* Coins and seals */
+.coin{display:inline-block;width:34px;height:34px;vertical-align:-6px;margin-right:6px}
+.tile .num{display:flex;align-items:center;font-family:var(--display);font-weight:var(--dweight)}
+.seal{width:58px;height:58px;min-width:58px;border-radius:50%;font-family:var(--display);font-weight:var(--dweight);font-size:19px;color:#3A2600;
+  background:radial-gradient(circle at 35% 30%,#FFF1BF,var(--accent2) 62%,color-mix(in srgb,var(--accent2) 70%,#000) 100%);box-shadow:inset 0 0 0 3px rgba(255,255,255,.45),0 3px 0 rgba(0,0,0,.25);transform:none;clip-path:none;border:0}
+body[data-theme="karate"] .seal,body[data-theme="army"] .seal,body[data-theme="hero"] .seal{border-radius:50%;transform:none;clip-path:none;border:0}
+.quest .thumb{border-radius:14px;background:color-mix(in srgb,var(--accent2) 22%,var(--panel))}
+.quest .t{font-size:20px}
+.tile .what{color:var(--muted)}
+.tile .go{color:var(--accent);font-weight:900}
+.stars i{font-size:20px;text-shadow:0 1px 0 rgba(0,0,0,.15)}
+
+@keyframes pop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
+@keyframes rise{0%{transform:translateY(18px);opacity:0}100%{transform:none;opacity:1}}
+.stage .mentor-btn{animation:rise .5s ease-out both}
+.stage .bubble{animation:pop .45s .25s ease-out both}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -526,6 +602,38 @@ function faceEditor(k,mediaId){const img=new Image();let zoom=1,ox=0,oy=0,drag=n
       setTimeout(()=>{sfxFanfare(k);confetti(k)},200);toast("Looking good, "+k.name+"!")},"image/jpeg",.88)};
   el.addEventListener("click",e=>{if(e.target.closest("[data-close]"))delMedia(mediaId)},true)}
 
+/* ---------- Scenes: an illustrated place for each master to stand in ---------- */
+function sceneSVG(theme){const S={
+  karate:`<defs><linearGradient id="skK" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2B1638"/><stop offset=".55" stop-color="#B8322A"/><stop offset="1" stop-color="#F2A65A"/></linearGradient></defs>
+    <rect width="400" height="220" fill="url(#skK)"/><circle cx="292" cy="104" r="50" fill="#FFE1A0" opacity=".92"/>
+    <path d="M0 150 L60 112 L110 140 L170 98 L240 146 L300 118 L400 150 V220 H0Z" fill="#5A2440" opacity=".85"/>
+    <g fill="#2A1226"><rect x="330" y="96" width="6" height="64"/><path d="M312 104 h42 l-8 -10 h-26z M316 120 h34 l-7 -9 h-20z M320 136 h26 l-6 -8 h-14z"/></g>
+    <path d="M0 0 C40 30 70 26 110 40" stroke="#2A1226" stroke-width="4" fill="none"/><g fill="#F7B7C8">${[[18,14],[40,26],[62,30],[86,34],[104,42],[30,6],[74,20]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="5"/>`).join("")}</g>
+    <rect y="168" width="400" height="52" fill="#C9A86A"/><path d="M0 168 H400 M100 168 V220 M200 168 V220 M300 168 V220" stroke="#A88850" stroke-width="2"/><rect y="164" width="400" height="6" fill="#6B3A22"/>`,
+  army:`<defs><linearGradient id="skA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6E8FA8"/><stop offset="1" stop-color="#D8D2A8"/></linearGradient></defs>
+    <rect width="400" height="220" fill="url(#skA)"/><path d="M0 150 Q100 100 200 140 T400 128 V220 H0Z" fill="#56693A"/><path d="M0 170 Q120 140 260 166 T400 160 V220 H0Z" fill="#44542D"/>
+    <path d="M250 168 L290 118 L330 168Z" fill="#7A6A3E"/><path d="M290 118 L290 168" stroke="#5B4E2C" stroke-width="2"/><rect x="350" y="82" width="4" height="86" fill="#3B3020"/><path d="M354 84 h32 l-6 9 6 9 h-32z" fill="#E8742A"/>
+    <rect y="186" width="400" height="34" fill="#5C4A2E"/>`,
+  hero:`<defs><linearGradient id="skH" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0D1550"/><stop offset="1" stop-color="#3A57D6"/></linearGradient></defs>
+    <rect width="400" height="220" fill="url(#skH)"/><path d="M300 0 L250 220 L360 220Z" fill="#FFD23F" opacity=".18"/><circle cx="330" cy="40" r="16" fill="#FFF3B0"/>
+    <g fill="#101633">${[[0,110,46],[44,80,38],[80,124,40],[118,70,50],[166,104,36],[200,60,44],[242,96,40],[280,120,44],[322,84,40],[360,108,40]].map(([x,y,w])=>`<rect x="${x}" y="${y}" width="${w}" height="${220-y}"/>`).join("")}</g>
+    <g fill="#FFD23F" opacity=".85">${Array.from({length:26},(_,i)=>`<rect x="${(i*53)%390+8}" y="${100+((i*37)%80)}" width="6" height="8"/>`).join("")}</g>
+    <rect y="176" width="400" height="44" fill="#0B1030"/><path d="M0 176 H400" stroke="#E5332A" stroke-width="4"/>`,
+  pop:`<rect width="400" height="220" fill="#160A2C"/><path d="M90 0 L20 190 H170Z" fill="#FF2E93" opacity=".28"/><path d="M310 0 L230 190 H380Z" fill="#31D7F2" opacity=".24"/>
+    <path d="M200 0 L150 190 H250Z" fill="#FFD166" opacity=".14"/><rect y="150" width="400" height="40" fill="#3A1868"/>
+    <g fill="#FFD166">${Array.from({length:20},(_,i)=>`<circle cx="${10+i*20}" cy="152" r="2.5"/>`).join("")}</g>
+    <path d="M0 220 V196 ${Array.from({length:21},(_,i)=>`Q${i*20+10} ${180+(i%3)*4} ${i*20+20} 196`).join(" ")} V220Z" fill="#05020C"/>`,
+  space:`<defs><linearGradient id="skS" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#05081A"/><stop offset="1" stop-color="#1B2470"/></linearGradient></defs>
+    <rect width="400" height="220" fill="url(#skS)"/><g fill="#fff">${Array.from({length:40},(_,i)=>`<circle cx="${(i*97)%400}" cy="${(i*53)%160}" r="${i%4?0.9:1.6}"/>`).join("")}</g>
+    <circle cx="306" cy="70" r="34" fill="#FF8A3D"/><ellipse cx="306" cy="70" rx="56" ry="12" fill="none" stroke="#FFD0A8" stroke-width="4" transform="rotate(-14 306 70)"/>
+    <path d="M0 176 Q200 150 400 176 V220 H0Z" fill="#3A4468"/><g fill="#2C3552"><ellipse cx="80" cy="190" rx="18" ry="5"/><ellipse cx="250" cy="196" rx="24" ry="6"/><ellipse cx="350" cy="186" rx="12" ry="4"/></g>`,
+  football:`<defs><linearGradient id="skF" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1C4A8A"/><stop offset="1" stop-color="#6FB4EE"/></linearGradient></defs>
+    <rect width="400" height="220" fill="url(#skF)"/><rect y="96" width="400" height="60" fill="#22324D"/>
+    <g>${Array.from({length:60},(_,i)=>`<circle cx="${(i*41)%400}" cy="${104+(i%5)*10}" r="3" fill="${["#D62828","#F2C14E","#FFFFFF","#5BA4E6"][i%4]}"/>`).join("")}</g>
+    <g fill="#E8EEF5"><rect x="40" y="20" width="4" height="80"/><rect x="24" y="12" width="36" height="14" rx="3"/><rect x="356" y="20" width="4" height="80"/><rect x="340" y="12" width="36" height="14" rx="3"/></g>
+    <rect y="156" width="400" height="64" fill="#2E9B4D"/>
+    ${[0,1,2,3].map(i=>`<rect x="${i*100}" y="156" width="50" height="64" fill="#34A855"/>`).join("")}<path d="M0 178 H400 M200 156 V220" stroke="#fff" stroke-width="3" opacity=".8"/>`
+};return `<svg class="scene" viewBox="0 0 400 220" preserveAspectRatio="xMidYMax slice" aria-hidden="true">${S[theme]||S.karate}</svg>`}
 /* ---------- Masters: one illustrated mentor per world ---------- */
 function mentorSVG(theme,cls="mentor"){
   const eyes=(c="#1E1A17")=>`<circle cx="50" cy="58" r="3" fill="${c}"/><circle cx="70" cy="58" r="3" fill="${c}"/>`;
@@ -590,7 +698,8 @@ function poseSVG(name){const P=POSES[name]||POSES.grab;const L=(a,b)=>`M${a[0]} 
 function moveFor(k,i){const mv=T(k).moves;return mv[i%mv.length]}
 function say(k,key,vars={}){const m=T(k).m;let t=m[key];if(Array.isArray(t))t=t[Math.floor(Math.random()*t.length)];
   return String(t||"").replace(/\{(\w+)\}/g,(_,v)=>vars[v]!=null?vars[v]:(v==="name"?k.name:""))}
-function stageHTML(k,line,sub){const th=T(k);return `<div class="stage"><button class="mentor-btn" data-act="mentorSay" data-line="${esc(line)}" aria-label="Hear ${esc(th.m.name)}" style="padding:0;grid-row:1">${mentorSVG(k.theme)}</button>
+function coinSVG(){return `<svg class="coin" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="var(--accent2)"/><circle cx="20" cy="20" r="18" fill="#000" opacity=".18"/><circle cx="20" cy="18.5" r="16.5" fill="var(--accent2)"/><circle cx="20" cy="18.5" r="11" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="2"/><path transform="translate(20 18.5) scale(.75)" d="M0-10l2.9 6 6.6.9-4.8 4.6 1.2 6.5L0 4.9-5.9 8l1.2-6.5-4.8-4.6 6.6-.9z" fill="#fff" fill-opacity=".85"/></svg>`}
+function stageHTML(k,line,sub){const th=T(k);return `<div class="stage">${sceneSVG(k.theme)}<button class="mentor-btn" data-act="mentorSay" data-line="${esc(line)}" aria-label="Hear ${esc(th.m.name)}" style="padding:0;grid-row:1">${mentorSVG(k.theme)}</button>
   <div class="who">${esc(th.m.name)}</div><div class="bubble">${sub?`<small>${esc(sub)}</small>`:""}${esc(line)}</div></div>`}
 
 /* ---------- Speech + sound ---------- */
@@ -683,15 +792,16 @@ VIEWS.hq=({kid:id})=>{const k=kid(id);if(!k){home();return""}setBodyTheme(k);con
     <button class="iconbtn" data-act="parent" aria-label="Grown-ups">${IC.lock}</button></div>
   </div>
   ${stageHTML(k,line+" "+sub)}
-  <div class="me on-world">${avatarSVG(k)?`<button data-act="style" data-id="${k.id}" aria-label="Change my picture or style" style="padding:0">${avatarSVG(k)}</button>`:badgeSVG(k)}
+  <div class="me player">${avatarSVG(k)?`<button data-act="style" data-id="${k.id}" aria-label="Change my picture or style" style="padding:0">${avatarSVG(k)}</button>`:badgeSVG(k)}
     <div class="stack" style="gap:8px;min-width:0"><h1 class="display">${esc(k.name)}</h1>
       <div class="rankline">${k.face?badgeSVG(k).replace('class="badge"','class="badge sm"'):""}${esc(th.ranks[r])}</div>
       <div class="meter" role="progressbar" aria-label="Progress to next rank" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" style="--belt:${th.belts?th.belts[Math.min(r+1,6)]:""}"><i style="width:${pct}%"></i></div>
       <span style="font-weight:700;font-size:15px;opacity:.85">${next?`${next-k.earned} ${esc(th.cur.toLowerCase())} to ${esc(th.ranks[r+1])}`:"Top rank reached"}</span></div></div>
   <div class="tiles">
-    <button class="panel tile" data-act="shop" data-id="${k.id}"><span class="what">${esc(th.cur)}</span><span class="num">${k.credits}</span><span class="go">${esc(th.shop)}</span></button>
+    <button class="panel tile" data-act="shop" data-id="${k.id}"><span class="what">${esc(th.cur)}</span><span class="num">${coinSVG()}<span data-count="${k.credits}">${k.credits}</span></span><span class="go">${esc(th.shop)}</span></button>
     ${g?`<div class="panel tile"><span class="what">Big goal · ${gn}/${g.target}</span><b style="font-size:19px;line-height:1.2">${esc(g.name)}</b>
-      <div class="stars" aria-label="${gn} of ${g.target} stars">${Array.from({length:g.target},(_,i)=>`<i class="${i<gn?"on":""}">★</i>`).join("")}</div></div>`
+      <div class="stars" aria-label="${gn} of ${g.target} stars">${Array.from({length:g.target},(_,i)=>`<i class="${i<gn?"on":""}">★</i>`).join("")}</div>
+      ${(g.backers||[]).length?`<span class="backers">Backed by ${g.backers.map(x=>`<b>${esc(x.name)}</b>${x.gift?` (${esc(x.gift)})`:""}`).join(", ")}</span>`:""}</div>`
       :`<div class="panel tile"><span class="what">Big goal</span><span class="muted" style="font-weight:700">Ask a grown-up to set one. Brave, kind and active things earn stars.</span></div>`}
   </div>
   <div class="section-title on-world"><h2 class="display">${esc(th.jobs)}</h2>${todo.length?`<span class="count">${todo.length}</span>`:""}</div>
@@ -700,13 +810,15 @@ VIEWS.hq=({kid:id})=>{const k=kid(id);if(!k){home();return""}setBodyTheme(k);con
       <span class="stack" style="gap:4px;min-width:0"><span class="t">${esc(j.title||th.job)}</span>
         <span class="meta">${j.status==="pending"?"Waiting for a grown-up to check":isChallenge(j)?esc(TYPES[j.type].label):`${j.steps.length} ${esc(th.stepWord.toLowerCase())}${j.steps.length===1?"":"s"}`}${j.timer&&j.status!=="pending"?" · beat the clock":""}</span></span>
       <span class="seal">${isChallenge(j)?"★":"+"+j.credits}</span></button>`).join(""):`<div class="panel empty"><b>${esc(th.empty)}</b></div>`}</div>
-  ${(k.trophies||[]).length?`<button class="panel hallstrip" data-act="trophies" data-id="${k.id}"><span class="grow"><b>${esc(th.hall)}</b><br><span class="muted">${k.trophies.length} to watch again</span></span>
-    ${k.trophies.filter(t=>t.media).slice(0,3).map(t=>t.kind==="video"?`<video class="tthumb" muted playsinline preload="metadata" data-media="${t.media}"></video>`:`<img class="tthumb" data-media="${t.media}" alt="">`).join("")}</button>`:""}`};
+  ${(k.trophies||[]).length||(k.treats||[]).length?`<button class="panel hallstrip" data-act="trophies" data-id="${k.id}"><span class="grow"><b>${esc(th.hall)}</b><br><span class="muted">${(k.trophies||[]).length} wins · ${(k.treats||[]).length} rewards earned</span></span>
+    ${[...(k.treats||[]).filter(t=>t.photo).map(t=>({media:t.photo,kind:"photo"})),...(k.trophies||[]).filter(t=>t.media)].slice(0,3).map(t=>t.kind==="video"?`<video class="tthumb" muted playsinline preload="metadata" data-media="${t.media}"></video>`:`<img class="tthumb" data-media="${t.media}" alt="">`).join("")}</button>`:""}`};
 VIEWS.hq.after=({kid:id})=>{const k=kid(id);
+  const n=document.querySelector("[data-count]");if(n&&!matchMedia("(prefers-reduced-motion: reduce)").matches){const to=+n.dataset.count,t0=performance.now();if(to>0){n.textContent="0";
+    const step=t=>{const p=Math.min(1,(t-t0)/700);n.textContent=Math.round(to*(1-Math.pow(1-p,3)));if(p<1)requestAnimationFrame(step)};requestAnimationFrame(step)}}
   if(k&&k.goalHit&&k.goal){delete k.goalHit;delete k.newTrophy;save();const g=k.goal;
     setTimeout(()=>{sfxFanfare(k);confetti(k);setTimeout(()=>confetti(k),900);speak(`Goal reached! ${g.name}`);
       overlay(`<div class="celebrate stack" style="align-items:center"><span class="label">Big goal reached</span>${g.photo?`<img class="media-box" style="object-fit:cover;max-height:30vh" data-media="${g.photo}" alt="">`:avatarSVG(k,null,"avatar big")||""}
-        <div class="display big">${esc(g.name)}</div><p style="margin:0">${g.target} stars, ${esc(k.name)}! You did it.</p><button class="btn big" data-close>Woohoo!</button></div>`)},300);return}
+        <div class="display big">${esc(g.name)}</div><p style="margin:0">${g.target} stars, ${esc(k.name)}! You did it.</p>${(g.backers||[]).map(x=>`<p style="margin:0">Thank you, <b>${esc(x.name)}</b>!${x.msg?` “${esc(x.msg)}”`:""}</p>`).join("")}<button class="btn big" data-close>Woohoo!</button></div>`)},300);return}
   if(k&&!k.rankUp&&k.newTrophy&&k.trophies&&k.trophies[0]){delete k.newTrophy;save();const t=k.trophies[0],th=T(k);
     setTimeout(()=>{sfxFanfare(k);confetti(k);overlay(`<div class="celebrate stack" style="align-items:center"><span class="label">New in your ${esc(th.hall)}</span><div class="display big">${esc(t.title)}</div>
       ${!t.media?`<div class="ticon big">${TYPES[t.type]?TYPES[t.type].icon:"★"}</div>`:t.kind==="video"?`<video class="media-box" controls autoplay playsinline data-media="${t.media}"></video>`:`<img class="media-box" style="object-fit:contain" data-media="${t.media}" alt="">`}
@@ -746,6 +858,8 @@ VIEWS.job=({id})=>{const j=S.jobs.find(x=>x.id===id);const k=kid(j.kid);setBodyT
       <span class="what"><button class="play" data-act="playStep" data-job="${j.id}" data-step="${s.id}" aria-label="Listen to ${esc(th.stepWord.toLowerCase())} ${i+1}">${IC.play}</button><span>${esc(s.text||"Listen to find out")}</span></span>
       <span class="act"><button class="hai" data-act="tickStep" data-job="${j.id}" data-step="${s.id}" ${started?"":"disabled"}>${d?"Undo":esc(th.call)}</button></span>
       <span class="stamp" aria-hidden="true">${esc(th.call.replace(/[!,].*$/,""))}</span></div>`}).join("")}</div>`:""}
+  ${started?`<div class="panel stack" style="gap:10px"><div class="spread"><b>Progress shots</b><button class="btn ghost small" data-act="progressShot" data-id="${j.id}">${IC.cam} Snap progress</button></div>
+    ${(j.run.progress||[]).length?`<div class="pstrip">${j.run.progress.map((id,i)=>`<img data-media="${id}" alt="Progress photo ${i+1}">`).join("")}</div>`:`<span class="muted" style="font-weight:700">Big job? Snap a photo as you go to show how it's coming on.</span>`}</div>`:""}
   ${started?`<button class="btn big" data-act="finishJob" data-id="${j.id}" ${allDone?"":"disabled"}>${{photo:IC.cam+" Take your proof photo",video:IC.cam+" Film your proof",seen:"Show a grown-up",none:esc(th.done.replace(/!.*$/,"!"))}[j.proof||"none"]}</button>`:""}`};
 VIEWS.job.after=({id})=>{const j=S.jobs.find(x=>x.id===id);if(j&&j.run&&j.timer)runClock(j)};
 function fmt(sec){sec=Math.max(0,Math.round(sec));return Math.floor(sec/60)+":"+String(sec%60).padStart(2,"0")}
@@ -763,12 +877,15 @@ VIEWS.trophies=({kid:id})=>{const k=kid(id);setBodyTheme(k);const th=T(k);const 
   ${list.length?`<div class="tgrid">${list.map(t=>`<button class="tcard" data-act="trophy" data-kid="${k.id}" data-id="${t.id}">
     <span class="tmedia">${!t.media?`<span class="ticon">${TYPES[t.type]?TYPES[t.type].icon:"★"}</span>`:t.kind==="video"?`<video muted playsinline preload="metadata" data-media="${t.media}"></video><span class="tplay">${IC.play}</span>`:`<img data-media="${t.media}" alt="">`}</span>
     <span class="t">${esc(t.title)}</span><span class="muted" style="font-size:14px;font-weight:700">${new Date(t.at).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}${t.star?" · ★":""}</span></button>`).join("")}</div>`
-  :`<div class="panel empty">Finish something with photo or video proof and it appears here.</div>`}`};
+  :`<div class="panel empty">Finish something with photo or video proof and it appears here.</div>`}
+  ${(k.treats||[]).length?`<div class="section-title on-world"><h2 class="display">Rewards I've earned</h2><span class="count">${k.treats.length}</span></div>
+  <div class="tgrid">${k.treats.map(t=>`<div class="tcard"><span class="tmedia">${t.photo?`<img data-media="${t.photo}" alt="${esc(t.name)}">`:`<span class="ticon">${esc(t.icon)}</span>`}</span>
+    <span class="t">${esc(t.name)}</span><span class="muted" style="font-size:14px;font-weight:700">${new Date(t.at).toLocaleDateString("en-GB",{day:"numeric",month:"short"})} · ${t.cost} ${esc(th.cur.toLowerCase())}</span></div>`).join("")}</div>`:""}`};
 VIEWS.shop=({kid:id})=>{const k=kid(id);setBodyTheme(k);const th=T(k);
   const mine=S.requests.filter(r=>r.kid===k.id&&r.status==="asked");
   return `
   <div class="topbar"><button class="iconbtn" data-act="back" aria-label="Back">${IC.back}</button><h1 class="display grow on-world">${esc(th.shop)}</h1>
-    <span class="panel" style="padding:8px 14px;font-weight:900;font-size:20px">${k.credits} <span class="muted" style="font-size:14px">${esc(th.cur.toLowerCase())}</span></span></div>
+    <span class="panel" style="padding:6px 14px;font-weight:900;font-size:22px;display:flex;align-items:center">${coinSVG()}${k.credits}</span></div>
   ${stageHTML(k,say(k,"shop"))}
   ${mine.length?`<div class="panel stack"><b>On its way</b>${mine.map(r=>`<div class="spread"><span>${esc(r.icon)} ${esc(r.name)}</span><span class="chip wait">Ask a grown-up</span></div>`).join("")}</div>`:""}
   <div class="shopgrid">${S.rewards.map(r=>`<div class="reward">${r.photo?`<img class="rphoto" data-media="${r.photo}" alt="">`:`<span class="ico">${esc(r.icon)}</span>`}<span class="n">${esc(r.name)}</span>
@@ -795,6 +912,7 @@ const PARENT={
     return `<div class="stack">${jobs.map(j=>{const k=kid(j.kid);const th=T(k);const earned=j.credits+(j.beat?bonus(j):0);return `<div class="panel stack">
       <div class="spread"><b>${esc(k.name)}: ${esc(j.title||"Job")}</b>${j.beat?`<span class="chip prize">Beat the clock</span>`:""}</div>
       <div class="pair">${j.photo?`<figure style="margin:0"><img data-media="${j.photo}" alt="Before"><figcaption class="label">Before</figcaption></figure>`:""}${j.after&&j.afterKind!=="video"?`<figure style="margin:0"><img data-media="${j.after}" alt="Proof"><figcaption class="label">Proof</figcaption></figure>`:""}</div>
+      ${j.run&&(j.run.progress||[]).length?`<div class="stack" style="gap:6px"><span class="label">Progress</span><div class="pstrip">${j.run.progress.map(id=>`<img data-media="${id}" alt="Progress photo">`).join("")}</div></div>`:""}
       ${j.after&&j.afterKind==="video"?`<video class="media-box" controls playsinline data-media="${j.after}"></video>`:""}
       ${j.proof==="seen"?`<span class="chip">Did you see it happen?</span>`:""}
       <div class="row"><button class="btn good" data-act="approve" data-id="${j.id}">${isChallenge(j)?"Approve ★":`Approve +${earned} ${esc(th.cur)}`}</button><button class="btn bad" data-act="sendBack" data-id="${j.id}">Not done yet</button></div></div>`}).join("")}
@@ -949,12 +1067,13 @@ const ACT={
     const el=overlay(`<div class="stack"><div class="display" style="font-size:26px">${esc(t.title)}</div>
       ${!t.media?`<div class="ticon big">${TYPES[t.type]?TYPES[t.type].icon:"★"}</div>`:t.kind==="video"?`<video class="media-box" controls autoplay playsinline data-media="${t.media}"></video>`:`<img class="media-box" style="object-fit:contain" data-media="${t.media}" alt="">`}
       <span class="muted">${new Date(t.at).toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})} ${t.star?" · ★":" · +"+t.amt}</span>
+      ${albumHTML(t)}
       <div class="row">${canSave?`<button class="btn" id="tsave">Save to gallery</button>`:""}<button class="btn ghost" data-close>Close</button><button class="btn bad small" id="tdel">Remove</button></div></div>`);
     const sv=el.querySelector("#tsave");if(sv)sv.onclick=async()=>{const blob=await DB.get(t.media);if(!blob){toast("File not found");return}
       const fr=new FileReader();fr.onload=()=>{const b64=String(fr.result).split(",")[1];const ext=t.kind==="video"?(blob.type.includes("mp4")?"mp4":"webm"):"jpg";
         try{const ok=bridge().saveMedia(b64,blob.type||(t.kind==="video"?"video/webm":"image/jpeg"),("TidyQuest-"+k.name+"-"+t.title).replace(/[^\w-]+/g,"-").slice(0,60)+"."+ext);toast(ok?"Saved to the gallery":"Couldn't save. Allow storage access and try again.")}catch(e){toast("Couldn't save to the gallery")}};fr.readAsDataURL(blob)};
     el.querySelector("#tdel").onclick=()=>{overlayClose();pinPad("Grown-ups only","Enter your PIN to remove it",p=>{if(p!==S.pin)return false;overlayClose();
-      k.trophies=k.trophies.filter(x=>x!==t);delMedia(t.media);save();render();toast("Removed")})}},
+      k.trophies=k.trophies.filter(x=>x!==t);delMedia(t.media);albumDel(t.album);save();render();toast("Removed")})}},
   selfie(b){const k=kid(b.dataset.id);capture({mode:"photo",facing:"user",title:"Smile, "+k.name+"!"},id=>faceEditor(k,id))},
   noFace(b){const k=kid(b.dataset.id);delMedia(k.face);k.face=null;save();render()},
   job(b){go("job",{id:b.dataset.id})},
@@ -1001,25 +1120,36 @@ const ACT={
     else{const i=S.jobs.findIndex(x=>x.id===j.id);const old=S.jobs[i];old.steps.forEach(s=>{if(!j.steps.find(x=>x.id===s.id))delMedia(s.audio)});if(_old&&_old!==j.photo)delMedia(_old);S.jobs[i]=j}
     save();draft=null;toast("Job saved");back()},
   delJob(){confirmSheet("Delete this job?","Its photo and voice notes go too.",()=>{const j=S.jobs.find(x=>x.id===draft.id);if(j){delMedia(j.photo);delMedia(j.after);j.steps.forEach(s=>delMedia(s.audio));S.jobs=S.jobs.filter(x=>x!==j);save()}draft=null;back()})},
-  approve(b){const j=S.jobs.find(x=>x.id===b.dataset.id);const k=kid(j.kid);const before=rankOf(k.earned||0);
-    if(isChallenge(j)){logAchievement(k,{type:j.type,title:j.title,media:j.after,kind:j.afterKind});j.after=null;j.run=null;j.beat=false;
+  async approve(b){const j=S.jobs.find(x=>x.id===b.dataset.id);const k=kid(j.kid);const before=rankOf(k.earned||0);
+    const prog=(j.run&&j.run.progress)||[];const album=(prog.length||(j.photo&&j.after))?{before:j.photo?await copyMedia(j.photo):null,progress:prog.slice()}:null;
+    if(isChallenge(j)){logAchievement(k,{type:j.type,title:j.title,media:j.after,kind:j.afterKind,album});j.after=null;j.run=null;j.beat=false;
       if(j.repeat){j.status="todo";j.from=tomorrow()}else{delMedia(j.photo);j.steps.forEach(s=>delMedia(s.audio));S.jobs=S.jobs.filter(x=>x!==j)}
       save();toast(`★ for ${k.name}`);render();return}
     const amt=j.credits+(j.beat?bonus(j):0);
     k.credits+=amt;k.earned=(k.earned||0)+amt;if(rankOf(k.earned)>before)k.rankUp=true;
-    if(j.after){k.trophies=k.trophies||[];k.trophies.unshift({id:uid(),title:j.title||T(k).job,type:j.type||"tidy",media:j.after,kind:j.afterKind||"photo",at:Date.now(),amt});k.newTrophy=true}
+    if(j.after||album){k.trophies=k.trophies||[];k.trophies.unshift({id:uid(),title:j.title||T(k).job,type:j.type||"tidy",media:j.after||null,kind:j.after?(j.afterKind||"photo"):null,at:Date.now(),amt,album});k.newTrophy=true}
+    else if(album)albumDel(album);
     j.after=null;j.run=null;j.beat=false;
     if(j.repeat){j.status="todo";j.from=tomorrow()}else{delMedia(j.photo);j.steps.forEach(s=>delMedia(s.audio));S.jobs=S.jobs.filter(x=>x!==j)}
     save();toast(`${k.name} got +${amt}`);render()},
-  sendBack(b){const j=S.jobs.find(x=>x.id===b.dataset.id);delMedia(j.after);j.after=null;j.run=null;j.beat=false;j.status="todo";save();toast("Sent back to have another go");render()},
-  given(b){const r=S.requests.find(x=>x.id===b.dataset.id);r.status="given";S.requests=S.requests.filter(x=>x.status==="asked");save();render()},
+  progressShot(b){const j=S.jobs.find(x=>x.id===b.dataset.id);const k=kid(j.kid);
+    capture({mode:"photo",title:"Progress shot"},id=>{j.run.progress=(j.run.progress||[]).concat(id);save();sfxTick(k);speak(say(k,"step"));const y=scrollY;render().then(()=>scrollTo(0,y))})},
+  sendBack(b){const j=S.jobs.find(x=>x.id===b.dataset.id);((j.run&&j.run.progress)||[]).forEach(delMedia);delMedia(j.after);j.after=null;j.run=null;j.beat=false;j.status="todo";save();toast("Sent back to have another go");render()},
+  given(b){const r=S.requests.find(x=>x.id===b.dataset.id);const k=kid(r.kid);
+    const finish=photo=>{if(k){k.treats=k.treats||[];k.treats.unshift({id:uid(),name:r.name,icon:r.icon,cost:r.cost,at:Date.now(),photo:photo||null});k.newTreat=true}
+      S.requests=S.requests.filter(x=>x!==r);save();overlayClose();render();toast("Enjoy!")};
+    const el=overlay(`<div class="stack" style="text-align:center;align-items:center"><span style="font-size:56px">${esc(r.icon)}</span><h2 class="display">${esc(k?k.name:"")} gets ${esc(r.name)}</h2>
+      <p class="muted" style="margin:0">Take a photo of them with it? It goes in their collection of rewards they've earned.</p>
+      <div class="row"><button class="btn" id="gphoto">${IC.cam} Take a photo</button><button class="btn ghost" id="gskip">Skip</button></div></div>`);
+    el.querySelector("#gskip").onclick=()=>finish(null);
+    el.querySelector("#gphoto").onclick=()=>capture({mode:"photo",title:"Enjoying "+r.name},id=>finish(id))},
   refund(b){const r=S.requests.find(x=>x.id===b.dataset.id);const k=kid(r.kid);if(k)k.credits+=r.cost;S.requests=S.requests.filter(x=>x!==r);save();toast("Credits returned");render()},
   addReward(){S.rewards.push({id:uid(),icon:"⭐",name:"New reward",cost:5});save();render()},
   delReward(b){const r=S.rewards.find(x=>x.id===b.dataset.id);if(r)delMedia(r.photo);S.rewards=S.rewards.filter(x=>x!==r);save();render()},
   rPhoto(b){const r=S.rewards.find(x=>x.id===b.dataset.id);capture({mode:"photo",title:"Photo of: "+r.name},id=>{if(r.photo)delMedia(r.photo);r.photo=id;save();render()})},
   addKid(){const n=$("#newkid").value.trim();if(!n)return;const k={id:uid(),name:n,theme:"karate",credits:0,earned:0};S.kids.push(k);save();go("style",{kid:k.id,back:"parent"})},
   kidStyle(b){go("style",{kid:b.dataset.id,back:"parent"})},
-  delKid(b){const k=kid(b.dataset.id);confirmSheet(`Remove ${k.name}?`,"This deletes their picture, jobs, credits, stars and every trophy video. It can't be undone.",()=>{S.jobs.filter(j=>j.kid===k.id).forEach(j=>{delMedia(j.photo);delMedia(j.after);j.steps.forEach(s=>delMedia(s.audio))});(k.trophies||[]).forEach(t=>delMedia(t.media));delMedia(k.face);
+  delKid(b){const k=kid(b.dataset.id);confirmSheet(`Remove ${k.name}?`,"This deletes their picture, jobs, credits, stars and every trophy video. It can't be undone.",()=>{S.jobs.filter(j=>j.kid===k.id).forEach(j=>{delMedia(j.photo);delMedia(j.after);j.steps.forEach(s=>delMedia(s.audio))});(k.trophies||[]).forEach(t=>{delMedia(t.media);albumDel(t.album)});(k.treats||[]).forEach(t=>delMedia(t.photo));delMedia(k.face);
     S.jobs=S.jobs.filter(j=>j.kid!==k.id);S.requests=S.requests.filter(r=>r.kid!==k.id);S.kids=S.kids.filter(x=>x!==k);save();render()})},
   adj(b){const k=kid(b.dataset.id);const d=+b.dataset.d;k.credits=Math.max(0,k.credits+d);if(d>0)k.earned=(k.earned||0)+d;else k.earned=Math.max(0,(k.earned||0)+d);save();render()},
   changePin(){pinPad("New PIN","Choose 4 digits",p=>{S.pin=p;save();overlayClose();toast("PIN changed")})},
@@ -1032,8 +1162,13 @@ function goalCard(k,th){const g=k.goal;if(!g)return"";const n=Math.min(g.count||
     ${g.photo?`<img class="tthumb" style="width:64px;height:64px" data-media="${g.photo}" alt="">`:""}</div>
     <div class="stars" aria-label="${n} of ${g.target} stars">${Array.from({length:g.target},(_,i)=>`<i class="${i<n?"on":""}">★</i>`).join("")}</div>
     <div class="spread"><span class="muted">${g.done?"Goal reached!":`${g.target-n} more brave, active, kind or learning things to go`}</span><b>${n}/${g.target}</b></div></div>`}
-function logAchievement(k,{type,title,media,kind}){k.trophies=k.trophies||[];
-  k.trophies.unshift({id:uid(),title:title||TYPES[type].label,type,media:media||null,kind:media?kind:null,at:Date.now(),amt:0,star:true});k.newTrophy=true;addStar(k)}
+async function copyMedia(id){const b=await DB.get(id);return b?await putMedia(b):null}
+function albumDel(a){if(!a)return;delMedia(a.before);(a.progress||[]).forEach(delMedia)}
+function albumHTML(t){const a=t.album;if(!a)return"";const items=[];if(a.before)items.push([a.before,"Before"]);(a.progress||[]).forEach((id,i)=>items.push([id,"Progress "+(i+1)]));
+  if(t.media&&t.kind!=="video")items.push([t.media,"After"]);if(items.length<2)return"";
+  return `<div class="stack" style="gap:6px"><b>The story</b><div class="pstrip story">${items.map(([id,l])=>`<figure><img data-media="${id}" alt="${l}"><figcaption>${l}</figcaption></figure>`).join("")}</div></div>`}
+function logAchievement(k,{type,title,media,kind,album}){k.trophies=k.trophies||[];
+  k.trophies.unshift({id:uid(),title:title||TYPES[type].label,type,media:media||null,kind:media?kind:null,at:Date.now(),amt:0,star:true,album:album||null});k.newTrophy=true;addStar(k)}
 function quickLog(preKid,state){const st=state||{kid:preKid||(S.kids[0]&&S.kids[0].id),type:"brave",title:"",media:null,kind:null};
   overlay("");const el=overlayEl;
   const draw=()=>{el.querySelector(".sheet").innerHTML=`<div class="stack">
@@ -1054,19 +1189,27 @@ function quickLog(preKid,state){const st=state||{kid:preKid||(S.kids[0]&&S.kids[
     else if(q==="photo"||q==="video"){capture({mode:q,title:"Proof"},(id,kind)=>{st.media=id;st.kind=kind;quickLog(null,st)})}
     else if(q==="save"){const k=kid(st.kid);if(!k)return;st.title=(el.querySelector("#qtitle").value||"").trim();
       logAchievement(k,st);save();overlayClose();render();toast(`★ for ${k.name}${k.goal?` · ${Math.min(k.goal.count,k.goal.target)}/${k.goal.target}`:""}`)}})}
-function goalEditor(k,draftGoal){const g=draftGoal||(k.goal&&!k.goal.done?{...k.goal}:{name:"",target:20,count:0,photo:null});
+function goalEditor(k,draftGoal){const g=draftGoal||(k.goal&&!k.goal.done?{...k.goal,backers:(k.goal.backers||[]).slice()}:{name:"",target:20,count:0,photo:null,backers:[]});g.backers=g.backers||[];
   const el=overlay(`<div class="stack"><h2 class="display">Big goal for ${esc(k.name)}</h2>
     <p class="muted" style="margin:0">Brave, active, kind and learning things each add a star. Chores still earn credits for the shop.</p>
     <label class="label" for="gname">The big reward</label><input id="gname" maxlength="40" value="${esc(g.name)}" placeholder="e.g. Water park on holiday">
     <div class="spread"><span>Stars needed</span><span class="row"><button class="btn ghost small" data-g="-5">−5</button><b id="gt" style="font-size:28px;min-width:2ch;text-align:center">${g.target}</b><button class="btn ghost small" data-g="5">+5</button></span></div>
+    <div class="stack" style="gap:8px;border-top:1px solid var(--line);padding-top:12px"><b>Backers</b><span class="muted" style="margin-top:-6px">Family helping with the big reward, like an uncle adding to the holiday fund.</span>
+      ${g.backers.map((x,i)=>`<div class="spread"><span><b>${esc(x.name)}</b>${x.gift?` · ${esc(x.gift)}`:""}${x.msg?`<br><span class="muted">“${esc(x.msg)}”</span>`:""}</span><button class="btn bad small" data-rmb="${i}">Remove</button></div>`).join("")}
+      <div class="row" style="gap:8px"><input id="bname" placeholder="Who, e.g. Uncle Steve" maxlength="30" style="flex:1;min-width:140px"><input id="bgift" placeholder="Giving, e.g. £10" maxlength="30" style="flex:1;min-width:120px"></div>
+      <input id="bmsg" placeholder="Message for ${esc(k.name)} (optional)" maxlength="80">
+      <button class="btn ghost small" id="badd" style="align-self:flex-start">Add backer</button></div>
     <div class="row">${g.photo?`<img class="tthumb" data-media="${g.photo}" alt="">`:""}<button class="btn ghost small" id="gphoto">${IC.cam} ${g.photo?"Change photo":"Add a photo"}</button><span class="muted">optional</span></div>
     <div class="row"><button class="btn" id="gsave">Save goal</button><button class="btn ghost" data-close>Cancel</button></div></div>`);
-  const nameIn=el.querySelector("#gname");
+  const nameIn=el.querySelector("#gname");const keepName=()=>{g.name=nameIn.value.trim()};
+  el.querySelector("#badd").onclick=()=>{const n=el.querySelector("#bname").value.trim();if(!n){toast("Add who's backing it");return}keepName();
+    g.backers.push({id:uid(),name:n,gift:el.querySelector("#bgift").value.trim(),msg:el.querySelector("#bmsg").value.trim()});goalEditor(k,g)};
+  el.querySelectorAll("[data-rmb]").forEach(b=>b.onclick=()=>{keepName();g.backers.splice(+b.dataset.rmb,1);goalEditor(k,g)});
   el.querySelectorAll("[data-g]").forEach(b=>b.onclick=()=>{g.target=Math.max(5,Math.min(100,g.target+ +b.dataset.g));el.querySelector("#gt").textContent=g.target});
   el.querySelector("#gphoto").onclick=()=>{g.name=nameIn.value.trim();capture({mode:"photo",title:"Photo of the big reward"},id=>{if(g.photo&&(!k.goal||g.photo!==k.goal.photo))delMedia(g.photo);g.photo=id;goalEditor(k,g)})};
   el.querySelector("#gsave").onclick=()=>{g.name=nameIn.value.trim();if(!g.name){toast("Name the big reward");return}
     if(k.goal&&k.goal.photo&&k.goal.photo!==g.photo)delMedia(k.goal.photo);
-    k.goal={name:g.name,target:g.target,count:Math.min(g.count||0,g.target),photo:g.photo||null,done:false};save();overlayClose();render();toast("Goal saved")}}
+    k.goal={name:g.name,target:g.target,count:Math.min(g.count||0,g.target),photo:g.photo||null,done:false,backers:g.backers};save();overlayClose();render();toast("Goal saved")}}
 
 /* ---------- Shop sharing ---------- */
 const SHOP_TAG="TQSHOP1:";
@@ -1103,10 +1246,11 @@ const blobToB64=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=
 function b64ToBlob(b64,type){const bin=atob(b64);const a=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return new Blob([a],{type})}
 async function packMedia(id){if(!id)return null;const b=await DB.get(id);if(!b)return null;return {type:b.type||"application/octet-stream",data:await blobToB64(b)}}
 async function buildKidFile(k){const trophies=[];
-  for(const t of (k.trophies||[]))trophies.push({...t,media:await packMedia(t.media)});
+  for(const t of (k.trophies||[]))trophies.push({...t,media:await packMedia(t.media),album:t.album?{before:await packMedia(t.album.before),progress:await Promise.all((t.album.progress||[]).map(packMedia))}:null});
+  const treats=[];for(const t of (k.treats||[]))treats.push({...t,photo:await packMedia(t.photo)});
   const g=k.goal?{...k.goal,photo:await packMedia(k.goal.photo)}:null;
   return JSON.stringify({tq:"kid",v:1,id:"x"+uid(),from:S.device,at:Date.now(),
-    kid:{id:k.id,name:k.name,theme:k.theme,earned:k.earned||0,credits:k.credits||0},face:await packMedia(k.face),goal:g,trophies})}
+    kid:{id:k.id,name:k.name,theme:k.theme,earned:k.earned||0,credits:k.credits||0},face:await packMedia(k.face),goal:g,trophies,treats})}
 async function shareFile(name,text){const b=bridge();
   if(b&&b.fileBegin){if(!b.fileBegin(name))return false;const CH=256*1024;
     for(let i=0;i<text.length;i+=CH){if(!b.fileAppend(text.slice(i,i+CH)))return false}
@@ -1123,10 +1267,14 @@ async function importKidFile(text){let d;try{d=JSON.parse(text)}catch(e){return 
   k.theme=x.theme||k.theme;k.earned=Math.max(k.earned||0,x.earned||0);k.credits=(k.credits||0)+(x.credits||0);
   if(d.face){if(k.face)delMedia(k.face);k.face=await put(d.face)}
   if(d.goal){const g=d.goal;if(k.goal&&k.goal.name===g.name){k.goal.count=Math.min(k.goal.target,(k.goal.count||0)+(g.count||0))}
-    else{if(k.goal&&k.goal.photo)delMedia(k.goal.photo);k.goal={name:g.name,target:g.target,count:g.count||0,done:!!g.done,photo:null}}
+    else{if(k.goal&&k.goal.photo)delMedia(k.goal.photo);k.goal={name:g.name,target:g.target,count:g.count||0,done:!!g.done,photo:null,backers:[]}}
+    {const ids=new Set((k.goal.backers||[]).map(b=>b.id));k.goal.backers=(k.goal.backers||[]).concat((g.backers||[]).filter(b=>!ids.has(b.id)))}
     if(g.photo&&!k.goal.photo)k.goal.photo=await put(g.photo);if(k.goal.count>=k.goal.target&&!k.goal.done){k.goal.done=true;k.goalHit=true}}
   k.trophies=k.trophies||[];const have=new Set(k.trophies.map(t=>t.id));let added=0;
-  for(const t of (d.trophies||[])){if(have.has(t.id))continue;k.trophies.push({...t,media:await put(t.media)});added++}
+  for(const t of (d.trophies||[])){if(have.has(t.id))continue;const al=t.album?{before:await put(t.album.before),progress:(await Promise.all((t.album.progress||[]).map(put))).filter(Boolean)}:null;
+    k.trophies.push({...t,media:await put(t.media),album:al});added++}
+  k.treats=k.treats||[];const haveT=new Set(k.treats.map(t=>t.id));for(const t of (d.treats||[])){if(haveT.has(t.id))continue;k.treats.push({...t,photo:await put(t.photo)})}
+  k.treats.sort((a,b)=>(b.at||0)-(a.at||0));
   k.trophies.sort((a,b)=>(b.at||0)-(a.at||0));
   S.usedIn.push(d.id);save();render();
   overlay(`<div class="stack" style="text-align:center;align-items:center">${avatarSVG(k,null,"avatar big")||mentorSVG(k.theme)}<h2 class="display">${esc(k.name)} ${isNew?"has arrived":"is up to date"}</h2>
