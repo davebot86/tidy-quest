@@ -218,6 +218,9 @@ body[data-theme="karate"] .stamp{border-radius:6px}
 .reward{background:var(--panel);color:var(--ink);border:var(--card-border);border-radius:var(--card-radius);box-shadow:var(--card-shadow);padding:12px;display:flex;flex-direction:column;gap:10px;text-align:left}
 .reward .ico{font-size:46px;line-height:1;height:96px;display:grid;place-items:center;background:rgba(127,127,127,.1);border-radius:calc(var(--card-radius) - 2px)}
 .reward .n{font-weight:900;line-height:1.25;flex:1}
+.reward .howlong{font-size:13px;font-weight:800;color:var(--muted);background:none;border:0;padding:0;text-align:left;text-decoration:underline;cursor:pointer}.reward.saving{outline:3px solid var(--accent2);outline-offset:2px}
+.plan{width:100%;border-collapse:collapse;font-size:17px}.plan td{padding:7px 10px;border-bottom:2px solid rgba(127,127,127,.18)}.plan td:last-child{text-align:right;font-weight:900}.plan tr.hit td{color:var(--accent2);font-weight:900}
+.freeideas{display:flex;flex-wrap:wrap;gap:8px}
 .reward .rphoto{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:calc(var(--card-radius) - 2px);max-width:100%}
 
 /* Style picker */
@@ -491,6 +494,9 @@ const TYPES={
 };
 const isChallenge=j=>!!(j&&j.type&&j.type!=="tidy");
 const PROOF={photo:"Photo",video:"Video",seen:"A grown-up saw it",none:"No proof"};
+/* Treats that cost nothing: time and privileges are worth as much to a child as things are */
+const FREE_IDEAS=[["🍝","Choose what's for tea",8],["🎲","Board game with a grown-up",10],["📖","An extra bedtime story",5],["🏕️","Build a den in the living room",15],
+  ["🎮","Boss of the TV remote for an hour",10],["🧁","Bake something together",15],["🚲","Bike ride or scooter trip",12],["🧑‍🤝‍🧑","Have a friend over",20],["🎵","Pick the music in the car",5],["🌟","Be the boss of the weekend plan",25]];
 const DEFAULT_REWARDS=[
   {icon:"🍮",name:"Pudding after tea",cost:5},
   {icon:"📺",name:"20 minutes extra screen time",cost:8},
@@ -890,7 +896,8 @@ VIEWS.hq=({kid:id})=>{const k=kid(id);if(!k){home();return""}setBodyTheme(k);con
   ${(()=>{const w=weekOf(k);if(!w.wins&&!w.stars&&!w.treats)return "";return `<div class="weekstrip on-world"><span class="wl">This week</span>${w.wins?`<span>✅ ${w.wins} win${w.wins===1?"":"s"}</span>`:""}${w.stars?`<span>★ ${w.stars} star${w.stars===1?"":"s"}</span>`:""}${w.treats?`<span>🛍️ ${w.treats} treat${w.treats===1?"":"s"}</span>`:""}</div>`})()}
   <div class="tiles">
     <button class="panel tile" data-act="shop" data-id="${k.id}"><span class="what">${esc(th.cur)}</span><span class="num">${coinSVG()}<span data-count="${k.credits}">${k.credits}</span></span>
-      ${(()=>{const n=nextTreat(k);if(!n)return "";const pct=Math.min(100,Math.round(k.credits/n.r.cost*100));return `<span class="nudge"><span class="nl">${n.have?`You can get <b>${esc(n.r.name)}</b>! ${esc(n.r.icon||"")}`:`<b>${n.need}</b> more for ${esc(n.r.name)} ${esc(n.r.icon||"")}`}</span><span class="nbar"><i style="width:${pct}%"></i></span></span>`})()}
+      ${(()=>{const sv=savingFor(k);if(sv){const pl=savePlan(k,sv),pct=Math.min(100,Math.round(k.credits/sv.cost*100));return `<span class="nudge"><span class="nl">${pl.need?`Saving for <b>${esc(sv.name)}</b> ${esc(sv.icon||"")}: <b>${pl.need}</b> more, ready ${pl.days===1?"<b>tomorrow</b>":`by <b>${esc(pl.whenText)}</b>`}`:`You've saved enough for <b>${esc(sv.name)}</b>! ${esc(sv.icon||"")}`}</span><span class="nbar"><i style="width:${pct}%"></i></span></span>`}
+        const n=nextTreat(k);if(!n)return "";const pct=Math.min(100,Math.round(k.credits/n.r.cost*100));return `<span class="nudge"><span class="nl">${n.have?`You can get <b>${esc(n.r.name)}</b>! ${esc(n.r.icon||"")}`:`<b>${n.need}</b> more for ${esc(n.r.name)} ${esc(n.r.icon||"")}`}</span><span class="nbar"><i style="width:${pct}%"></i></span></span>`})()}
       <span class="go">${esc(th.shop)} →</span></button>
     ${g?`<div class="panel tile"><span class="what">Big goal · ${gn}/${g.target}</span><b style="font-size:19px;line-height:1.2">${esc(g.name)}</b>
       <div class="stars" aria-label="${gn} of ${g.target} stars">${Array.from({length:g.target},(_,i)=>`<i class="${i<gn?"on":""}">★</i>`).join("")}</div>
@@ -997,8 +1004,9 @@ VIEWS.shop=({kid:id})=>{const k=kid(id);setBodyTheme(k);const th=T(k);
   ${(()=>{const w=S.wishes.filter(x=>x.kid===k.id);return `<button class="panel wishbtn" data-act="addWish" data-id="${k.id}"><span class="wplus">+</span><span><b style="font-size:19px">Add a wish</b><br><span class="muted" style="font-weight:700">Something you'd like in the ${esc(th.shop)}? Snap it and ask.</span></span></button>
   ${w.length?`<div class="panel stack"><b>Your wishes</b>${w.map(x=>`<div class="spread"><span class="row" style="gap:10px">${x.photo?`<img class="tthumb" data-media="${x.photo}" alt="">`:`<span style="font-size:30px">${esc(x.icon)}</span>`}<b>${esc(x.name||"My wish")}</b></span><span class="chip wait">Waiting for a grown-up</span></div>`).join("")}</div>`:""}`})()}
   ${mine.length?`<div class="panel stack"><b>On its way</b>${mine.map(r=>`<div class="spread"><span>${esc(r.icon)} ${esc(r.name)}</span><span class="chip wait">Ask a grown-up</span></div>`).join("")}</div>`:""}
-  <div class="shopgrid">${S.rewards.map(r=>`<div class="reward">${r.photo?`<img class="rphoto" data-media="${r.photo}" alt="">`:`<span class="ico">${esc(r.icon)}</span>`}<span class="n">${esc(r.name)}${r.by===k.id?`<br><span class="chip">Your idea</span>`:""}</span>
-    <button class="btn small" data-act="buy" data-kid="${k.id}" data-id="${r.id}" ${k.credits<r.cost?"disabled":""}>${r.cost} ${esc(th.cur.toLowerCase())}</button></div>`).join("")}</div>`};
+  <div class="shopgrid">${S.rewards.map(r=>{const sv=savingFor(k)===r,pl=savePlan(k,r);return `<div class="reward ${sv?"saving":""}">${r.photo?`<img class="rphoto" data-media="${r.photo}" alt="">`:`<span class="ico">${esc(r.icon)}</span>`}<span class="n">${esc(r.name)}${r.by===k.id?`<br><span class="chip">Your idea</span>`:""}${sv?`<br><span class="chip">Saving for this</span>`:""}</span>
+    ${pl.need?`<button class="howlong" data-act="planFor" data-kid="${k.id}" data-id="${r.id}">${pl.days===1?"Ready tomorrow":`About ${pl.days} days`}. How?</button>`:""}
+    <button class="btn small" data-act="buy" data-kid="${k.id}" data-id="${r.id}" ${k.credits<r.cost?"disabled":""}>${r.cost} ${esc(th.cur.toLowerCase())}</button></div>`}).join("")}</div>`};
 
 /* ---------- Parent area ---------- */
 const PTABS=[["jobs","Jobs"],["check","To check"],["rewards","Rewards"],["kids","Children"],["link","Link & sync"],["settings","Settings"]];
@@ -1041,10 +1049,13 @@ const PARENT={
       ${reqs.map(r=>{const k=kid(r.kid);return `<div class="panel spread"><span><b>${esc(k?k.name:"?")}</b> bought ${esc(r.icon)} ${esc(r.name)}</span>
       <span class="row"><button class="btn good small" data-act="given" data-id="${r.id}">Given</button><button class="btn bad small" data-act="refund" data-id="${r.id}">Refund</button></span></div>`}).join("")}</div>`},
   rewards(){return `<p class="muted" style="margin:0">Family credits can buy anything you decide: treats, time, privileges or pocket money.</p>
+    <div class="panel stack"><b>Treats that cost nothing</b><p class="muted" style="margin:0">Time with you and small privileges work as well as things, and don't cost a penny. Keep bought things for when they've saved up. If something does cost money, put its price in the £ box: they'll see how much work it's worth.</p>
+      <div class="freeideas">${FREE_IDEAS.map((f,i)=>S.rewards.some(r=>r.name===f[1])?"":`<button class="btn ghost small" data-act="addFree" data-i="${i}">+ ${esc(f[0])} ${esc(f[1])}</button>`).join("")||`<span class="muted">All added.</span>`}</div></div>
     <div class="stack">${S.rewards.map(r=>`<div class="panel row" style="gap:8px">
       <input aria-label="Icon" value="${esc(r.icon)}" data-rw="icon" data-id="${r.id}" style="width:64px;text-align:center;font-size:24px" maxlength="4">
       <input aria-label="Reward" value="${esc(r.name)}" data-rw="name" data-id="${r.id}" style="flex:1;min-width:150px">
       <input aria-label="Cost" type="number" min="1" max="999" value="${r.cost}" data-rw="cost" data-id="${r.id}" style="width:90px">
+      <input aria-label="Shop price in pounds, if it costs money" placeholder="£ price" inputmode="decimal" value="${r.price?"£"+esc(String(r.price)):""}" data-rw="price" data-id="${r.id}" style="width:104px">
       <button class="iconbtn" data-act="rPhoto" data-id="${r.id}" aria-label="Reward photo" style="overflow:hidden;padding:0">${r.photo?`<img data-media="${r.photo}" alt="" style="width:100%;height:100%;object-fit:cover">`:IC.cam}</button>
       <button class="iconbtn" data-act="delReward" data-id="${r.id}" aria-label="Remove reward">${IC.trash}</button></div>`).join("")}</div>
     <p class="muted" style="margin:0">Tap the camera next to a reward to add a photo of the real thing. Photos stay on this tablet; sharing the shop sends the names, icons and prices.</p>
@@ -1236,10 +1247,23 @@ const ACT={
     if(j.proof==="photo")capture({mode:"photo",title:"Photo proof: show what you did!"},(id,kind)=>done(id,kind));
     else if(j.proof==="video")capture({mode:"video",title:"Video proof: film it!"},(id,kind)=>done(id,kind));
     else done()},
+  planFor(b){const k=kid(b.dataset.kid),r=S.rewards.find(x=>x.id===b.dataset.id);if(!k||!r)return;const th=T(k),cur=th.cur.toLowerCase(),pl=savePlan(k,r),p=pl.pace.n;
+    const rows=[];const d=new Date();for(let i=1;i<=pl.days;i++){const day=new Date(+d+i*86400000);rows.push([i===1?"Tomorrow":day.toLocaleDateString("en-GB",{weekday:"short",day:"numeric"}),Math.min(r.cost,k.credits+p*i)])}
+    const show=rows.length<=8?rows:[...rows.slice(0,6),["…",""],rows[rows.length-1]];const sv=savingFor(k)===r;
+    const how=pl.pace.from==="pace"?`You've been earning about <b>${p}</b> a day.`:pl.pace.from==="daily"?`Your daily jobs earn <b>${p}</b> a day.`:`If you earn about <b>${p}</b> a day:`;
+    const el=overlay(`<div class="stack">${r.photo?`<img class="rphoto" data-media="${r.photo}" alt="" style="max-height:160px;object-fit:cover;border-radius:14px">`:`<span style="font-size:56px;text-align:center">${esc(r.icon)}</span>`}
+      <h2 class="display" style="margin:0">${esc(r.name)}</h2>
+      <p style="margin:0">You have <b>${k.credits}</b>. You need <b>${pl.need}</b> more ${esc(cur)}. ${how}</p>
+      <table class="plan"><tr><td>Today</td><td>${k.credits}</td></tr>${show.map(([a,n])=>`<tr class="${n===r.cost?"hit":""}"><td>${esc(a)}</td><td>${n}${n===r.cost?" ✓":""}</td></tr>`).join("")}</table>
+      <p style="margin:0;font-weight:800">Ready ${pl.days===1?"tomorrow":"by "+esc(pl.whenText)}. That's about ${pl.jobs} job${pl.jobs===1?"":"s"}.</p>
+      ${r.price?`<p class="muted" style="margin:0">It costs <b>£${esc(String(r.price))}</b> in a real shop. A grown-up works to pay for it, and so do you.</p>`:""}
+      <div class="row"><button class="btn" id="svgo">${sv?"Stop saving for this":"Save up for this"}</button><button class="btn ghost" data-close>Close</button></div></div>`);
+    el.querySelector("#svgo").onclick=()=>{k.saving={name:sv?null:r.name,at:Date.now()};save();overlayClose();render();if(!sv){sfxTick(k);speak(`Saving for ${r.name}. Ready ${pl.days===1?"tomorrow":"by "+pl.whenText}.`)}}},
+  addFree(b){const it=FREE_IDEAS[+b.dataset.i];if(!it||S.rewards.some(r=>r.name===it[1]))return;S.rewards.push({id:uid(),icon:it[0],name:it[1],cost:it[2],at:Date.now()});S.shopAt=Date.now();save();render();toast("Added to the shop")},
   buy(b){const k=kid(b.dataset.kid);const r=S.rewards.find(x=>x.id===b.dataset.id);const th=T(k);if(k.credits<r.cost)return;
     overlay(`<div class="stack" style="text-align:center;align-items:center">${r.photo?`<img class="rphoto" data-media="${r.photo}" alt="" style="max-width:280px">`:`<span style="font-size:64px">${esc(r.icon)}</span>`}<h2 class="display">${esc(r.name)}</h2><p>Spend ${r.cost} ${esc(th.cur.toLowerCase())}?</p>
       <div class="row"><button class="btn" id="yesbuy">Yes please</button><button class="btn ghost" data-close>Not yet</button></div></div>`).querySelector("#yesbuy").onclick=()=>{
-      const rid=uid();post(k,{d:-r.cost,why:"buy "+r.name});S.requests.push({id:rid,kid:k.id,name:r.name,icon:r.icon,cost:r.cost,status:"asked",at:Date.now()});save();overlayClose();sfxFanfare(k);confetti(k);render();
+      const rid=uid();post(k,{d:-r.cost,why:"buy "+r.name});if(k.saving&&k.saving.name===r.name)k.saving={name:null,at:Date.now()};S.requests.push({id:rid,kid:k.id,name:r.name,icon:r.icon,cost:r.cost,status:"asked",at:Date.now()});save();overlayClose();sfxFanfare(k);confetti(k);render();
       if(together())setTimeout(()=>grownUpOK("Grown-up: hand it over?",`${k.name} bought ${r.name}. Enter your PIN.`,()=>ACT.given({dataset:{id:rid}})),700);else toast("Ask a grown-up for your "+r.name)}},
   parent(){pinPad("Grown-ups only","Enter your PIN",p=>{if(p!==S.pin)return false;overlayClose();go("parent",{tab:pendingCount()?"check":"jobs"})})},
   exitParent(){home()},
@@ -1332,6 +1356,18 @@ function fixTrophies(k){k.trophies=k.trophies||[];k.tGone=k.tGone||[];const gone
   k.trophies.sort((a,b)=>(b.at||0)-(a.at||0))}
 /* what happened in the last 7 days, and the treat within reach */
 function weekOf(k){const since=Date.now()-7*86400000;let wins=0,stars=0,treats=0;for(const e of (k.ledger||[])){if((e.t||0)<since)continue;const w=String(e.why||"");if(w.startsWith("job "))wins++;if(w.startsWith("star "))stars+=e.s||0;if(w.startsWith("buy "))treats++}return {wins,stars,treats}}
+/* Saving up: how long something takes at the child's own pace, so they can see what things are worth.
+   Pace = points earned over the last fortnight (not counting the starting balance), or their daily jobs if they're new, or 5 a day. */
+function pace(k){const day=86400000,now=Date.now(),since=now-14*day;let pts=0,first=now;
+  for(const e of (k.ledger||[])){if((e.t||0)<since||String(e.why||"")==="start"||(e.d||0)<=0)continue;pts+=e.d;first=Math.min(first,e.t||now)}
+  if(pts>0){const days=Math.min(14,Math.max(3,Math.ceil((now-first)/day)));return {n:Math.max(1,Math.round(pts/days)),from:"pace"}}
+  const daily=S.jobs.filter(j=>j.kid===k.id&&j.repeat).reduce((a,j)=>a+(j.credits||0),0);if(daily>0)return {n:daily,from:"daily"};return {n:5,from:"guess"}}
+function perJob(k){const xs=[];for(const e of (k.ledger||[]))if(String(e.why||"").startsWith("job ")&&(e.d||0)>0)xs.push(e.d);
+  if(!xs.length)for(const j of S.jobs)if(j.kid===k.id&&j.credits)xs.push(j.credits);return xs.length?Math.max(1,Math.round(xs.reduce((a,b)=>a+b,0)/xs.length)):5}
+function savePlan(k,r){const need=Math.max(0,r.cost-(k.credits||0)),p=pace(k),days=need?Math.ceil(need/p.n):0,d=new Date();d.setHours(12,0,0,0);
+  const when=new Date(+d+days*86400000),wd=x=>x.toLocaleDateString("en-GB",{weekday:"long"}),dm=x=>x.toLocaleDateString("en-GB",{day:"numeric",month:"long"});
+  return {need,pace:p,days,when,whenText:days===0?"now":days===1?"tomorrow":days<7?wd(when):wd(when)+" "+dm(when),jobs:need?Math.ceil(need/perJob(k)):0}}
+function savingFor(k){const n=k.saving&&k.saving.name;return n?S.rewards.find(r=>r.name===n)||null:null}
 function nextTreat(k){const rs=S.rewards.filter(r=>r.cost>0);if(!rs.length)return null;const can=rs.filter(r=>r.cost<=k.credits).sort((a,b)=>b.cost-a.cost)[0];
   if(can)return {r:can,have:true};const nx=rs.filter(r=>r.cost>k.credits).sort((a,b)=>a.cost-b.cost)[0];return nx?{r:nx,have:false,need:nx.cost-k.credits}:null}
 /* ---------- Monthly poster: one A4 picture of the month, in the child's world, to save and pin on the wall ---------- */
@@ -1578,10 +1614,10 @@ function wishSheet(k,state){const st=state||{icon:"🍫",name:"",photo:null};con
 
 /* ---------- Shop sharing ---------- */
 const SHOP_TAG="TQSHOP1:";
-function encodeShop(){const list=S.rewards.map(r=>({i:r.icon,n:r.name,c:r.cost}));return SHOP_TAG+btoa(unescape(encodeURIComponent(JSON.stringify(list))))}
+function encodeShop(){const list=S.rewards.map(r=>({i:r.icon,n:r.name,c:r.cost,...(r.price?{p:r.price}:{})}));return SHOP_TAG+btoa(unescape(encodeURIComponent(JSON.stringify(list))))}
 function decodeShop(text){const m=String(text).replace(/\s+/g,"").match(/TQSHOP1:([A-Za-z0-9+/=]+)/);if(!m)return null;
   try{const list=JSON.parse(decodeURIComponent(escape(atob(m[1]))));if(!Array.isArray(list))return null;
-    return list.filter(x=>x&&x.n).slice(0,60).map(x=>({id:uid(),icon:String(x.i||"⭐").slice(0,4),name:String(x.n).slice(0,60),cost:Math.max(1,Math.min(999,parseInt(x.c)||1))}))}catch(e){return null}}
+    return list.filter(x=>x&&x.n).slice(0,60).map(x=>({id:uid(),icon:String(x.i||"⭐").slice(0,4),name:String(x.n).slice(0,60),cost:Math.max(1,Math.min(999,parseInt(x.c)||1)),...(parseFloat(x.p)>0?{price:Math.round(parseFloat(x.p)*100)/100}:{})}))}catch(e){return null}}
 function shareMessage(){return "Tidy Quest reward shop ("+S.rewards.length+" rewards). To use it: open Tidy Quest → lock → Grown-ups → Rewards → Load a shop, then paste this whole message.\n\n"+encodeShop()}
 async function copyText(text){try{if(window.AndroidTTS&&AndroidTTS.copy){AndroidTTS.copy(text);return true}}catch(e){}
   try{await navigator.clipboard.writeText(text);return true}catch(e){return false}}
@@ -1642,6 +1678,7 @@ async function mergeKid(d,live){const x=d.kid;const seenL=new Set();let k=findKi
   const put=async m=>{if(!m)return null;if(typeof m==="string"){if(!S.up.includes(m))S.up.push(m);return m}return await putMedia(b64ToBlob(m.data,m.type))};
   k.theme=x.theme||k.theme;k.ledger=k.ledger||[];const before={c:k.credits||0,s:k.goal?k.goal.count||0:0};
   if(d.face&&d.face!==k.face){if(k.face)delMedia(k.face);k.face=await put(d.face)}
+  if(d.saving&&(!k.saving||(d.saving.at||0)>(k.saving.at||0)))k.saving={name:d.saving.name?String(d.saving.name).slice(0,60):null,at:d.saving.at||0};
   if(d.says&&Array.isArray(d.says.d)&&(!k.says||(d.says.at||0)>(k.says.at||0)))k.says={at:d.says.at||0,d:d.says.d.slice(0,7).map(x=>String(x||"").slice(0,160))};
   if(d.goal){const g={...d.goal};g.id=g.id||("g:"+String(g.name||"").trim().toLowerCase());
     const mine=k.goal;const newer=!mine||(g.id!==mine.id&&(g.setAt||0)>(mine.setAt||0));
@@ -1735,7 +1772,7 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
   function liteObj(k){stamp();const tpls=[...S.library,...S.jobs.filter(j=>j.kid===k.id).map(j=>({...j,id:"t"+j.id,at:j.created||0}))].filter((t,i,arr)=>arr.findIndex(y=>tplKey(y)===tplKey(t))===i)
       .map(t=>({id:t.id,title:t.title,type:t.type,credits:t.credits,timer:t.timer,proof:t.proof,repeat:!!t.repeat,at:t.at||0,photo:u(t.photo),steps:(t.steps||[]).map(x=>({text:x.text,audio:u(x.audio)}))}));
     const g=k.goal?{id:k.goal.id,name:k.goal.name,target:k.goal.target,backers:srt(k.goal.backers),setAt:k.goal.setAt||0,editAt:k.goal.editAt||0,photo:u(k.goal.photo)}:null;
-    return ({tq:"kid",v:2,live:1,kid:{id:k.id,name:k.name,theme:k.theme},face:u(k.face),ledger:srt(k.ledger),goal:g,says:k.says||null,
+    return ({tq:"kid",v:2,live:1,kid:{id:k.id,name:k.name,theme:k.theme},face:u(k.face),ledger:srt(k.ledger),goal:g,says:k.says||null,saving:k.saving||null,
       trophies:srt(k.trophies).map(t=>({...t,media:u(t.media),album:ua(t.album)})),tGone:[...(k.tGone||[])].sort(),treats:srt(k.treats).map(t=>({...t,photo:u(t.photo)})),
       library:srt(tpls,tplKey),shopGone:srt(S.shopGone),shop:srt(S.rewards).map(r=>({id:r.id,at:r.at||0,icon:r.icon,name:r.name,cost:r.cost,by:r.by||null,photo:u(r.photo)})),
       requests:srt(S.requests.filter(r=>r.kid===k.id)),reqDone:[...S.reqDone].sort(),wishes:srt(S.wishes.filter(w=>w.kid===k.id)).map(w=>({...w,photo:u(w.photo)})),wishDone:[...S.wishDone].sort(),jobs:srt(S.jobs.filter(j=>j.kid===k.id)).map(j=>({...jlite(j),at:j.at||0})),jobGone:[...S.jobGone].sort()})}
@@ -1983,7 +2020,7 @@ document.addEventListener("click",e=>{
   if(e.target.closest("[data-close]")){overlayClose();return}
   const b=e.target.closest("[data-act]");if(!b||b.disabled)return;const f=ACT[b.dataset.act];if(f)f(b)});
 document.addEventListener("change",e=>{const t=e.target;
-  if(t.dataset.rw){const r=S.rewards.find(x=>x.id===t.dataset.id);if(!r)return;r[t.dataset.rw]=t.dataset.rw==="cost"?Math.max(1,parseInt(t.value)||1):t.value.trim()||r[t.dataset.rw];r.at=Date.now();S.shopAt=Date.now();save()}
+  if(t.dataset.rw){const r=S.rewards.find(x=>x.id===t.dataset.id);if(!r)return;if(t.dataset.rw==="price"){const v=parseFloat(String(t.value).replace(/[£,\s]/g,""));if(v>0)r.price=Math.round(v*100)/100;else delete r.price}else r[t.dataset.rw]=t.dataset.rw==="cost"?Math.max(1,parseInt(t.value)||1):t.value.trim()||r[t.dataset.rw];r.at=Date.now();S.shopAt=Date.now();save()}
   if(t.id==="devname"){Sync.setName(t.value.trim())}
   if(t.dataset.kn){const k=kid(t.dataset.kn);if(k&&t.value.trim()){k.name=t.value.trim();save()}}});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")back()});
