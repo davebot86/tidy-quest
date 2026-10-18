@@ -1403,97 +1403,127 @@ function cover(x,img,X,Y,W,H,fy=.25){const iw=img.width||img.videoWidth,ih=img.h
 function wrap(x,text,X,Y,maxW,lh,maxLines=3){const words=String(text).split(/\s+/);let line="",n=0;
   for(let i=0;i<words.length;i++){const t=line?line+" "+words[i]:words[i];if(x.measureText(t).width>maxW&&line){x.fillText(line,X,Y+n*lh);n++;line=words[i];if(n===maxLines-1){const rest=words.slice(i).join(" ");let r=rest;while(x.measureText(r+"…").width>maxW&&r.length>1)r=r.slice(0,-1);x.fillText(r===rest?r:r+"…",X,Y+n*lh);return n+1}}else line=t}
   if(line){x.fillText(line,X,Y+n*lh);n++}return n}
+/* Poster layout: the photos are the point, so they get most of the page. Slots depend on how many photos are chosen. */
+const PW=1240,PH=1754,PTOP=686,PBOT=PH-96,PG=22;
+function posterSlots(n){const X=60,W=PW-120,top=PTOP,H=PBOT-top,G=PG,r=(x,y,w,h)=>({x,y,w,h});
+  if(n<=0)return [];if(n===1)return [r(X,top,W,H)];
+  if(n===2){const h=(H-G)/2;return [r(X,top,W,h),r(X,top+h+G,W,h)]}
+  if(n===3){const h1=Math.round(H*.56),h2=H-h1-G,w=(W-G)/2;return [r(X,top,W,h1),r(X,top+h1+G,w,h2),r(X+w+G,top+h1+G,w,h2)]}
+  if(n===4){const w=(W-G)/2,h=(H-G)/2;return [r(X,top,w,h),r(X+w+G,top,w,h),r(X,top+h+G,w,h),r(X+w+G,top+h+G,w,h)]}
+  if(n===5){const h1=Math.round(H*.5),h2=H-h1-G,w1=(W-G)/2,w2=(W-2*G)/3;return [r(X,top,w1,h1),r(X+w1+G,top,w1,h1),r(X,top+h1+G,w2,h2),r(X+w2+G,top+h1+G,w2,h2),r(X+2*(w2+G),top+h1+G,w2,h2)]}
+  const w=(W-2*G)/3,h=(H-G)/2;return [0,1,2,3,4,5].map(i=>r(X+(i%3)*(w+G),top+Math.floor(i/3)*(h+G),w,h))}
+function placeImg(x,img,X,Y,W,H,f){const iw=img.width||img.videoWidth,ih=img.height||img.videoHeight;const z=Math.max(1,(f&&f.z)||1),s=Math.max(W/iw,H/ih)*z,w=iw*s,h=ih*s;
+  const fx=f&&f.x!=null?f.x:.5,fy=f&&f.y!=null?f.y:.3;x.drawImage(img,X+(W-w)*fx,Y+(H-h)*fy,w,h)}
+function posterTitle(k,M,lay){const who=(lay.who||"").trim();return who?{big:/update$/i.test(who)?who:who+" Update",small:`From ${k.name} · ${M.R.label}`}:{big:`${k.name}'s ${M.R.month}`,small:`${T(k).hall} · ${M.R.label}`}}
 async function makePoster(k,off,lay){const P=POSTER[k.theme]||POSTER.army,th=T(k),M=monthOf(k,off);lay=lay||posterLayout(k,M);
   const df=s=>P.font.replace("{s}",s),bf=(w,s)=>`${w} ${s}px Nunito, system-ui, sans-serif`;
   try{await Promise.all([df(40),bf(900,40),bf(700,40)].map(f=>document.fonts.load(f)))}catch(e){}
-  const W=1240,H=1754,c=document.createElement("canvas");c.width=W;c.height=H;const x=c.getContext("2d");
+  const W=PW,H=PH,c=document.createElement("canvas");c.width=W;c.height=H;const x=c.getContext("2d");
   x.fillStyle=P.bg;x.fillRect(0,0,W,H);
   x.globalAlpha=.07;x.fillStyle="#FFFFFF";for(let i=0;i<70;i++){x.beginPath();x.arc((i*197)%W,(i*311)%H,6+(i%5)*5,0,7);x.fill()}x.globalAlpha=1;
-  /* title */
-  x.fillStyle=P.title;x.textBaseline="alphabetic";{const tt=`${k.name}'s ${M.R.month}`;let fs=104;x.font=df(fs);while(x.measureText(tt).width>W-120&&fs>48){fs-=4;x.font=df(fs)}x.fillText(tt,60,150)}
-  x.font=bf(800,32);x.globalAlpha=.85;x.fillText(`${th.hall} · ${M.R.label}`,62,200);x.globalAlpha=1;
-  /* the master's stage */
-  const sy=236,sh=330;x.save();rrect(x,60,sy,W-120,sh,34);x.clip();
-  const scene=await svgImg(sceneSVG(k.theme).replace(/class="scene"/,""),1120,616);if(scene)x.drawImage(scene,60,sy-(616-sh)/2,1120,616);else{x.fillStyle=P.panel;x.fillRect(60,sy,W-120,sh)}
-  const men=await svgImg(mentorSVG(k.theme,"m"),270,306);if(men)x.drawImage(men,100,sy+sh-306,270,306);
-  x.restore();x.lineWidth=6;x.strokeStyle="rgba(0,0,0,.25)";rrect(x,60,sy,W-120,sh,34);x.stroke();
-  {const line=(MONTH_LINE[k.theme]||MONTH_LINE.army).replace(/\{name\}/g,k.name),bw=W-120-430+40,tw2=bw-72;x.font=bf(900,40);
-   const n=countLines(x,line,tw2,3),bh=92+n*50;const by=sy+(sh-bh)/2;
-   x.fillStyle=P.panel;rrect(x,430,by,bw,bh,26);x.fill();x.beginPath();x.moveTo(432,by+bh-70);x.lineTo(400,by+bh-50);x.lineTo(432,by+bh-34);x.fill();
-   x.fillStyle=P.ink;x.font=bf(800,26);x.globalAlpha=.6;x.fillText(th.m.name,466,by+50);x.globalAlpha=1;x.font=bf(900,40);wrap(x,line,466,by+102,tw2,50,3)}
-  /* the child */
-  const cy=sy+sh+30;x.fillStyle=P.panel;rrect(x,60,cy,W-120,200,30);x.fill();
-  let av=null;if(k.face){const fb=await DB.get(k.face);const du=await blobToDataURL(fb);const s=avatarSVG(k);if(s&&du)av=await svgImg(s.replace(/class="[^"]*"/,"").replace(/data-media="[^"]*"/,`href="${du}"`),164,180)}
-  if(av)x.drawImage(av,86,cy+12,164,180);else{x.fillStyle=P.accent;x.beginPath();x.arc(168,cy+100,72,0,7);x.fill();x.fillStyle="#FFF";x.font=bf(900,72);x.textAlign="center";x.fillText(k.name.slice(0,1).toUpperCase(),168,cy+126);x.textAlign="left"}
-  const r=rankOf(k.earned||0);x.fillStyle=P.ink;x.font=df(72);x.fillText(k.name,290,cy+92);
-  if(th.belts){x.fillStyle=th.belts[r];rrect(x,292,cy+118,260,40,8);x.fill();x.strokeStyle="rgba(0,0,0,.25)";x.lineWidth=3;x.stroke();x.fillStyle=P.ink;x.font=bf(900,34);x.fillText(th.ranks[r],572,cy+150)}
-  else{x.font=bf(900,40);x.fillStyle=P.accent;x.fillText(th.ranks[r],292,cy+150)}
-  /* the numbers */
-  const ty=cy+230,tw=(W-120-3*24)/4,tiles=[[M.jobs,M.jobs===1?"job done":"jobs done"],[M.stars,M.stars===1?"star earned":"stars earned"],[M.earned,th.cur.toLowerCase()+" earned"],[M.treats,M.treats===1?"treat bought":"treats bought"]];
-  tiles.forEach(([n,l],i)=>{const X=60+i*(tw+24);x.fillStyle=P.panel;rrect(x,X,ty,tw,170,26);x.fill();x.fillStyle=i===1?P.accent:P.ink;x.font=df(84);x.textAlign="center";x.fillText(String(n),X+tw/2,ty+96);
-    x.fillStyle=P.muted;x.font=bf(800,26);x.fillText(l,X+tw/2,ty+140);x.textAlign="left"});
+  /* the master, top right, in a round window onto their world */
+  const mc={x:W-60-130,y:150,r:130};x.save();x.beginPath();x.arc(mc.x,mc.y,mc.r,0,7);x.clip();
+  const scene=await svgImg(sceneSVG(k.theme).replace(/class="scene"/,""),520,286);if(scene)x.drawImage(scene,mc.x-260,mc.y-160,520,286);else{x.fillStyle=P.panel;x.fillRect(mc.x-mc.r,mc.y-mc.r,mc.r*2,mc.r*2)}
+  const men=await svgImg(mentorSVG(k.theme,"m"),220,250);if(men)x.drawImage(men,mc.x-110,mc.y+mc.r-250,220,250);x.restore();
+  x.lineWidth=8;x.strokeStyle=P.gold;x.beginPath();x.arc(mc.x,mc.y,mc.r,0,7);x.stroke();
+  /* title: the month on the wall, or "Nanny Update" for the post */
+  const tt=posterTitle(k,M,lay);x.fillStyle=P.title;x.textBaseline="alphabetic";{let fs=112;x.font=df(fs);const maxW=W-120-300;while(x.measureText(tt.big).width>maxW&&fs>52){fs-=4;x.font=df(fs)}x.fillText(tt.big,60,150)}
+  x.font=bf(800,32);x.globalAlpha=.85;x.fillText(tt.small,62,202);x.globalAlpha=1;
+  /* the master's line */
+  {const line=(MONTH_LINE[k.theme]||MONTH_LINE.army).replace(/\{name\}/g,k.name);x.font=bf(800,30);x.fillStyle=P.title;x.globalAlpha=.95;wrap(x,`“${line}” – ${th.m.name}`,62,258,W-120-300,38,2);x.globalAlpha=1}
+  /* the child, their belt, and the month in numbers, on one strip */
+  const cy=330,chh=200;x.fillStyle=P.panel;rrect(x,60,cy,W-120,chh,30);x.fill();
+  let av=null;if(k.face){const fb=await DB.get(k.face);const du=await blobToDataURL(fb);const s=avatarSVG(k);if(s&&du)av=await svgImg(s.replace(/class="[^"]*"/,"").replace(/data-media="[^"]*"/,`href="${du}"`),150,165)}
+  if(av)x.drawImage(av,80,cy+18,150,165);else{x.fillStyle=P.accent;x.beginPath();x.arc(155,cy+100,66,0,7);x.fill();x.fillStyle="#FFF";x.font=bf(900,66);x.textAlign="center";x.fillText(k.name.slice(0,1).toUpperCase(),155,cy+124);x.textAlign="left"}
+  const r=rankOf(k.earned||0);x.fillStyle=P.ink;{let fs=64;x.font=df(fs);while(x.measureText(k.name).width>330&&fs>36){fs-=4;x.font=df(fs)}x.fillText(k.name,252,cy+88)}
+  if(th.belts){x.fillStyle=th.belts[r];rrect(x,254,cy+112,200,30,8);x.fill();x.strokeStyle="rgba(0,0,0,.25)";x.lineWidth=3;x.stroke();x.fillStyle=P.ink;x.font=bf(900,28);x.fillText(th.ranks[r],254,cy+178)}
+  else{x.font=bf(900,32);x.fillStyle=P.accent;x.fillText(th.ranks[r],254,cy+150)}
+  const nums=[[M.jobs,M.jobs===1?"job done":"jobs done"],[M.stars,M.stars===1?"star":"stars"],[M.earned,th.cur.toLowerCase()],[M.treats,M.treats===1?"treat":"treats"]];
+  const sx=610,sw=(W-60-24-sx)/4;nums.forEach(([n,l],i)=>{const X=sx+i*sw;x.textAlign="center";x.fillStyle=i===1?P.accent:P.ink;x.font=df(70);x.fillText(String(n),X+sw/2,cy+108);x.fillStyle=P.muted;x.font=bf(800,22);x.fillText(l,X+sw/2,cy+146);x.textAlign="left";
+    if(i){x.fillStyle="rgba(127,127,127,.25)";x.fillRect(X,cy+40,2,120)}});
   /* the big goal */
-  let gy=ty+200;if(k.goal){const g=k.goal,n=Math.min(g.count||0,g.target);x.fillStyle=P.panel;rrect(x,60,gy,W-120,130,26);x.fill();
-    x.fillStyle=P.muted;x.font=bf(800,24);x.fillText(`BIG GOAL · ${n} OF ${g.target} STARS`,92,gy+44);x.fillStyle=P.ink;x.font=bf(900,36);wrap(x,g.name,92,gy+88,620,40,1);
-    const bx=740,bw=W-120-(bx-60)-32;x.fillStyle="rgba(127,127,127,.25)";rrect(x,bx,gy+50,bw,34,17);x.fill();x.fillStyle=P.gold;if(n)rrect(x,bx,gy+50,Math.max(34,bw*n/g.target),34,17),x.fill();gy+=160}
-  /* the photos, and the month's wins */
-  const pics=lay.pics.map(id=>M.pics.find(p=>p.id===id)).filter(Boolean),top=gy,bottom=H-110,avail=bottom-top,G=22;
-  const winsPanel=(X,Y,Wd,Hd)=>{if(Hd<120)return;x.fillStyle=P.panel;rrect(x,X,Y,Wd,Hd,24);x.fill();x.fillStyle=P.ink;x.font=bf(900,32);x.fillText(M.wins.length?"This month's wins":"Wins go here",X+30,Y+54);
-    x.font=bf(700,28);const max=Math.floor((Hd-90)/46);M.wins.slice(0,max).forEach((w,i)=>{x.fillStyle=w.star?P.accent:P.ink;x.font=bf(900,28);x.fillText(w.star?"★":"✓",X+30,Y+104+i*46);
-      x.fillStyle=P.ink;x.font=bf(700,28);let t=w.t;while(x.measureText(t).width>Wd-110&&t.length>1)t=t.slice(0,-1);x.fillText(t===w.t?t:t+"…",X+72,Y+104+i*46)});
-    if(M.wins.length>max&&max>0){x.fillStyle=P.muted;x.font=bf(800,24);x.fillText(`and ${M.wins.length-max} more`,X+72,Y+104+max*46)}};
-  const drawPic=async(p,X,Y,cw,ch)=>{const u=await mediaURL(p.id);const img=p.video?await videoFrame(u):await blobImg(u);
-    x.save();rrect(x,X,Y,cw,ch,24);x.clip();x.fillStyle=P.panel;x.fillRect(X,Y,cw,ch);if(img)cover(x,img,X,Y,cw,ch-60,(lay.fy||{})[p.id]??.25);
-    x.fillStyle="rgba(0,0,0,.72)";x.fillRect(X,Y+ch-60,cw,60);x.fillStyle="#FFF";x.font=bf(900,25);
-    const cap=(p.star?"★ ":"")+p.title;let t=cap;while(x.measureText(t).width>cw-36&&t.length>1)t=t.slice(0,-1);x.fillText(t===cap?t:t+"…",X+18,Y+ch-22);x.restore()};
-  if(pics.length===1){const cw=(W-120-G)/2,ch=Math.min(avail,520);await drawPic(pics[0],60,top,cw,ch);winsPanel(60+cw+G,top,cw,ch)}
-  else if(pics.length){const cols=pics.length===4?2:Math.min(3,pics.length),rows=Math.ceil(pics.length/cols),cw=(W-120-G*(cols-1))/cols;
-    const room=avail-G*(rows-1),ch=rows===1?Math.min(cols===2?440:360,room-(M.wins.length&&room>=520?200:0)):Math.min(cols===2?360:300,room/rows);
-    for(let i=0;i<pics.length;i++)await drawPic(pics[i],60+(i%cols)*(cw+G),top+Math.floor(i/cols)*(ch+G),cw,ch);
-    const used=rows*ch+(rows-1)*G+G;if(M.wins.length&&avail-used>=150)winsPanel(60,top+used,W-120,Math.min(avail-used,90+Math.min(M.wins.length,8)*46))}
-  else winsPanel(60,top,W-120,Math.min(avail,90+Math.max(1,Math.min(M.wins.length,14))*46));
+  const gy=cy+chh+22;if(k.goal){const g=k.goal,n=Math.min(g.count||0,g.target);x.fillStyle=P.panel;rrect(x,60,gy,W-120,110,26);x.fill();
+    x.fillStyle=P.muted;x.font=bf(800,22);x.fillText(`BIG GOAL · ${n} OF ${g.target} STARS`,92,gy+40);x.fillStyle=P.ink;x.font=bf(900,34);wrap(x,g.name,92,gy+82,600,38,1);
+    const bx=740,bw=W-120-(bx-60)-32;x.fillStyle="rgba(127,127,127,.25)";rrect(x,bx,gy+40,bw,32,16);x.fill();x.fillStyle=P.gold;if(n)rrect(x,bx,gy+40,Math.max(32,bw*n/g.target),32,16),x.fill()}
+  else{x.fillStyle=P.panel;rrect(x,60,gy,W-120,110,26);x.fill();x.fillStyle=P.ink;x.font=bf(900,32);x.fillText(M.wins.length?`${M.wins.length} win${M.wins.length===1?"":"s"} this month`:"A month of training",92,gy+68)}
+  /* the photos: big, each framed the way the grown-up chose */
+  const pics=lay.pics.map(id=>M.pics.find(p=>p.id===id)).filter(Boolean),slots=posterSlots(pics.length);
+  for(let i=0;i<pics.length;i++){const p=pics[i],s=slots[i];const u=await mediaURL(p.id);const img=p.video?await videoFrame(u):await blobImg(u);
+    x.save();rrect(x,s.x,s.y,s.w,s.h,26);x.clip();x.fillStyle=P.panel;x.fillRect(s.x,s.y,s.w,s.h);if(img)placeImg(x,img,s.x,s.y,s.w,s.h,(lay.f||{})[p.id]);
+    const cap=(p.star?"★ ":"")+p.title,fs=s.w>700?30:s.w>450?26:22;x.font=bf(900,fs);let t=cap;while(x.measureText(t).width>s.w-56&&t.length>1)t=t.slice(0,-1);t=t===cap?t:t+"…";
+    const tw=x.measureText(t).width;x.fillStyle="rgba(0,0,0,.62)";rrect(x,s.x+14,s.y+s.h-fs-36,tw+28,fs+22,12);x.fill();x.fillStyle="#FFF";x.fillText(t,s.x+28,s.y+s.h-30);x.restore()}
+  if(!pics.length){x.fillStyle=P.panel;rrect(x,60,PTOP,W-120,PBOT-PTOP,26);x.fill();x.fillStyle=P.ink;x.font=bf(900,36);x.fillText(M.wins.length?"This month's wins":"Wins go here",96,PTOP+70);
+    x.font=bf(700,32);M.wins.slice(0,16).forEach((w,i)=>{x.fillStyle=w.star?P.accent:P.ink;x.fillText((w.star?"★ ":"✓ ")+w.t,96,PTOP+130+i*52)})}
   /* footer */
-  x.fillStyle=P.title;x.globalAlpha=.75;x.font=bf(800,24);x.fillText("Tidy Quest",60,H-50);x.textAlign="right";x.fillText(`Made ${new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}`,W-60,H-50);x.textAlign="left";x.globalAlpha=1;
+  x.fillStyle=P.title;x.globalAlpha=.75;x.font=bf(800,24);x.fillText("Tidy Quest",60,H-44);x.textAlign="right";x.fillText(`Made ${new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}`,W-60,H-44);x.textAlign="left";x.globalAlpha=1;
   return {canvas:c,M}}
-/* Arranging the poster: which photos, in what order, and how each is framed. Kept per child per month. */
+/* Arranging the poster: who it's for, which photos, their order, and how each sits in its frame. Kept per child per month. */
 function posterKey(k,M){return k.id+"_"+M.R.a}
 function posterLayout(k,M){const all=M.pics.map(p=>p.id),saved=(S.posters||{})[posterKey(k,M)];
-  if(!saved)return {pics:all.slice(0,6),fy:{}};return {pics:saved.pics.filter(id=>all.includes(id)).slice(0,6),fy:saved.fy||{}}}
-function keepLayout(k,M,lay){S.posters=S.posters||{};S.posters[posterKey(k,M)]={pics:lay.pics,fy:lay.fy};save()}
-async function posterArrange(k,off){const M=monthOf(k,off),lay=posterLayout(k,M);
-  const thumbs={};for(const p of M.pics){const u=await mediaURL(p.id);thumbs[p.id]=p.video?await videoFrame(u).then(c=>c&&c.toDataURL?c.toDataURL("image/jpeg",.7):null):u}
-  const el=overlay(`<div class="stack"><h2 class="display">Arrange the poster</h2>
-    <p class="muted" style="margin:0">Up to 6 photos. Use the arrows to change the order, and ▲ ▼ to move the picture inside its frame.</p>
+  if(!saved)return {pics:all.slice(0,6),f:{},who:""};const f=saved.f||{};if(saved.fy)for(const id in saved.fy)if(!f[id])f[id]={y:saved.fy[id]};
+  return {pics:saved.pics.filter(id=>all.includes(id)).slice(0,6),f,who:saved.who||""}}
+function keepLayout(k,M,lay){S.posters=S.posters||{};S.posters[posterKey(k,M)]={pics:lay.pics,f:lay.f,who:lay.who||""};save()}
+const POSTER_FOR=["Nanny","Grandad","Grandma","Uncle","Auntie"];
+async function thumbsFor(M){const t={};for(const p of M.pics){const u=await mediaURL(p.id);t[p.id]=p.video?await videoFrame(u).then(c=>c&&c.toDataURL?c.toDataURL("image/jpeg",.8):null):u}return t}
+/* Move one photo inside its frame: drag to slide it, the slider to zoom. The frame is the same shape as on the poster. */
+function frameEditor(k,off,M,lay,id,thumbs,back){const n=lay.pics.length,i=lay.pics.indexOf(id),s=posterSlots(n)[i],p=M.pics.find(q=>q.id===id);
+  const f=Object.assign({x:.5,y:.3,z:1},lay.f[id]||{});const el=overlay(`<div class="stack"><h2 class="display" style="margin:0">Move the photo</h2>
+    <p class="muted" style="margin:0">Drag the photo to choose what shows. Use the slider to zoom in.</p>
+    <div id="fe" style="position:relative;width:100%;aspect-ratio:${s.w}/${s.h};border-radius:16px;overflow:hidden;background:#0003;touch-action:none;cursor:grab">
+      <img id="feimg" src="${thumbs[id]||""}" alt="${esc(p.title||"")}" draggable="false" style="position:absolute;left:0;top:0;max-width:none;max-height:none;user-select:none;pointer-events:none"></div>
+    <label class="row" style="gap:10px;align-items:center"><span style="font-weight:800">Zoom</span><input id="fez" type="range" min="1" max="3" step="0.05" value="${f.z}" style="flex:1"></label>
+    <div class="row"><button class="btn" id="feok">Done</button><button class="btn ghost" id="fereset">Reset</button></div></div>`);
+  const box=el.querySelector("#fe"),img=el.querySelector("#feimg");let iw=0,ih=0;
+  const lay1=()=>{if(!iw)return;const W=box.clientWidth,H=box.clientHeight,sc=Math.max(W/iw,H/ih)*f.z,w=iw*sc,h=ih*sc;img.style.width=w+"px";img.style.height=h+"px";img.style.left=((W-w)*f.x)+"px";img.style.top=((H-h)*f.y)+"px";return {W,H,w,h}};
+  const ready=()=>{iw=img.naturalWidth;ih=img.naturalHeight;lay1()};if(img.complete&&img.naturalWidth)ready();else img.onload=ready;
+  let drag=null;box.addEventListener("pointerdown",e=>{const d=lay1();if(!d)return;drag={x:e.clientX,y:e.clientY,fx:f.x,fy:f.y,d};box.setPointerCapture(e.pointerId)});
+  box.addEventListener("pointermove",e=>{if(!drag)return;const {W,H,w,h}=drag.d;if(w>W)f.x=Math.min(1,Math.max(0,drag.fx-(e.clientX-drag.x)/(w-W)));if(h>H)f.y=Math.min(1,Math.max(0,drag.fy-(e.clientY-drag.y)/(h-H)));lay1()});
+  const end=()=>{drag=null};box.addEventListener("pointerup",end);box.addEventListener("pointercancel",end);
+  el.querySelector("#fez").oninput=e=>{f.z=+e.target.value;lay1()};
+  el.querySelector("#fereset").onclick=()=>{f.x=.5;f.y=.3;f.z=1;el.querySelector("#fez").value=1;lay1()};
+  el.querySelector("#feok").onclick=()=>{lay.f[id]={x:+f.x.toFixed(3),y:+f.y.toFixed(3),z:+f.z.toFixed(2)};keepLayout(k,M,lay);back()}}
+async function posterArrange(k,off){const M=monthOf(k,off),lay=posterLayout(k,M),thumbs=await thumbsFor(M);
+  const open=()=>{const el=overlay(`<div class="stack"><h2 class="display">Arrange the poster</h2>
+    <div class="stack" style="gap:8px"><b>Who's it for?</b><div class="row" style="gap:6px;flex-wrap:wrap" id="pa-who"></div>
+      <input id="pa-whoin" placeholder="Or type a name, like Nanny Jean" value="${esc(lay.who||"")}" maxlength="30"></div>
+    <p class="muted" style="margin:0">Up to 6 photos. ◀ ▶ changes the order. <b>Move</b> lets you drag and zoom each photo in its frame.</p>
     <div id="pa-on" class="stack" style="gap:8px"></div>
     <h3 style="margin:6px 0 0">Not on the poster</h3><div id="pa-off" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
     <div class="row"><button class="btn" id="pa-done">See the poster</button><button class="btn ghost" id="pa-reset">Start again</button></div></div>`);
-  const pic=id=>M.pics.find(p=>p.id===id),fy=id=>lay.fy[id]??.25;
-  const thumb=(id,h)=>`<div style="width:100%;height:${h}px;border-radius:10px;background:#0002 url('${thumbs[id]||""}') center ${Math.round(fy(id)*100)}%/cover no-repeat"></div>`;
-  const draw=()=>{if(overlayEl!==el)return;
-    el.querySelector("#pa-on").innerHTML=lay.pics.length?lay.pics.map((id,i)=>`<div class="card" style="display:grid;grid-template-columns:92px 1fr auto;gap:10px;align-items:center;padding:8px">
-      ${thumb(id,92)}<div style="min-width:0"><b style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i+1}. ${esc(pic(id).title||"")}</b>
-      <div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap"><button class="btn ghost small" data-pa="up" data-i="${i}" ${i?"":"disabled"} aria-label="Earlier">◀</button><button class="btn ghost small" data-pa="down" data-i="${i}" ${i<lay.pics.length-1?"":"disabled"} aria-label="Later">▶</button>
-      <button class="btn ghost small" data-pa="hi" data-i="${i}" aria-label="Show more of the top">▲</button><button class="btn ghost small" data-pa="lo" data-i="${i}" aria-label="Show more of the bottom">▼</button></div></div>
-      <button class="btn ghost small" data-pa="out" data-i="${i}" aria-label="Take off the poster">✕</button></div>`).join(""):`<p class="muted">No photos chosen. The poster will show the month's wins instead.</p>`;
-    const rest=M.pics.filter(p=>!lay.pics.includes(p.id));
-    el.querySelector("#pa-off").innerHTML=rest.length?rest.map(p=>`<button class="card" data-pa="in" data-id="${esc(p.id)}" style="padding:6px;text-align:left;${lay.pics.length>=6?"opacity:.45":""}">${thumb(p.id,80)}<span style="font-size:12px;font-weight:800;display:block;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">+ ${esc(p.title||"")}</span></button>`).join(""):`<p class="muted" style="grid-column:1/-1">Every photo is on.</p>`;
-    el.querySelectorAll("[data-pa]").forEach(b=>b.onclick=()=>{const i=+b.dataset.i,a=b.dataset.pa,L=lay.pics;
-      if(a==="up"&&i>0)[L[i-1],L[i]]=[L[i],L[i-1]];if(a==="down"&&i<L.length-1)[L[i+1],L[i]]=[L[i],L[i+1]];
-      if(a==="hi")lay.fy[L[i]]=Math.max(0,fy(L[i])-.15);if(a==="lo")lay.fy[L[i]]=Math.min(1,fy(L[i])+.15);
-      if(a==="out")L.splice(i,1);if(a==="in"){if(L.length>=6){toast("6 photos fit. Take one off first.");return}L.push(b.dataset.id)}
-      keepLayout(k,M,lay);draw()})};
-  draw();
-  el.querySelector("#pa-done").onclick=()=>posterSheet(k,off);
-  el.querySelector("#pa-reset").onclick=()=>{lay.pics=M.pics.map(p=>p.id).slice(0,6);lay.fy={};keepLayout(k,M,lay);draw()}}
-async function posterSheet(k,off=0){const el=overlay(`<div class="stack"><h2 class="display">${esc(k.name)}'s monthly poster</h2>
+    const pic=id=>M.pics.find(p=>p.id===id);
+    const thumb=(id,h)=>`<div style="width:100%;height:${h}px;border-radius:10px;background:#0002 url('${thumbs[id]||""}') center/cover no-repeat"></div>`;
+    const drawWho=()=>{if(overlayEl!==el)return;el.querySelector("#pa-who").innerHTML=[["","The wall"],...POSTER_FOR.map(w=>[w,w+" Update"])].map(([v,l])=>`<button class="btn small ${(lay.who||"")===v?"":"ghost"}" data-who="${esc(v)}">${esc(l)}</button>`).join("");
+      el.querySelectorAll("[data-who]").forEach(b=>b.onclick=()=>{lay.who=b.dataset.who;el.querySelector("#pa-whoin").value=lay.who;keepLayout(k,M,lay);drawWho()})};
+    const draw=()=>{if(overlayEl!==el)return;drawWho();
+      el.querySelector("#pa-on").innerHTML=lay.pics.length?lay.pics.map((id,i)=>`<div class="card" style="display:grid;grid-template-columns:92px 1fr auto;gap:10px;align-items:center;padding:8px">
+        ${thumb(id,92)}<div style="min-width:0"><b style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i+1}. ${esc(pic(id).title||"")}</b>
+        <div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap"><button class="btn ghost small" data-pa="up" data-i="${i}" ${i?"":"disabled"} aria-label="Earlier">◀</button><button class="btn ghost small" data-pa="down" data-i="${i}" ${i<lay.pics.length-1?"":"disabled"} aria-label="Later">▶</button>
+        <button class="btn small" data-pa="move" data-i="${i}">Move</button></div></div>
+        <button class="btn ghost small" data-pa="out" data-i="${i}" aria-label="Take off the poster">✕</button></div>`).join(""):`<p class="muted">No photos chosen. The poster will list the month's wins instead.</p>`;
+      const rest=M.pics.filter(p=>!lay.pics.includes(p.id));
+      el.querySelector("#pa-off").innerHTML=rest.length?rest.map(p=>`<button class="card" data-pa="in" data-id="${esc(p.id)}" style="padding:6px;text-align:left;${lay.pics.length>=6?"opacity:.45":""}">${thumb(p.id,80)}<span style="font-size:12px;font-weight:800;display:block;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">+ ${esc(p.title||"")}</span></button>`).join(""):`<p class="muted" style="grid-column:1/-1">Every photo is on.</p>`;
+      el.querySelectorAll("[data-pa]").forEach(b=>b.onclick=()=>{const i=+b.dataset.i,a=b.dataset.pa,L=lay.pics;
+        if(a==="move"){frameEditor(k,off,M,lay,L[i],thumbs,open);return}
+        if(a==="up"&&i>0)[L[i-1],L[i]]=[L[i],L[i-1]];if(a==="down"&&i<L.length-1)[L[i+1],L[i]]=[L[i],L[i+1]];
+        if(a==="out")L.splice(i,1);if(a==="in"){if(L.length>=6){toast("6 photos fit. Take one off first.");return}L.push(b.dataset.id)}
+        keepLayout(k,M,lay);draw()})};
+    draw();
+    el.querySelector("#pa-whoin").oninput=e=>{lay.who=e.target.value.slice(0,30);keepLayout(k,M,lay)};
+    el.querySelector("#pa-whoin").onchange=()=>drawWho();
+    el.querySelector("#pa-done").onclick=()=>posterSheet(k,off);
+    el.querySelector("#pa-reset").onclick=()=>{lay.pics=M.pics.map(p=>p.id).slice(0,6);lay.f={};lay.who="";keepLayout(k,M,lay);open()}};
+  open()}
+async function posterSheet(k,off=0){const M0=monthOf(k,off),lay0=posterLayout(k,M0),tt=posterTitle(k,M0,lay0);
+  const el=overlay(`<div class="stack"><h2 class="display">${esc(lay0.who?tt.big:k.name+"'s monthly poster")}</h2>
     <div class="seg"><button class="${off===0?"on":""}" id="pm0">This month</button><button class="${off===-1?"on":""}" id="pm1">Last month</button></div>
     <div id="pbox" class="muted" style="text-align:center;padding:30px 0">Making the poster…</div>
-    <div class="row" id="pact" hidden><button class="btn" id="psave">Save to the gallery</button><button class="btn ghost" id="parr">Arrange photos</button><button class="btn ghost" data-close>Close</button></div></div>`);
+    <div class="row" id="pact" hidden><button class="btn" id="parr">Arrange and move photos</button><button class="btn ghost" id="psave">Save to the gallery</button><button class="btn ghost" data-close>Close</button></div></div>`);
   el.querySelector("#pm0").onclick=()=>posterSheet(k,0);el.querySelector("#pm1").onclick=()=>posterSheet(k,-1);
   let res;try{res=await makePoster(k,off)}catch(e){el.querySelector("#pbox").textContent="Couldn't make the poster. Try again.";return}
   if(overlayEl!==el)return;const url=res.canvas.toDataURL("image/jpeg",.92);
-  el.querySelector("#pbox").outerHTML=`<img src="${url}" alt="${esc(k.name)}'s poster for ${esc(res.M.R.label)}" style="width:100%;border-radius:12px;box-shadow:0 8px 24px -12px rgba(0,0,0,.5)"><p class="muted" style="margin:0;font-size:14px">A4 size. Print it from the gallery, or send it to family.</p>`;
-  el.querySelector("#pact").hidden=false;el.querySelector("#parr").onclick=()=>posterArrange(k,off);const name=("TidyQuest-"+k.name+"-"+res.M.R.label).replace(/[^\w-]+/g,"-")+".jpg";
+  el.querySelector("#pbox").outerHTML=`<img src="${url}" alt="${esc(tt.big)} poster for ${esc(res.M.R.label)}" style="width:100%;border-radius:12px;box-shadow:0 8px 24px -12px rgba(0,0,0,.5)"><p class="muted" style="margin:0;font-size:14px">A4 size. Print it, or send it to family.</p>`;
+  el.querySelector("#pact").hidden=false;el.querySelector("#parr").onclick=()=>posterArrange(k,off);
+  const name=("TidyQuest-"+(lay0.who?lay0.who+"-":"")+k.name+"-"+res.M.R.label).replace(/[^\w-]+/g,"-")+".jpg";
   el.querySelector("#psave").onclick=()=>{const b=bridge();if(b&&b.saveMedia){try{toast(b.saveMedia(url.split(",")[1],"image/jpeg",name)?"Saved to the gallery":"Couldn't save. Allow storage access and try again.")}catch(e){toast("Couldn't save to the gallery")}}
     else{const a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove()}}}
 /* Save every photo and video to the phone's own gallery: the family's copy, since nothing is kept online */
