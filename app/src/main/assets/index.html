@@ -392,6 +392,8 @@ body[data-theme="karate"] .seal,body[data-theme="army"] .seal,body[data-theme="h
 @keyframes rise{0%{transform:translateY(18px);opacity:0}100%{transform:none;opacity:1}}
 .stage .mentor-btn{animation:rise .5s ease-out both}
 .stage .bubble{animation:pop .45s .25s ease-out both}
+.updbar{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:60;display:flex;gap:10px;align-items:center;background:#1d2a2f;color:#fff;padding:12px 12px 12px 16px;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.35);font-size:15px;line-height:1.3}
+.updbar .iconbtn{background:transparent;color:#fff;border:0;width:36px;height:36px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -503,7 +505,7 @@ function load(){
   if(!S){S={pin:null,kids:[],jobs:[],rewards:DEFAULT_REWARDS.map(r=>({...r,id:uid()})),requests:[]}}
   S.device=S.device||("d"+uid());S.wishes=S.wishes||[];S.library=S.library||[];S.shopGone=S.shopGone||[];S.rewards.forEach(r=>{if(r.at==null)r.at=0});delete S.lastSend;
   S.kids.forEach(k=>{if(k.goal&&!k.goal.id)k.goal.id="g:"+String(k.goal.name||"").trim().toLowerCase();
-    if(!k.ledger){k.ledger=[{id:"o"+uid(),t:Date.now(),d:k.credits||0,e:k.earned||0,s:k.goal?(k.goal.count||0):0,g:k.goal?k.goal.id:null,why:"start"}]}recalc(k,true);try{fixTrophies(k)}catch(e){}});S.pendingIn=S.pendingIn||{};S.reqDone=S.reqDone||[];S.wishDone=S.wishDone||[];S.kidGone=S.kidGone||[];S.usedIn=S.usedIn||[];S.sent=S.sent||[];
+    if(!k.ledger){k.ledger=[{id:"o"+uid(),t:Date.now(),d:k.credits||0,e:k.earned||0,s:k.goal?(k.goal.count||0):0,g:k.goal?k.goal.id:null,why:"start"}]}recalc(k,true);try{fixTrophies(k)}catch(e){}});S.pendingIn=S.pendingIn||{};S.reqDone=S.reqDone||[];S.up=S.up||[];S.noUp=S.noUp||[];S.wishDone=S.wishDone||[];S.kidGone=S.kidGone||[];S.usedIn=S.usedIn||[];S.sent=S.sent||[];
   S.jobs.forEach(j=>{if(!j.type)j.type="tidy";if(!j.proof)j.proof=j.afterReq?"photo":"none"});
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast("Couldn't save. The tablet may be low on space.")}if(window.Sync)Sync.soon()}
@@ -1377,12 +1379,12 @@ async function importKidFile(text){let d;try{d=JSON.parse(text)}catch(e){return 
 async function mergeKid(d,live){const x=d.kid;const seenL=new Set();let k=findKidFor(x.id,x.name),isNew=false;
   if(!k){k={id:x.id,name:x.name,theme:x.theme,credits:0,earned:0};S.kids.push(k);isNew=true}
   else if(k.id!==x.id){S.jobs.forEach(j=>{if(j.kid===k.id)j.kid=x.id});S.requests.forEach(r=>{if(r.kid===k.id)r.kid=x.id});k.id=x.id}
-  const put=async m=>m?await putMedia(b64ToBlob(m.data,m.type)):null;
+  const put=async m=>{if(!m)return null;if(typeof m==="string"){if(!S.up.includes(m))S.up.push(m);return m}return await putMedia(b64ToBlob(m.data,m.type))};
   k.theme=x.theme||k.theme;k.ledger=k.ledger||[];const before={c:k.credits||0,s:k.goal?k.goal.count||0:0};
-  if(d.face){if(k.face)delMedia(k.face);k.face=await put(d.face)}
+  if(d.face&&d.face!==k.face){if(k.face)delMedia(k.face);k.face=await put(d.face)}
   if(d.goal){const g={...d.goal};g.id=g.id||("g:"+String(g.name||"").trim().toLowerCase());
     const mine=k.goal;const newer=!mine||(g.id!==mine.id&&(g.setAt||0)>(mine.setAt||0));
-    if(newer){if(mine&&mine.photo)delMedia(mine.photo);k.goal={id:g.id,name:g.name,target:g.target,count:0,done:false,photo:null,backers:g.backers||[],setAt:g.setAt||0,editAt:g.editAt||0};if(g.photo)k.goal.photo=await put(g.photo)}
+    if(newer){if(mine&&mine.photo&&mine.photo!==g.photo)delMedia(mine.photo);k.goal={id:g.id,name:g.name,target:g.target,count:0,done:false,photo:null,backers:g.backers||[],setAt:g.setAt||0,editAt:g.editAt||0};if(g.photo)k.goal.photo=await put(g.photo)}
     else if(mine.id===g.id){if((g.editAt||0)>(mine.editAt||0)){mine.name=g.name;mine.target=g.target}
       const ids=new Set((mine.backers||[]).map(b=>b.id));mine.backers=(mine.backers||[]).concat((g.backers||[]).filter(b=>!ids.has(b.id)));
       if(g.photo&&!mine.photo)mine.photo=await put(g.photo)}}
@@ -1401,7 +1403,7 @@ async function mergeKid(d,live){const x=d.kid;const seenL=new Set();let k=findKi
     for(const g of (d.shopGone||[])){const r=byId.get(g.id)||byName.get(key(g.name));if(r&&(r.at||0)<=g.at){delMedia(r.photo);S.rewards=S.rewards.filter(x=>x!==r);changed=true}if(!gone.has(g.id)){S.shopGone.push(g);gone.set(g.id,g)}}
     for(const r of d.shop){const tomb=gone.get(r.id);if(tomb&&tomb.at>=(r.at||0))continue;
       const ex=byId.get(r.id)||byName.get(key(r.name));
-      if(ex){if(!S.rewards.includes(ex))continue;if((r.at||0)>(ex.at||0)){ex.name=r.name;ex.cost=Math.max(1,parseInt(r.cost)||1);ex.icon=r.icon||ex.icon;ex.at=r.at;if(r.photo){delMedia(ex.photo);ex.photo=await put(r.photo)}changed=true}
+      if(ex){if(!S.rewards.includes(ex))continue;if((r.at||0)>(ex.at||0)){ex.name=r.name;ex.cost=Math.max(1,parseInt(r.cost)||1);ex.icon=r.icon||ex.icon;ex.at=r.at;if(r.photo&&r.photo!==ex.photo){delMedia(ex.photo);ex.photo=await put(r.photo)}changed=true}
         else if(!ex.photo&&r.photo){ex.photo=await put(r.photo);changed=true}}
       else{S.rewards.push({id:r.id||uid(),icon:r.icon||"⭐",name:r.name,cost:Math.max(1,parseInt(r.cost)||1),by:r.by||null,at:r.at||0,photo:await put(r.photo)});shopAdded++;changed=true}}
     if(changed&&!shopAdded)shopAdded=-1}
@@ -1453,13 +1455,14 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
   const st={state:"off",at:0,err:""};
   const has=()=>typeof firebase!=="undefined"&&firebase.firestore&&firebase.auth;
   const srt=(a,f=x=>x.id)=>[...(a||[])].sort((p,r)=>{const A=String(f(p)),B=String(f(r));return A<B?-1:A>B?1:0});
+  const u=()=>null,ua=()=>null;
   function lite(k){const tpls=[...S.library,...S.jobs.filter(j=>j.kid===k.id).map(j=>({...j,id:"t"+j.id,at:j.created||0}))].filter((t,i,arr)=>arr.findIndex(y=>tplKey(y)===tplKey(t))===i)
-      .map(t=>({id:t.id,title:t.title,type:t.type,credits:t.credits,timer:t.timer,proof:t.proof,repeat:!!t.repeat,at:t.at||0,photo:null,steps:(t.steps||[]).map(x=>({text:x.text,audio:null}))}));
-    const g=k.goal?{id:k.goal.id,name:k.goal.name,target:k.goal.target,backers:srt(k.goal.backers),setAt:k.goal.setAt||0,editAt:k.goal.editAt||0,photo:null}:null;
-    return JSON.stringify({tq:"kid",v:2,live:1,kid:{id:k.id,name:k.name,theme:k.theme},ledger:srt(k.ledger),goal:g,
-      trophies:srt(k.trophies).map(t=>({...t,media:null,album:null})),tGone:[...(k.tGone||[])].sort(),treats:srt(k.treats).map(t=>({...t,photo:null})),
-      library:srt(tpls,tplKey),shopGone:srt(S.shopGone),shop:srt(S.rewards).map(r=>({id:r.id,at:r.at||0,icon:r.icon,name:r.name,cost:r.cost,by:r.by||null,photo:null})),
-      requests:srt(S.requests.filter(r=>r.kid===k.id)),reqDone:[...S.reqDone].sort(),wishes:srt(S.wishes.filter(w=>w.kid===k.id)).map(w=>({...w,photo:null})),wishDone:[...S.wishDone].sort()})}
+      .map(t=>({id:t.id,title:t.title,type:t.type,credits:t.credits,timer:t.timer,proof:t.proof,repeat:!!t.repeat,at:t.at||0,photo:u(t.photo),steps:(t.steps||[]).map(x=>({text:x.text,audio:u(x.audio)}))}));
+    const g=k.goal?{id:k.goal.id,name:k.goal.name,target:k.goal.target,backers:srt(k.goal.backers),setAt:k.goal.setAt||0,editAt:k.goal.editAt||0,photo:u(k.goal.photo)}:null;
+    return JSON.stringify({tq:"kid",v:2,live:1,kid:{id:k.id,name:k.name,theme:k.theme},face:u(k.face),ledger:srt(k.ledger),goal:g,
+      trophies:srt(k.trophies).map(t=>({...t,media:u(t.media),album:ua(t.album)})),tGone:[...(k.tGone||[])].sort(),treats:srt(k.treats).map(t=>({...t,photo:u(t.photo)})),
+      library:srt(tpls,tplKey),shopGone:srt(S.shopGone),shop:srt(S.rewards).map(r=>({id:r.id,at:r.at||0,icon:r.icon,name:r.name,cost:r.cost,by:r.by||null,photo:u(r.photo)})),
+      requests:srt(S.requests.filter(r=>r.kid===k.id)),reqDone:[...S.reqDone].sort(),wishes:srt(S.wishes.filter(w=>w.kid===k.id)).map(w=>({...w,photo:u(w.photo)})),wishDone:[...S.wishDone].sort()})}
   function setState(s,err){st.state=s;st.err=err||"";if(s==="on")st.at=Date.now();if(view&&view.name==="parent"&&view.args&&view.args.tab==="link"){const el=$("#syncpanel");if(el)el.outerHTML=panel()}}
   async function start(){if(!S.family)return;if(!has()){setState("nosdk");return}clearTimeout(retry);setState("connecting");
     try{if(!firebase.apps.length){firebase.initializeApp(FB_CFG);try{firebase.firestore().settings({experimentalAutoDetectLongPolling:true})}catch(e){}}
@@ -1467,14 +1470,14 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
       db=firebase.firestore();ref=db.collection("families").doc(S.family);first=false;if(unsub)unsub();
       unsub=ref.onSnapshot({includeMetadataChanges:false},snap=>{q=q.then(()=>onSnap(snap)).catch(e=>console.log(e))},e=>{setState("error",e.message);unsub=null;retry=setTimeout(start,30000)});
     }catch(e){setState("error",e.message||String(e));retry=setTimeout(start,30000)}}
-  async function onSnap(snap){const data=snap.data()||{};let changed=false;const news=[];
+  async function onSnap(snap){const data=snap.data()||{};lastData=data;let changed=false;const news=[];
     for(const id of (data.gone||[]))if(!S.kidGone.includes(id)){S.kidGone.push(id);const k=kid(id);if(k){S.kids=S.kids.filter(x=>x!==k);changed=true}}
     for(const key of Object.keys(data)){if(key.slice(0,2)!=="k_")continue;const id=key.slice(2),txt=data[key];
       if(S.kidGone.includes(id)||last[id]===txt)continue;let d;try{d=JSON.parse(txt)}catch(e){continue}
       const r=await mergeKid(d,true);last[r.k.id]=txt;changed=true;r.news.forEach(e=>news.push({k:r.k,e}))}
     setState("on");
     if(changed){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}if(view&&view.name==="welcome"&&S.kids.length){overlayClose();home();toast("You're in! Welcome to the family.")}else{liveRender();alerts(news)}}
-    first=true;push()}
+    first=true;push();media()}
   function alerts(news){if(!news.length)return;const say=({k,e})=>{const w=String(e.why||"");
       if(w.startsWith("buy "))return `🛍️ ${k.name} just bought ${w.slice(4)}!`;
       if(w.startsWith("job "))return `${T(k).call||"🥋"} ${k.name} earned ${e.d} ${e.d===1?"point":"points"}: ${w.slice(4)}`;
@@ -1488,7 +1491,38 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
   async function liveRender(){if(!view||["job","edit","style","welcome"].includes(view.name)||overlayEl)return;const a=document.activeElement;if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))return;
     const y=window.scrollY;await render();window.scrollTo(0,y)}
   function soon(){if(!ref||!first)return;clearTimeout(timer);timer=setTimeout(push,1200)}
-  function push(){if(!ref||!first)return;const up={};
+  /* ---- photos, pictures and voice notes: each stored once online (big ones in parts), fetched by the other phones ---- */
+  let mBusy=false,mAgain=false,lastData={},mT=null;const tried=new Set();
+  /* every picture belongs to a "slot" (Eddie's face, trophy X, reward Y…). The family record says which picture each slot has; the newest picture wins everywhere. */
+  function slots(){const out=[],add=(key,get,set)=>out.push({key:"m_"+key.replace(/[^A-Za-z0-9_:-]/g,"_").slice(0,300),get,set});
+    S.kids.forEach(k=>{add("face:"+k.id,()=>k.face,v=>k.face=v);if(k.goal){const g=k.goal;add("goal:"+g.id,()=>g.photo,v=>g.photo=v)}
+      (k.trophies||[]).forEach(t=>{add("tr:"+t.id,()=>t.media,v=>{t.media=v;if(!t.kind)t.kind="photo"});
+        add("trb:"+t.id,()=>t.album&&t.album.before,v=>{t.album=t.album||{before:null,progress:[]};t.album.before=v});
+        for(let i=0;i<6;i++)add("trp:"+t.id+":"+i,()=>t.album&&(t.album.progress||[])[i],v=>{t.album=t.album||{before:null,progress:[]};t.album.progress=t.album.progress||[];t.album.progress[i]=v})});
+      (k.treats||[]).forEach(t=>add("treat:"+t.id,()=>t.photo,v=>t.photo=v))});
+    S.rewards.forEach(r=>add("rw:"+r.id,()=>r.photo,v=>r.photo=v));S.wishes.forEach(w=>add("wish:"+w.id,()=>w.photo,v=>w.photo=v));
+    S.library.forEach(t=>{const tk=tplKey(t);add("lib:"+tk,()=>t.photo,v=>t.photo=v);(t.steps||[]).forEach((x,i)=>add("libs:"+tk+":"+i,()=>x.audio,v=>x.audio=v))});return out}
+  const born=id=>{const n=parseInt(String(id||"").slice(1,-5),36);return isFinite(n)&&n>1.5e12&&n<4e12?n:0};
+  const part=(id,i)=>db.collection("families").doc(S.family+"_m_"+id+(i==null?"":"_"+i));
+  async function shrink(b){if(!/^image\//.test(b.type)||b.size<450000)return b;try{const bm=await createImageBitmap(b);const sc=Math.min(1,1400/Math.max(bm.width,bm.height));
+      const c=document.createElement("canvas");c.width=Math.round(bm.width*sc);c.height=Math.round(bm.height*sc);c.getContext("2d").drawImage(bm,0,0,c.width,c.height);
+      const out=await new Promise(r=>c.toBlob(r,"image/jpeg",.78));return out&&out.size<b.size?out:b}catch(e){return b}}
+  const CH=900000;
+  async function upload(id,blob){if(S.up.includes(id))return true;if(S.noUp.includes(id))return false;const b=await shrink(blob);if(b.size>8*1024*1024){S.noUp.push(id);return false}
+    const data=await blobToB64(b);const n=Math.ceil(data.length/CH);for(let i=0;i<n;i++)await part(id,i).set({d:data.slice(i*CH,(i+1)*CH)});
+    await part(id).set({t:b.type||"application/octet-stream",n,at:Date.now()});S.up.push(id);return true}
+  async function download(id){if(await DB.get(id))return true;if(tried.has(id))return false;tried.add(id);
+    const m=await part(id).get();if(!m.exists)return false;const {t,n}=m.data();let data="";
+    for(let i=0;i<n;i++){const c=await part(id,i).get();if(!c.exists)return false;data+=c.data().d}
+    await DB.put(id,b64ToBlob(data,t));if(!S.up.includes(id))S.up.push(id);return true}
+  async function media(){if(!ref||!first)return;if(mBusy){mAgain=true;return}mBusy=true;let got=false;
+    try{for(const sl of slots()){const L=sl.get(),cur=lastData[sl.key];
+        const hasL=L?!!(await DB.get(L)):false;
+        if(cur&&cur.id&&cur.id!==L&&(!hasL||(cur.at||0)>born(L))){if(await download(cur.id)){sl.set(cur.id);got=true}continue}
+        if(hasL&&(!cur||(cur.id!==L&&born(L)>(cur.at||0)))){const blob=await DB.get(L);if(await upload(L,blob)){const v={id:L,at:born(L)};lastData[sl.key]=v;await ref.set({[sl.key]:v},{merge:true})}}}
+    }catch(e){console.log("media",e)}
+    mBusy=false;if(got){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}liveRender()}else{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}if(mAgain){mAgain=false;media()}}
+  function push(){if(!ref||!first)return;clearTimeout(mT);mT=setTimeout(media,400);const up={};
     for(const k of S.kids){const txt=lite(k);if(last[k.id]!==txt){up["k_"+k.id]=txt;last[k.id]=txt}}
     if(!Object.keys(up).length)return;up.at=firebase.firestore.FieldValue.serverTimestamp();
     ref.set(up,{merge:true}).then(()=>setState("on")).catch(e=>{for(const k in up)if(k.startsWith("k_"))delete last[k.slice(2)];setState("error",e.message)})}
@@ -1521,6 +1555,23 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
   return {start,soon,push,forget,panel,joinPrompt,create,showCode,joinMenu,leave,status:st}})();
 window.Sync=Sync;
 Object.assign(ACT,{famNew(){Sync.create()},famJoin(){Sync.joinMenu()},famCode(){Sync.showCode()},famLeave(){Sync.leave()}});
+/* ---------- Updates: the app checks for a newer trial build and installs it from inside the app ---------- */
+const Upd=(()=>{let bar=null,info=null;
+  function el(html){if(!bar){bar=document.createElement("div");bar.className="updbar";document.body.appendChild(bar)}bar.innerHTML=html;return bar}
+  function hide(){if(bar){bar.remove();bar=null}}
+  window.__onUpdate=o=>{if(!o||!o.versionCode||!o.mine||o.versionCode<=o.mine)return;info=o;
+    el(`<span class="grow"><b>New update ready</b><br><span style="opacity:.85">Tidy Quest ${esc(String(o.name||""))}. Everything stays as it is.</span></span><button class="btn small" id="updgo">Update</button><button class="iconbtn" id="updx" aria-label="Later">✕</button>`);
+    bar.querySelector("#updgo").onclick=go;bar.querySelector("#updx").onclick=hide};
+  function go(){const b=bridge();if(!b||!b.installUpdate)return;el(`<span class="grow"><b>Getting the update…</b></span>`);b.installUpdate()}
+  window.__onUpdateStep=(step,pct)=>{
+    if(step==="allow")el(`<span class="grow"><b>One-time step:</b> switch on <b>Allow from this source</b>, then come back and tap Update.</span><button class="btn small" id="updgo">Update</button>`).querySelector("#updgo").onclick=go;
+    else if(step==="progress")el(`<span class="grow"><b>Downloading update… ${pct}%</b></span>`);
+    else if(step==="install")el(`<span class="grow"><b>Tap Update on the next screen.</b> Tidy Quest restarts with everything kept.</span><button class="iconbtn" id="updx" aria-label="Close">✕</button>`).querySelector("#updx").onclick=hide;
+    else if(step==="fail")el(`<span class="grow"><b>The update didn't download.</b> Check the internet and try again.</span><button class="btn small" id="updgo">Try again</button>`).querySelector("#updgo").onclick=go};
+  function check(){const b=bridge();if(b&&b.checkUpdate)try{b.checkUpdate()}catch(e){}}
+  return {check}})();
+setTimeout(Upd.check,2500);setInterval(Upd.check,3*60*60*1000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)Upd.check()});
 function handleCode(text){const d=unpackQR(text);
   if(!d){toast("That isn't a Tidy Quest code.");return}
   if(d.from&&d.from===S.device){toast("That code is from this tablet. Scan it on the other one.");return}

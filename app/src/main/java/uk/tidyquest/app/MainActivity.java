@@ -41,6 +41,10 @@ import com.google.zxing.integration.android.IntentResult;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import android.provider.Settings;
+import androidx.core.content.pm.PackageInfoCompat;
 import java.io.InputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -53,6 +57,25 @@ import java.util.Locale;
 public class MainActivity extends Activity {
     private static final int REQ_PERMS = 1;
     private static final int REQ_FILE = 2;
+    private static final String UPDATE_BASE = "https://github.com/davebot86/tidy-quest/releases/download/trial/";
+
+    private int myVersion() {
+        try { return (int) PackageInfoCompat.getLongVersionCode(getPackageManager().getPackageInfo(getPackageName(), 0)); }
+        catch (Exception e) { return 0; }
+    }
+
+    private static String httpText(String url) throws Exception {
+        HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+        c.setInstanceFollowRedirects(true);
+        c.setConnectTimeout(15000);
+        c.setReadTimeout(15000);
+        try (InputStream in = c.getInputStream(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            byte[] buf = new byte[8192]; int n;
+            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+            return out.toString("UTF-8");
+        }
+    }
+
     private static final String START_URL = "https://appassets.androidplatform.net/assets/index.html";
 
     private WebView web;
@@ -245,6 +268,74 @@ public class MainActivity extends Activity {
             @JavascriptInterface
             public boolean hasPendingImport() {
                 return pendingImport != null;
+            }
+
+            @JavascriptInterface
+            public int appVersion() { return myVersion(); }
+
+            @JavascriptInterface
+            public void checkUpdate() {
+                new Thread(() -> {
+                    String result = "null";
+                    try {
+                        String body = httpText(UPDATE_BASE + "version.json?t=" + System.currentTimeMillis());
+                        JSONObject o = new JSONObject(body);
+                        o.put("mine", myVersion());
+                        result = o.toString();
+                    } catch (Exception e) { result = "null"; }
+                    final String r = result;
+                    runOnUiThread(() -> web.evaluateJavascript("window.__onUpdate && window.__onUpdate(" + r + ")", null));
+                }).start();
+            }
+
+            @JavascriptInterface
+            public void installUpdate() {
+                if (Build.VERSION.SDK_INT >= 26 && !getPackageManager().canRequestPackageInstalls()) {
+                    runOnUiThread(() -> {
+                        web.evaluateJavascript("window.__onUpdateStep && window.__onUpdateStep('allow')", null);
+                        try {
+                            startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + getPackageName())));
+                        } catch (Exception e) { }
+                    });
+                    return;
+                }
+                new Thread(() -> {
+                    try {
+                        File dir = new File(getCacheDir(), "share");
+                        dir.mkdirs();
+                        File apk = new File(dir, "TidyQuest-update.apk");
+                        HttpURLConnection c = (HttpURLConnection) new URL(UPDATE_BASE + "TidyQuest-trial.apk?t=" + System.currentTimeMillis()).openConnection();
+                        c.setInstanceFollowRedirects(true);
+                        c.setConnectTimeout(20000);
+                        c.setReadTimeout(60000);
+                        int total = c.getContentLength();
+                        try (InputStream in = c.getInputStream(); OutputStream out = new FileOutputStream(apk)) {
+                            byte[] buf = new byte[65536];
+                            int n; long got = 0; int lastPct = -1;
+                            while ((n = in.read(buf)) > 0) {
+                                out.write(buf, 0, n); got += n;
+                                if (total > 0) {
+                                    int pct = (int) (got * 100 / total);
+                                    if (pct != lastPct && pct % 5 == 0) {
+                                        lastPct = pct;
+                                        final int fp = pct;
+                                        runOnUiThread(() -> web.evaluateJavascript("window.__onUpdateStep && window.__onUpdateStep('progress'," + fp + ")", null));
+                                    }
+                                }
+                            }
+                        }
+                        Uri uri = FileProvider.getUriForFile(MainActivity.this, getPackageName() + ".files", apk);
+                        Intent i = new Intent(Intent.ACTION_VIEW);
+                        i.setDataAndType(uri, "application/vnd.android.package-archive");
+                        i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                        runOnUiThread(() -> {
+                            web.evaluateJavascript("window.__onUpdateStep && window.__onUpdateStep('install')", null);
+                            startActivity(i);
+                        });
+                    } catch (Exception e) {
+                        runOnUiThread(() -> web.evaluateJavascript("window.__onUpdateStep && window.__onUpdateStep('fail')", null));
+                    }
+                }).start();
             }
 
             @JavascriptInterface

@@ -64,6 +64,14 @@ jobs:
         with:
           gradle-version: '8.9'
 
+      - name: Set version from build number (so the in-app updater always sees a newer one)
+        run: |
+          vc=$((1000 + ${{ github.run_number }}))
+          sed -i -E "s/versionCode [0-9]+/versionCode $vc/; s/versionName '[^']*'/versionName '0.${{ github.run_number }}-trial'/" app/build.gradle
+          grep -n "version" app/build.gradle
+          echo "{\"versionCode\": $vc, \"name\": \"0.${{ github.run_number }}-trial\"}" > version.json
+          cat version.json
+
       - name: Build APK
         run: gradle :app:assembleRelease --no-daemon
 
@@ -80,6 +88,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete trial --yes --cleanup-tag || true
-          gh release create trial TidyQuest-trial.apk \
+          gh release create trial TidyQuest-trial.apk version.json \
             --title "Tidy Quest trial build" \
             --notes "Build ${{ github.run_number }}. Download TidyQuest-trial.apk on the Android tablet and open it to install."
