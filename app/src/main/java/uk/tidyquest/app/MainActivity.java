@@ -28,6 +28,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import androidx.core.content.FileProvider;
 import androidx.webkit.WebViewAssetLoader;
 
 import com.google.zxing.BarcodeFormat;
@@ -110,9 +111,15 @@ public class MainActivity extends Activity {
                 fileCallback = callback;
                 Intent i = new Intent(Intent.ACTION_GET_CONTENT);
                 i.addCategory(Intent.CATEGORY_OPENABLE);
-                i.setType("image/*");
+                String type = "*/*";
+                String[] accept = params.getAcceptTypes();
+                if (accept != null && accept.length > 0 && accept[0] != null) {
+                    if (accept[0].startsWith("image/") && accept.length == 1) type = "image/*";
+                    else if (accept[0].startsWith("video/") && accept.length == 1) type = "video/*";
+                }
+                i.setType(type);
                 try {
-                    startActivityForResult(Intent.createChooser(i, "Choose a photo"), REQ_FILE);
+                    startActivityForResult(Intent.createChooser(i, "Choose a file"), REQ_FILE);
                 } catch (Exception e) {
                     fileCallback = null;
                     return false;
@@ -198,6 +205,35 @@ public class MainActivity extends Activity {
             }
 
             @JavascriptInterface
+            public boolean fileBegin(String name) {
+                try {
+                    File dir = new File(getCacheDir(), "share");
+                    if (!dir.exists() && !dir.mkdirs()) return false;
+                    File[] old = dir.listFiles();
+                    if (old != null) for (File f : old) f.delete();
+                    shareFile = new File(dir, name.replaceAll("[^A-Za-z0-9._-]", ""));
+                    shareOut = new FileOutputStream(shareFile);
+                    return true;
+                } catch (Exception e) { return false; }
+            }
+
+            @JavascriptInterface
+            public boolean fileAppend(String text) {
+                try { shareOut.write(text.getBytes("UTF-8")); return true; } catch (Exception e) { return false; }
+            }
+
+            @JavascriptInterface
+            public boolean fileShare(String title) {
+                try { shareOut.close(); } catch (Exception ignored) {}
+                return startShare(title);
+            }
+
+            @JavascriptInterface
+            public boolean fileReshare(String title) {
+                return shareFile != null && shareFile.exists() && startShare(title);
+            }
+
+            @JavascriptInterface
             public void copy(String text) {
                 runOnUiThread(() -> {
                     ClipboardManager cm = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
@@ -208,6 +244,22 @@ public class MainActivity extends Activity {
 
         if (savedInstanceState != null) web.restoreState(savedInstanceState);
         else web.loadUrl(START_URL);
+    }
+
+    private File shareFile;
+    private FileOutputStream shareOut;
+
+    private boolean startShare(String title) {
+        try {
+            Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".files", shareFile);
+            Intent send = new Intent(Intent.ACTION_SEND);
+            send.setType("application/json");
+            send.putExtra(Intent.EXTRA_STREAM, uri);
+            send.putExtra(Intent.EXTRA_TEXT, "Open this in Tidy Quest: Grown-ups, Link tablets, Receive from a file.");
+            send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            runOnUiThread(() -> startActivity(Intent.createChooser(send, title)));
+            return true;
+        } catch (Exception e) { return false; }
     }
 
     private void handlePermission(PermissionRequest request) {

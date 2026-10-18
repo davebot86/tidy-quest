@@ -821,6 +821,13 @@ const PARENT={
       <div class="row" style="gap:8px"><button class="btn ghost small" data-act="kidStyle" data-id="${k.id}">Picture &amp; world</button><button class="btn bad small" data-act="delKid" data-id="${k.id}">Remove ${esc(k.name)}</button></div></div>`}).join("")}</div>
     <div class="panel row"><input id="newkid" placeholder="Add a child's name" maxlength="20" style="flex:1;min-width:160px"><button class="btn" data-act="addKid">Add</button></div>`},
   link(){return `
+    <div class="panel stack"><b>Send a child to another phone</b><p class="muted" style="margin:0">Makes one file with their picture, rank, points, goal stars and every trophy photo and video. Send it by WhatsApp or email, then open it on the other phone with <b>Receive from a file</b>. Points and stars move with the file; everything else is copied.</p>
+      <div class="row" style="gap:8px">${S.kids.map(k=>`<button class="btn small" data-act="sendKid" data-id="${k.id}">Send ${esc(k.name)}</button>`).join("")}</div></div>
+    ${S.lastSend?`<div class="panel stack"><b>Last sent: ${esc(S.lastSend.name)}, ${new Date(S.lastSend.at).toLocaleString("en-GB",{weekday:"short",hour:"2-digit",minute:"2-digit"})}</b>
+      <p class="muted" style="margin:0">Carrying ${S.lastSend.credits} points${S.lastSend.stars?` and ${S.lastSend.stars} stars`:""}.</p>
+      <div class="row" style="gap:8px">${bridge()&&bridge().fileReshare?`<button class="btn ghost small" data-act="resend">Send it again</button>`:""}<button class="btn bad small" data-act="undoSend">It never arrived: put points back</button></div></div>`:""}
+    <div class="panel stack"><b>Receive from a file</b><p class="muted" style="margin:0">Open a Tidy Quest file someone sent you. Save it from WhatsApp first if it asks.</p>
+      <button class="btn ghost" data-act="receiveFile">Choose the file</button></div>
     <div class="panel stack"><b>Scan a code</b><p class="muted" style="margin:0">Scan a Tidy Quest code from another tablet: a family setup, a credits request or a credits transfer.</p>
       <button class="btn" data-act="scanAny">${IC.cam} Scan a code</button></div>
     <div class="panel stack"><b>Copy this setup to another tablet</b><p class="muted" style="margin:0">Sends your children, their styles and the reward shop. Credits never copy, so nothing can double up. Jobs, photos and voice notes stay here.</p>
@@ -1091,6 +1098,39 @@ Object.assign(ACT,{
         S.rewards=list;save();overlayClose();render();toast("Shop loaded")};
       sh.querySelector("#addshop").onclick=()=>{const have=new Set(S.rewards.map(r=>r.name.toLowerCase()));S.rewards.push(...list.filter(r=>!have.has(r.name.toLowerCase())));save();overlayClose();render();toast("Rewards added")}}}
 });
+/* ---------- Send a child to another phone (one file, no internet needed) ---------- */
+const blobToB64=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]);r.onerror=rej;r.readAsDataURL(b)});
+function b64ToBlob(b64,type){const bin=atob(b64);const a=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return new Blob([a],{type})}
+async function packMedia(id){if(!id)return null;const b=await DB.get(id);if(!b)return null;return {type:b.type||"application/octet-stream",data:await blobToB64(b)}}
+async function buildKidFile(k){const trophies=[];
+  for(const t of (k.trophies||[]))trophies.push({...t,media:await packMedia(t.media)});
+  const g=k.goal?{...k.goal,photo:await packMedia(k.goal.photo)}:null;
+  return JSON.stringify({tq:"kid",v:1,id:"x"+uid(),from:S.device,at:Date.now(),
+    kid:{id:k.id,name:k.name,theme:k.theme,earned:k.earned||0,credits:k.credits||0},face:await packMedia(k.face),goal:g,trophies})}
+async function shareFile(name,text){const b=bridge();
+  if(b&&b.fileBegin){if(!b.fileBegin(name))return false;const CH=256*1024;
+    for(let i=0;i<text.length;i+=CH){if(!b.fileAppend(text.slice(i,i+CH)))return false}
+    return b.fileShare("Send "+name)}
+  window.__lastExport=text;return true}
+async function importKidFile(text){let d;try{d=JSON.parse(text)}catch(e){return toast("That file isn't a Tidy Quest file.")}
+  if(!d||d.tq!=="kid"||!d.kid)return toast("That file isn't a Tidy Quest file.");
+  if(d.from===S.device)return toast("That file came from this phone. Open it on the other phone.");
+  if(S.usedIn.includes(d.id))return toast("This file has already been added on this phone.");
+  const x=d.kid;let k=findKidFor(x.id,x.name),isNew=false;
+  if(!k){k={id:x.id,name:x.name,theme:x.theme,credits:0,earned:0};S.kids.push(k);isNew=true}
+  else if(k.id!==x.id){S.jobs.forEach(j=>{if(j.kid===k.id)j.kid=x.id});S.requests.forEach(r=>{if(r.kid===k.id)r.kid=x.id});k.id=x.id}
+  const put=async m=>m?await putMedia(b64ToBlob(m.data,m.type)):null;
+  k.theme=x.theme||k.theme;k.earned=Math.max(k.earned||0,x.earned||0);k.credits=(k.credits||0)+(x.credits||0);
+  if(d.face){if(k.face)delMedia(k.face);k.face=await put(d.face)}
+  if(d.goal){const g=d.goal;if(k.goal&&k.goal.name===g.name){k.goal.count=Math.min(k.goal.target,(k.goal.count||0)+(g.count||0))}
+    else{if(k.goal&&k.goal.photo)delMedia(k.goal.photo);k.goal={name:g.name,target:g.target,count:g.count||0,done:!!g.done,photo:null}}
+    if(g.photo&&!k.goal.photo)k.goal.photo=await put(g.photo);if(k.goal.count>=k.goal.target&&!k.goal.done){k.goal.done=true;k.goalHit=true}}
+  k.trophies=k.trophies||[];const have=new Set(k.trophies.map(t=>t.id));let added=0;
+  for(const t of (d.trophies||[])){if(have.has(t.id))continue;k.trophies.push({...t,media:await put(t.media)});added++}
+  k.trophies.sort((a,b)=>(b.at||0)-(a.at||0));
+  S.usedIn.push(d.id);save();render();
+  overlay(`<div class="stack" style="text-align:center;align-items:center">${avatarSVG(k,null,"avatar big")||mentorSVG(k.theme)}<h2 class="display">${esc(k.name)} ${isNew?"has arrived":"is up to date"}</h2>
+    <p style="margin:0">${x.credits?`+${x.credits} points. `:""}${d.goal&&d.goal.count?`${d.goal.count} goal stars. `:""}${added} trophy${added===1?"":"s"} added.</p><button class="btn" data-close>Done</button></div>`)}
 /* ---------- QR link between tablets (no internet needed) ---------- */
 const QR_TAG="TQ1:";
 function packQR(obj){return QR_TAG+btoa(unescape(encodeURIComponent(JSON.stringify(obj))))}
@@ -1159,6 +1199,22 @@ function acceptCredits(d){
   k.credits+=d.amt;delete S.pendingIn[d.n];S.usedIn.push(d.n);if(S.usedIn.length>200)S.usedIn.shift();save();overlayClose();render();sfxFanfare(k);confetti(k);
   overlay(`<div class="stack" style="text-align:center;align-items:center"><h2 class="display">+${d.amt} for ${esc(k.name)}</h2><p style="margin:0">${esc(k.name)} now has ${k.credits} credits on this tablet.</p><button class="btn" data-close>Done</button></div>`)}
 Object.assign(ACT,{
+  sendKid(b){const k=kid(b.dataset.id);const stars=k.goal?Math.min(k.goal.count||0,k.goal.target):0;
+    const el=overlay(`<div class="stack"><h2 class="display">Send ${esc(k.name)}</h2>
+      <p style="margin:0">This makes one file with ${esc(k.name)}'s picture, rank, goal and ${(k.trophies||[]).length} trophies.</p>
+      <p style="margin:0"><b>${k.credits} points${stars?` and ${stars} goal stars`:""} go with the file</b> and are cleared on this phone, so nothing gets counted twice. Everything else stays here too.</p>
+      <div class="row"><button class="btn" id="dosend">Make the file and send</button><button class="btn ghost" data-close>Cancel</button></div></div>`);
+    el.querySelector("#dosend").onclick=async()=>{const btn=el.querySelector("#dosend");btn.disabled=true;btn.textContent="Packing…";
+      try{const text=await buildKidFile(k);const name=`TidyQuest-${k.name.replace(/[^A-Za-z0-9]+/g,"")}-${today()}.tqkid.json`;
+        const ok=await shareFile(name,text);if(!ok){btn.disabled=false;btn.textContent="Make the file and send";toast("Couldn't make the file. Try again.");return}
+        S.lastSend={kid:k.id,name:k.name,credits:k.credits,stars:k.goal&&!k.goal.done?(k.goal.count||0):0,at:Date.now(),file:name};
+        k.credits=0;if(k.goal&&!k.goal.done)k.goal.count=0;save();overlayClose();render();toast(`${k.name}'s points and stars are in the file`)}
+      catch(e){btn.disabled=false;btn.textContent="Make the file and send";toast("Couldn't make the file. Try again.")}}},
+  resend(){try{bridge().fileReshare("Send "+S.lastSend.file)}catch(e){toast("Couldn't find the file. Make a new one.")}},
+  undoSend(){const L=S.lastSend;confirmSheet("Put the points back?",`Only do this if the file was never opened on the other phone, or ${L.name} gets them twice.`,()=>{const k=kid(L.kid);
+    if(k){k.credits+=L.credits;if(k.goal&&!k.goal.done)k.goal.count=Math.min(k.goal.target,(k.goal.count||0)+L.stars)}delete S.lastSend;save();render();toast("Points put back")},"Put them back","Cancel")},
+  receiveFile(){const f=$("#filepick");f.accept=".json,.tqkid,application/json,text/plain,*/*";f.value="";
+    f.onchange=async()=>{const file=f.files[0];f.accept="image/*";if(!file)return;toast("Opening the file…");importKidFile(await file.text())};f.click()},
   scanAny(){scanQR(handleCode)},
   showSetup(){showQR(setupCode(),"Family setup","On the other tablet: Grown-ups → Link tablets → Scan a code.")},
   receiveCredits(b){const k=kid(b.dataset.id);const el=showQR(receiveCode(k),`Receive credits for ${k.name}`,"1. Scan this on the other tablet (Link tablets → Scan a code). 2. Then scan the code it shows back.",
@@ -1166,8 +1222,8 @@ Object.assign(ACT,{
     el.querySelector("#scanback").onclick=()=>{overlayClose();scanQR(handleCode)}}
 });
 function keepTitle(){const t=$("#dtitle");if(t&&draft)draft.title=t.value.trim()}
-function confirmSheet(title,sub,yes){overlay(`<div class="stack"><h2 class="display">${esc(title)}</h2><p class="muted" style="margin:0">${esc(sub)}</p>
-  <div class="row"><button class="btn bad" id="cyes">Yes, delete</button><button class="btn ghost" data-close>Keep it</button></div></div>`).querySelector("#cyes").onclick=()=>{overlayClose();yes()}}
+function confirmSheet(title,sub,yes,label="Yes, delete",keep="Keep it"){overlay(`<div class="stack"><h2 class="display">${esc(title)}</h2><p class="muted" style="margin:0">${esc(sub)}</p>
+  <div class="row"><button class="btn bad" id="cyes">${esc(label)}</button><button class="btn ghost" data-close>${esc(keep)}</button></div></div>`).querySelector("#cyes").onclick=()=>{overlayClose();yes()}}
 
 document.addEventListener("click",e=>{
   if(e.target.closest("[data-close]")){overlayClose();return}
