@@ -10,7 +10,11 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.util.Base64;
 import android.net.Uri;
+import android.content.ContentValues;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.speech.tts.TextToSpeech;
 import android.view.View;
 import android.view.WindowManager;
@@ -36,6 +40,9 @@ import com.google.zxing.integration.android.IntentResult;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -153,6 +160,41 @@ public class MainActivity extends Activity {
                         .setBeepEnabled(false)
                         .setOrientationLocked(false)
                         .initiateScan());
+            }
+
+            @JavascriptInterface
+            public boolean saveMedia(String base64, String mime, String name) {
+                try {
+                    byte[] data = Base64.decode(base64, Base64.DEFAULT);
+                    boolean video = mime != null && mime.startsWith("video");
+                    String type = mime == null || mime.isEmpty() ? (video ? "video/webm" : "image/jpeg") : mime.split(";")[0];
+                    if (Build.VERSION.SDK_INT >= 29) {
+                        ContentValues v = new ContentValues();
+                        v.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
+                        v.put(MediaStore.MediaColumns.MIME_TYPE, type);
+                        v.put(MediaStore.MediaColumns.RELATIVE_PATH, (video ? Environment.DIRECTORY_MOVIES : Environment.DIRECTORY_PICTURES) + "/Tidy Quest");
+                        Uri uri = getContentResolver().insert(video ? MediaStore.Video.Media.EXTERNAL_CONTENT_URI : MediaStore.Images.Media.EXTERNAL_CONTENT_URI, v);
+                        if (uri == null) return false;
+                        try (OutputStream out = getContentResolver().openOutputStream(uri)) {
+                            out.write(data);
+                        }
+                        return true;
+                    }
+                    if (!has(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                        runOnUiThread(() -> requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 3));
+                        return false;
+                    }
+                    File dir = new File(Environment.getExternalStoragePublicDirectory(video ? Environment.DIRECTORY_MOVIES : Environment.DIRECTORY_PICTURES), "Tidy Quest");
+                    if (!dir.exists() && !dir.mkdirs()) return false;
+                    File f = new File(dir, name);
+                    try (FileOutputStream out = new FileOutputStream(f)) {
+                        out.write(data);
+                    }
+                    sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(f)));
+                    return true;
+                } catch (Exception e) {
+                    return false;
+                }
             }
 
             @JavascriptInterface
