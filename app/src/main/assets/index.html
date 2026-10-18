@@ -1160,9 +1160,9 @@ const ACT={
     el.querySelector("#gskip").onclick=()=>finish(null);
     el.querySelector("#gphoto").onclick=()=>capture({mode:"photo",title:"Enjoying "+r.name},id=>finish(id))},
   refund(b){const r=S.requests.find(x=>x.id===b.dataset.id);const k=kid(r.kid);if(k)post(k,{d:r.cost,why:"refund"});S.requests=S.requests.filter(x=>x!==r);save();toast("Credits returned");render()},
-  addReward(){S.rewards.push({id:uid(),icon:"⭐",name:"New reward",cost:5});save();render()},
-  delReward(b){const r=S.rewards.find(x=>x.id===b.dataset.id);if(r)delMedia(r.photo);S.rewards=S.rewards.filter(x=>x!==r);save();render()},
-  rPhoto(b){const r=S.rewards.find(x=>x.id===b.dataset.id);capture({mode:"photo",title:"Photo of: "+r.name},id=>{if(r.photo)delMedia(r.photo);r.photo=id;save();render()})},
+  addReward(){S.rewards.push({id:uid(),icon:"⭐",name:"New reward",cost:5});S.shopAt=Date.now();save();render()},
+  delReward(b){const r=S.rewards.find(x=>x.id===b.dataset.id);if(r)delMedia(r.photo);S.rewards=S.rewards.filter(x=>x!==r);S.shopAt=Date.now();save();render()},
+  rPhoto(b){const r=S.rewards.find(x=>x.id===b.dataset.id);capture({mode:"photo",title:"Photo of: "+r.name},id=>{if(r.photo)delMedia(r.photo);r.photo=id;S.shopAt=Date.now();save();render()})},
   addKid(){const n=$("#newkid").value.trim();if(!n)return;const k={id:uid(),name:n,theme:"karate",credits:0,earned:0};S.kids.push(k);save();go("style",{kid:k.id,back:"parent"})},
   kidStyle(b){go("style",{kid:b.dataset.id,back:"parent"})},
   delKid(b){const k=kid(b.dataset.id);confirmSheet(`Remove ${k.name}?`,"This deletes their picture, jobs, credits, stars and every trophy video. It can't be undone.",()=>{S.jobs.filter(j=>j.kid===k.id).forEach(j=>{delMedia(j.photo);delMedia(j.after);j.steps.forEach(s=>delMedia(s.audio))});(k.trophies||[]).forEach(t=>{delMedia(t.media);albumDel(t.album)});(k.treats||[]).forEach(t=>delMedia(t.photo));delMedia(k.face);
@@ -1281,8 +1281,8 @@ Object.assign(ACT,{
         <button class="btn" id="replshop">Replace my shop with these</button><button class="btn ghost" id="addshop">Add these to my shop</button><button class="btn ghost" data-close>Cancel</button></div>`);
       sh.querySelector("#replshop").onclick=()=>{const old=new Map(S.rewards.map(r=>[r.name.toLowerCase(),r]));
         list.forEach(r=>{const o=old.get(r.name.toLowerCase());if(o&&o.photo){r.photo=o.photo;o.photo=null}});old.forEach(o=>delMedia(o.photo));
-        S.rewards=list;save();overlayClose();render();toast("Shop loaded")};
-      sh.querySelector("#addshop").onclick=()=>{const have=new Set(S.rewards.map(r=>r.name.toLowerCase()));S.rewards.push(...list.filter(r=>!have.has(r.name.toLowerCase())));save();overlayClose();render();toast("Rewards added")}}}
+        S.rewards=list;S.shopAt=Date.now();save();overlayClose();render();toast("Shop loaded")};
+      sh.querySelector("#addshop").onclick=()=>{const have=new Set(S.rewards.map(r=>r.name.toLowerCase()));S.rewards.push(...list.filter(r=>!have.has(r.name.toLowerCase())));S.shopAt=Date.now();save();overlayClose();render();toast("Rewards added")}}}
 });
 /* ---------- Send a child to another phone (one file, no internet needed) ---------- */
 const blobToB64=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]);r.onerror=rej;r.readAsDataURL(b)});
@@ -1295,7 +1295,7 @@ async function buildKidFile(k){const trophies=[];
   return JSON.stringify({tq:"kid",v:2,id:"x"+uid(),from:S.device,at:Date.now(),
     ledger:k.ledger||[],
     kid:{id:k.id,name:k.name,theme:k.theme,earned:k.earned||0,credits:k.credits||0},face:await packMedia(k.face),goal:g,trophies,treats,
-    shop:await Promise.all(S.rewards.map(async r=>({icon:r.icon,name:r.name,cost:r.cost,by:r.by||null,photo:await packMedia(r.photo)})))})}
+    shopAt:S.shopAt||0,shop:await Promise.all(S.rewards.map(async r=>({icon:r.icon,name:r.name,cost:r.cost,by:r.by||null,photo:await packMedia(r.photo)})))})}
 async function shareFile(name,text){const b=bridge();
   if(b&&b.fileBegin){if(!b.fileBegin(name))return false;const CH=256*1024;
     for(let i=0;i<text.length;i+=CH){if(!b.fileAppend(text.slice(i,i+CH)))return false}
@@ -1325,14 +1325,15 @@ async function importKidFile(text){let d;try{d=JSON.parse(text)}catch(e){return 
     k.trophies.push({...t,media:await put(t.media),album:al});added++}
   k.treats=k.treats||[];const haveT=new Set(k.treats.map(t=>t.id));for(const t of (d.treats||[])){if(haveT.has(t.id))continue;k.treats.push({...t,photo:await put(t.photo)})}
   k.treats.sort((a,b)=>(b.at||0)-(a.at||0));
-  let shopAdded=0;const haveR=new Map(S.rewards.map(r=>[r.name.trim().toLowerCase(),r]));
-  for(const r of (d.shop||[])){const ex=haveR.get(String(r.name).trim().toLowerCase());
-    if(ex){if(!ex.photo&&r.photo)ex.photo=await put(r.photo);continue}
-    S.rewards.push({id:uid(),icon:r.icon||"⭐",name:r.name,cost:Math.max(1,parseInt(r.cost)||1),by:r.by||null,photo:await put(r.photo)});shopAdded++}
-  k.trophies.sort((a,b)=>(b.at||0)-(a.at||0));
+  let shopAdded=0;
+  if(d.shop&&(d.shopAt||0)>(S.shopAt||0)){const old=new Map(S.rewards.map(r=>[r.name.trim().toLowerCase(),r]));const next=[];
+    for(const r of d.shop){const ex=old.get(String(r.name).trim().toLowerCase());
+      next.push({id:ex?ex.id:uid(),icon:r.icon||"⭐",name:r.name,cost:Math.max(1,parseInt(r.cost)||1),by:r.by||null,photo:r.photo?await put(r.photo):(ex?ex.photo:null)});
+      if(ex&&r.photo&&ex.photo)delMedia(ex.photo);if(ex)old.delete(String(r.name).trim().toLowerCase());else shopAdded++}
+    old.forEach(r=>delMedia(r.photo));S.rewards=next;S.shopAt=d.shopAt;shopAdded=shopAdded||-1}
   S.usedIn.push(d.id);save();render();
   overlay(`<div class="stack" style="text-align:center;align-items:center">${avatarSVG(k,null,"avatar big")||mentorSVG(k.theme)}<h2 class="display">${esc(k.name)} ${isNew?"has arrived":"is up to date"}</h2>
-    <p style="margin:0">${k.credits} points${k.goal?`, ${Math.min(k.goal.count,k.goal.target)}/${k.goal.target} stars towards ${esc(k.goal.name)}`:""}. ${added} trophy${added===1?"":"s"} added.${shopAdded?` ${shopAdded} shop reward${shopAdded===1?"":"s"} added.`:""}</p><button class="btn" data-close>Done</button></div>`)}
+    <p style="margin:0">${k.credits} points${k.goal?`, ${Math.min(k.goal.count,k.goal.target)}/${k.goal.target} stars towards ${esc(k.goal.name)}`:""}. ${added} trophy${added===1?"":"s"} added.${shopAdded?" Shop updated to match.":""}</p><button class="btn" data-close>Done</button></div>`)}
 /* A file opened from WhatsApp or Files arrives here; it waits until the app is set up, then asks for the PIN. */
 window.__checkImport=()=>{const b=bridge();if(!b||!b.hasPendingImport||!b.hasPendingImport())return;
   if(!S.pin){toast("Set up Tidy Quest first, then the file will load.");return}
@@ -1375,7 +1376,7 @@ function applySetup(d){const added=[],matched=[];
       k.name=x.name;k.theme=x.theme;matched.push(x.name)}
     else{S.kids.push({id:x.id,name:x.name,theme:x.theme,credits:0,earned:0});added.push(x.name)}});
   if(d.shop&&d.shop.length){const old=new Map(S.rewards.map(r=>[r.name.toLowerCase(),r]));
-    S.rewards=d.shop.map(x=>{const o=old.get(String(x.n).toLowerCase());return {id:uid(),icon:x.i,name:x.n,cost:x.c,photo:o?o.photo:null}});
+    S.shopAt=Date.now();S.rewards=d.shop.map(x=>{const o=old.get(String(x.n).toLowerCase());return {id:uid(),icon:x.i,name:x.n,cost:x.c,photo:o?o.photo:null}});
     const kept=new Set(S.rewards.map(r=>r.photo));old.forEach(o=>{if(o.photo&&!kept.has(o.photo))delMedia(o.photo)})}
   save();render();
   overlay(`<div class="stack"><h2 class="display">Setup copied</h2>
@@ -1418,7 +1419,7 @@ Object.assign(ACT,{
       catch(e){btn.disabled=false;btn.textContent="Make the file and send";toast("Couldn't make the file. Try again.")}}},
   addWish(b){wishSheet(kid(b.dataset.id))},
   wishYes(b){const w=S.wishes.find(x=>x.id===b.dataset.id);if(!w)return;const name=($("#wn-"+w.id).value||"").trim()||w.name||"New reward";const cost=Math.max(1,Math.min(999,parseInt($("#wc-"+w.id).value)||10));
-    S.rewards.push({id:uid(),icon:w.icon||"⭐",name,cost,photo:w.photo||null,by:w.kid});S.wishes=S.wishes.filter(x=>x!==w);const k=kid(w.kid);
+    S.rewards.push({id:uid(),icon:w.icon||"⭐",name,cost,photo:w.photo||null,by:w.kid});S.shopAt=Date.now();S.wishes=S.wishes.filter(x=>x!==w);const k=kid(w.kid);
     if(k){k.wishNews={name,cost}}save();render();toast(`${name} is in the shop for ${cost}`)},
   wishNo(b){const w=S.wishes.find(x=>x.id===b.dataset.id);if(!w)return;delMedia(w.photo);S.wishes=S.wishes.filter(x=>x!==w);save();render();toast("Wish removed")},
   resend(){try{bridge().fileReshare("Send "+S.lastSend.file)}catch(e){toast("Couldn't find the file. Make a new one.")}},
@@ -1440,7 +1441,7 @@ document.addEventListener("click",e=>{
   if(e.target.closest("[data-close]")){overlayClose();return}
   const b=e.target.closest("[data-act]");if(!b||b.disabled)return;const f=ACT[b.dataset.act];if(f)f(b)});
 document.addEventListener("change",e=>{const t=e.target;
-  if(t.dataset.rw){const r=S.rewards.find(x=>x.id===t.dataset.id);if(!r)return;r[t.dataset.rw]=t.dataset.rw==="cost"?Math.max(1,parseInt(t.value)||1):t.value.trim()||r[t.dataset.rw];save()}
+  if(t.dataset.rw){const r=S.rewards.find(x=>x.id===t.dataset.id);if(!r)return;r[t.dataset.rw]=t.dataset.rw==="cost"?Math.max(1,parseInt(t.value)||1):t.value.trim()||r[t.dataset.rw];S.shopAt=Date.now();save()}
   if(t.dataset.kn){const k=kid(t.dataset.kn);if(k&&t.value.trim()){k.name=t.value.trim();save()}}});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")back()});
 window.addEventListener("popstate",()=>{});
