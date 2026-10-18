@@ -25,17 +25,18 @@ jobs:
 
       - name: Bundle theme fonts so the app works offline
         run: |
+          set -u
           mkdir -p /tmp/fonts && cd /tmp/fonts
-          for p in nunito black-ops-one kaushan-script bangers monoton orbitron graduate; do
-            npm pack "@fontsource/$p" --silent
-            mkdir -p "$p" && tar xzf fontsource-$p-*.tgz -C "$p" --strip-components=1
-          done
           out="$GITHUB_WORKSPACE/app/src/main/assets/fonts"
           mkdir -p "$out"
-          cp nunito/files/nunito-latin-400-normal.woff2 "$out/nunito-400.woff2"
-          cp nunito/files/nunito-latin-800-normal.woff2 "$out/nunito-800.woff2"
-          for p in black-ops-one kaushan-script bangers monoton orbitron graduate; do
-            cp "$p/files/$p-latin-400-normal.woff2" "$out/$p.woff2"
+          # package:weight pairs; file name in the app is <package>-<weight>.woff2
+          for pair in nunito:400 nunito:700 nunito:900 shippori-mincho-b1:800 saira-stencil-one:400 bangers:400 bungee:400 orbitron:700 bebas-neue:400; do
+            pkg="${pair%%:*}"; w="${pair##*:}"
+            if [ ! -d "$pkg" ]; then
+              npm pack "@fontsource/$pkg" --silent >/dev/null 2>&1 && mkdir -p "$pkg" && tar xzf fontsource-$pkg-*.tgz -C "$pkg" --strip-components=1 || echo "::warning::could not fetch $pkg"
+            fi
+            f=$(ls "$pkg"/files/*-latin-$w-normal.woff2 2>/dev/null | grep -v ext | head -1 || true)
+            if [ -n "$f" ]; then cp "$f" "$out/$pkg-$w.woff2"; else echo "::warning::no latin $w file for $pkg, app will use the fallback font"; fi
           done
           ls -l "$out"
 
