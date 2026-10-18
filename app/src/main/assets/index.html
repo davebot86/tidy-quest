@@ -170,6 +170,11 @@ body.parent{--bg:#f3f1ec;--panel:#fff;--ink:#22211f;--muted:#6c6862;--line:#e1dd
 .media-box{width:100%;border-radius:12px;background:#000;max-height:50vh}
 .reward .rphoto{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:12px;max-width:100%}
 .ideas{display:flex;flex-wrap:wrap;gap:8px}
+.stars{display:flex;flex-wrap:wrap;gap:4px}
+.stars i{font-style:normal;font-size:22px;line-height:1;color:var(--line)}
+.stars i.on{color:var(--accent)}
+.ticon{width:100%;height:100%;display:grid;place-items:center;font-size:56px;background:var(--line)}
+.ticon.big{height:auto;aspect-ratio:4/3;border-radius:12px;font-size:96px}
 .tthumb{width:52px;height:52px;border-radius:10px;object-fit:cover;background:#000}
 .tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
 .tcard{display:flex;flex-direction:column;gap:8px;text-align:left;background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);padding:10px}
@@ -226,12 +231,13 @@ const THEMES={
 const RANK_AT=[0,10,25,50,90,150,250];
 /* Job types: tidying plus challenges that build the whole child. */
 const TYPES={
-  tidy:{label:"Tidy up",proof:"photo",ideas:["Tidy the bedroom","Toys away in the lounge","Clothes in the washing basket","Make your bed","Clear the table"]},
-  active:{label:"Get active",proof:"video",ideas:["Ride your scooter to the park","Do a scooter stunt","Bike ride with a grown-up","20 star jumps","Kick a ball 50 times without stopping"]},
-  brave:{label:"Be brave & skills",proof:"video",ideas:["Learn a new scooter trick","Try a food you've never had","Swim a width","Tie your own shoelaces","Order your own drink at the café"]},
-  kind:{label:"Kindness",proof:"seen",ideas:["Help cook dinner","Make someone smile today","Write a thank-you card","Help carry the shopping","Share a toy without being asked"]},
-  learn:{label:"Learning",proof:"seen",ideas:["Read for 15 minutes","Practise your spellings","Learn 5 facts about an animal","Draw a map of your street","Count the change at the shop"]}
+  tidy:{label:"Tidy up",icon:"🧹",proof:"photo",ideas:["Tidy the bedroom","Toys away in the lounge","Clothes in the washing basket","Make your bed","Clear the table"]},
+  active:{label:"Get active",icon:"⚡",proof:"video",ideas:["Ride your scooter to the park","Do a scooter stunt","Bike ride with a grown-up","20 star jumps","Kick a ball 50 times without stopping"]},
+  brave:{label:"Be brave & skills",icon:"🦁",proof:"video",ideas:["Learn a new scooter trick","Try a food you've never had","Try a new dip","Swim a width","Tie your own shoelaces","Order your own drink at the café"]},
+  kind:{label:"Kindness",icon:"💛",proof:"seen",ideas:["Help cook dinner","Make someone smile today","Write a thank-you card","Help carry the shopping","Share a toy without being asked"]},
+  learn:{label:"Learning",icon:"📚",proof:"seen",ideas:["Read for 15 minutes","Practise your spellings","Learn 5 facts about an animal","Draw a map of your street","Count the change at the shop"]}
 };
+const isChallenge=j=>!!(j&&j.type&&j.type!=="tidy");
 const PROOF={photo:"Photo",video:"Video",seen:"A grown-up saw it",none:"No proof"};
 const DEFAULT_REWARDS=[
   {icon:"🍮",name:"Pudding after tea",cost:5},
@@ -456,19 +462,24 @@ VIEWS.hq=({kid:id})=>{const k=kid(id);if(!k){home();return""}setBodyTheme(k);con
       <div class="meter" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div></div></div>
   <div class="panel spread"><div class="wallet"><b>${k.credits}</b><span class="label">${esc(th.cur)}</span></div>
     <button class="btn" data-act="shop" data-id="${k.id}">${esc(th.shop)}</button></div>
+  ${goalCard(k,th)}
   ${(k.trophies||[]).length?`<button class="panel spread" data-act="trophies" data-id="${k.id}" style="width:100%;text-align:left"><span><b>${esc(th.hall)}</b><br><span class="muted">${k.trophies.length} achievement${k.trophies.length===1?"":"s"} to watch</span></span>
-    <span class="row" style="gap:6px">${k.trophies.slice(0,3).map(t=>t.kind==="video"?`<video class="tthumb" muted playsinline preload="metadata" data-media="${t.media}"></video>`:`<img class="tthumb" data-media="${t.media}" alt="">`).join("")}</span></button>`:""}
+    <span class="row" style="gap:6px">${k.trophies.filter(t=>t.media).slice(0,3).map(t=>t.kind==="video"?`<video class="tthumb" muted playsinline preload="metadata" data-media="${t.media}"></video>`:`<img class="tthumb" data-media="${t.media}" alt="">`).join("")}</span></button>`:""}
   <h2 class="display">${esc(th.jobs)}</h2>
   <div class="stack">${jobs.length?jobs.map(j=>`<button class="jobcard" data-act="job" data-id="${j.id}">
       ${j.photo?`<img class="thumb" data-media="${j.photo}" alt="">`:`<span class="thumb"></span>`}
       <span class="stack" style="gap:6px;min-width:0"><span class="t">${esc(j.title||th.job)}</span>
         <span class="row" style="gap:6px">${j.type&&j.type!=="tidy"?`<span class="chip">${esc(TYPES[j.type].label)}</span>`:""}${j.status==="pending"?`<span class="chip wait">Waiting for a grown-up</span>`:`<span class="chip">${j.steps.length} step${j.steps.length===1?"":"s"}</span>`}${j.timer?`<span class="chip">Beat the clock</span>`:""}</span></span>
-      <span class="chip prize">+${j.credits}</span></button>`).join(""):`<div class="panel empty display" style="font-size:22px">${esc(th.empty)}</div>`}</div>`};
+      <span class="chip prize">${isChallenge(j)?"★":"+"+j.credits}</span></button>`).join(""):`<div class="panel empty display" style="font-size:22px">${esc(th.empty)}</div>`}</div>`};
 VIEWS.hq.after=({kid:id})=>{const k=kid(id);
+  if(k&&k.goalHit&&k.goal){delete k.goalHit;delete k.newTrophy;save();const g=k.goal;
+    setTimeout(()=>{sfxFanfare(k);confetti(k);setTimeout(()=>confetti(k),900);speak(`Goal reached! ${g.name}`);
+      overlay(`<div class="celebrate stack" style="align-items:center"><span class="label">Big goal reached</span>${g.photo?`<img class="media-box" style="object-fit:cover;max-height:30vh" data-media="${g.photo}" alt="">`:avatarSVG(k,null,"avatar big")||""}
+        <div class="display big">${esc(g.name)}</div><p style="margin:0">${g.target} stars, ${esc(k.name)}! You did it.</p><button class="btn big" data-close>Woohoo!</button></div>`)},300);return}
   if(k&&!k.rankUp&&k.newTrophy&&k.trophies&&k.trophies[0]){delete k.newTrophy;save();const t=k.trophies[0],th=T(k);
     setTimeout(()=>{sfxFanfare(k);confetti(k);overlay(`<div class="celebrate stack" style="align-items:center"><span class="label">New in your ${esc(th.hall)}</span><div class="display big">${esc(t.title)}</div>
-      ${t.kind==="video"?`<video class="media-box" controls autoplay playsinline data-media="${t.media}"></video>`:`<img class="media-box" style="object-fit:contain" data-media="${t.media}" alt="">`}
-      <p style="margin:0">+${t.amt} ${esc(th.cur.toLowerCase())}. Be proud, ${esc(k.name)}!</p><button class="btn big" data-close>Brilliant</button></div>`)},300);return}
+      ${!t.media?`<div class="ticon big">${TYPES[t.type]?TYPES[t.type].icon:"★"}</div>`:t.kind==="video"?`<video class="media-box" controls autoplay playsinline data-media="${t.media}"></video>`:`<img class="media-box" style="object-fit:contain" data-media="${t.media}" alt="">`}
+      <p style="margin:0">${t.star?(k.goal?`★ ${Math.min(k.goal.count,k.goal.target)} of ${k.goal.target} towards ${esc(k.goal.name)}.`:"★ A star for you!"):`+${t.amt} ${esc(th.cur.toLowerCase())}.`} Be proud, ${esc(k.name)}!</p><button class="btn big" data-close>Brilliant</button></div>`)},300);return}
   if(k&&k.newTrophy)delete k.newTrophy;
   if(k&&k.rankUp){const th=T(k);const name=th.ranks[rankOf(k.earned)];delete k.rankUp;save();
   setTimeout(()=>{sfxFanfare(k);confetti(k);overlay(`<div class="celebrate stack" style="align-items:center">${avatarSVG(k,null,"avatar big")||badgeSVG(k)}<span class="label">Promotion</span><div class="display big">${esc(name)}</div><p>You've earned a new rank, ${esc(k.name)}!</p><button class="btn big" data-close>Brilliant</button></div>`);speak(`Promotion! You are now ${name}`)},300)}};
@@ -490,7 +501,7 @@ VIEWS.job=({id})=>{const j=S.jobs.find(x=>x.id===id);const k=kid(j.kid);setBodyT
   if(j.status==="pending")return `<div class="topbar"><button class="iconbtn" data-act="back" aria-label="Back">${IC.back}</button><h1 class="display grow">${esc(j.title||th.job)}</h1></div>
     <div class="panel empty stack" style="align-items:center"><h2 class="display">Report sent!</h2><p>A grown-up will check it and give you your ${esc(th.cur.toLowerCase())}.</p></div>`;
   return `
-  <div class="topbar"><button class="iconbtn" data-act="back" aria-label="Back">${IC.back}</button><div class="grow"><span class="label">${esc(TYPES[j.type||"tidy"].label)} · +${j.credits} ${esc(th.cur)}</span><h1 class="display">${esc(j.title||th.job)}</h1></div></div>
+  <div class="topbar"><button class="iconbtn" data-act="back" aria-label="Back">${IC.back}</button><div class="grow"><span class="label">${esc(TYPES[j.type||"tidy"].label)} · ${isChallenge(j)?"★ towards your big goal":"+"+j.credits+" "+esc(th.cur)}</span><h1 class="display">${esc(j.title||th.job)}</h1></div></div>
   ${j.proof==="photo"||j.proof==="video"?`<div class="panel row" style="gap:10px">${IC.cam.replace("<svg",'<svg style="width:28px;height:28px;flex:none"')}<b>When you finish, ${j.proof==="video"?"film a short video":"take a photo"} to show you did it.</b></div>`:""}
   ${j.proof==="seen"?`<div class="panel"><b>A grown-up needs to see you do this one.</b></div>`:""}
   ${j.photo?`<img class="hero-photo" data-media="${j.photo}" alt="The mess to tidy">`:""}
@@ -511,8 +522,8 @@ async function playStep(j,s){if(s.audio)await playClip(s.audio);else speak(s.tex
 VIEWS.trophies=({kid:id})=>{const k=kid(id);setBodyTheme(k);const th=T(k);const list=k.trophies||[];return `
   <div class="topbar"><button class="iconbtn" data-act="back" aria-label="Back">${IC.back}</button><div class="grow"><span class="label">${esc(k.name)}'s</span><h1 class="display">${esc(th.hall)}</h1></div></div>
   ${list.length?`<div class="tgrid">${list.map(t=>`<button class="tcard" data-act="trophy" data-kid="${k.id}" data-id="${t.id}">
-    <span class="tmedia">${t.kind==="video"?`<video muted playsinline preload="metadata" data-media="${t.media}"></video><span class="tplay">${IC.play}</span>`:`<img data-media="${t.media}" alt="">`}</span>
-    <span class="t">${esc(t.title)}</span><span class="row" style="gap:6px"><span class="chip">${esc(TYPES[t.type]?TYPES[t.type].label:"")}</span><span class="muted" style="font-size:14px">${new Date(t.at).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}</span></span></button>`).join("")}</div>`
+    <span class="tmedia">${!t.media?`<span class="ticon">${TYPES[t.type]?TYPES[t.type].icon:"★"}</span>`:t.kind==="video"?`<video muted playsinline preload="metadata" data-media="${t.media}"></video><span class="tplay">${IC.play}</span>`:`<img data-media="${t.media}" alt="">`}</span>
+    <span class="t">${esc(t.title)}</span><span class="row" style="gap:6px"><span class="chip">${esc(TYPES[t.type]?TYPES[t.type].label:"")}</span><span class="muted" style="font-size:14px">${new Date(t.at).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}</span>${t.star?`<span class="chip prize">★</span>`:""}</span></button>`).join("")}</div>`
   :`<div class="panel empty">Finish a job with photo or video proof and it lands here.</div>`}`};
 VIEWS.shop=({kid:id})=>{const k=kid(id);setBodyTheme(k);const th=T(k);
   const mine=S.requests.filter(r=>r.kid===k.id&&r.status==="asked");
@@ -532,12 +543,13 @@ VIEWS.parent=({tab="jobs"})=>{setBodyTheme(null,true);const pc=pendingCount();
   return head+PARENT[tab]()};
 const PARENT={
   jobs(){const list=[...S.jobs].sort((a,b)=>(b.created||0)-(a.created||0));return `
-    <button class="btn big" data-act="newJob" ${S.kids.length?"":"disabled"}>${IC.cam} New job</button>
+    <div class="row"><button class="btn big" style="flex:1;min-width:220px" data-act="quickLog" ${S.kids.length?"":"disabled"}>★ They just did something!</button>
+    <button class="btn ghost big" style="flex:1;min-width:220px" data-act="newJob" ${S.kids.length?"":"disabled"}>${IC.cam} New job</button></div>
     ${list.length?`<div class="stack">${list.map(j=>{const k=kid(j.kid);return `<button class="jobcard" data-act="editJob" data-id="${j.id}">
       ${j.photo?`<img class="thumb" data-media="${j.photo}" alt="">`:`<span class="thumb"></span>`}
       <span class="stack" style="gap:4px;min-width:0"><span class="t">${esc(j.title||"Untitled job")}</span><span class="muted">${esc(k?k.name:"?")} · ${j.steps.length} steps${j.repeat?" · daily":""}</span>
       <span>${j.status==="pending"?`<span class="chip wait">To check</span>`:j.status==="todo"&&j.from&&j.from>today()?`<span class="chip">Back tomorrow</span>`:`<span class="chip">Live</span>`}</span></span>
-      <span class="chip prize">+${j.credits}</span></button>`}).join("")}</div>`:`<div class="panel empty"><b>No jobs yet.</b><p class="muted">Tap New job, photograph the mess, then record one voice note per step: "Lego in the red box", "pants in the washing basket". Clear steps get better results.</p></div>`}`},
+      <span class="chip prize">${isChallenge(j)?"★":"+"+j.credits}</span></button>`}).join("")}</div>`:`<div class="panel empty"><b>No jobs yet.</b><p class="muted">Tap New job, photograph the mess, then record one voice note per step: "Lego in the red box", "pants in the washing basket". Clear steps get better results.</p></div>`}`},
   check(){const jobs=S.jobs.filter(j=>j.status==="pending");const reqs=S.requests.filter(r=>r.status==="asked");
     if(!jobs.length&&!reqs.length)return `<div class="panel empty muted">Nothing waiting. Finished jobs and reward requests appear here.</div>`;
     return `<div class="stack">${jobs.map(j=>{const k=kid(j.kid);const th=T(k);const earned=j.credits+(j.beat?bonus(j):0);return `<div class="panel stack">
@@ -545,7 +557,7 @@ const PARENT={
       <div class="pair">${j.photo?`<figure style="margin:0"><img data-media="${j.photo}" alt="Before"><figcaption class="label">Before</figcaption></figure>`:""}${j.after&&j.afterKind!=="video"?`<figure style="margin:0"><img data-media="${j.after}" alt="Proof"><figcaption class="label">Proof</figcaption></figure>`:""}</div>
       ${j.after&&j.afterKind==="video"?`<video class="media-box" controls playsinline data-media="${j.after}"></video>`:""}
       ${j.proof==="seen"?`<span class="chip">Did you see it happen?</span>`:""}
-      <div class="row"><button class="btn good" data-act="approve" data-id="${j.id}">Approve +${earned} ${esc(th.cur)}</button><button class="btn bad" data-act="sendBack" data-id="${j.id}">Not done yet</button></div></div>`}).join("")}
+      <div class="row"><button class="btn good" data-act="approve" data-id="${j.id}">${isChallenge(j)?"Approve ★":`Approve +${earned} ${esc(th.cur)}`}</button><button class="btn bad" data-act="sendBack" data-id="${j.id}">Not done yet</button></div></div>`}).join("")}
       ${reqs.map(r=>{const k=kid(r.kid);return `<div class="panel spread"><span><b>${esc(k?k.name:"?")}</b> bought ${esc(r.icon)} ${esc(r.name)}</span>
       <span class="row"><button class="btn good small" data-act="given" data-id="${r.id}">Given</button><button class="btn bad small" data-act="refund" data-id="${r.id}">Refund</button></span></div>`}).join("")}</div>`},
   rewards(){return `<p class="muted" style="margin:0">Family credits can buy anything you decide: treats, time, privileges or pocket money.</p>
@@ -563,6 +575,8 @@ const PARENT={
       <div class="spread"><input aria-label="Name" value="${esc(k.name)}" data-kn="${k.id}" style="flex:1"><span class="chip">${esc(th.label)}</span></div>
       <div class="spread"><span><b>${k.credits}</b> ${esc(th.cur)} · ${esc(th.ranks[rankOf(k.earned||0)])} (${k.earned||0} earned)</span>
       <span class="row"><button class="btn ghost small" data-act="adj" data-id="${k.id}" data-d="-1">−1</button><button class="btn ghost small" data-act="adj" data-id="${k.id}" data-d="1">+1</button><button class="btn ghost small" data-act="adj" data-id="${k.id}" data-d="5">+5</button></span></div>
+      <div class="spread" style="border-top:2px solid var(--line);padding-top:10px"><span>${k.goal?`<b>Big goal:</b> ${esc(k.goal.name)} · ${Math.min(k.goal.count,k.goal.target)}/${k.goal.target} ★${k.goal.done?" · reached!":""}`:`<b>No big goal yet.</b> <span class="muted">Challenges add stars towards one.</span>`}</span>
+        <button class="btn ${k.goal&&!k.goal.done?"ghost ":""}small" data-act="editGoal" data-id="${k.id}">${!k.goal?"Set a goal":k.goal.done?"New goal":"Edit"}</button></div>
       <button class="btn bad small" data-act="delKid" data-id="${k.id}" style="align-self:flex-start">Remove ${esc(k.name)}</button></div>`}).join("")}</div>
     <div class="panel row"><input id="newkid" placeholder="Add a child's name" maxlength="20" style="flex:1;min-width:160px"><button class="btn" data-act="addKid">Add</button></div>`},
   link(){return `
@@ -599,12 +613,12 @@ VIEWS.edit=()=>{setBodyTheme(null,true);const d=draft;const ty=TYPES[d.type];ret
     <button class="btn ghost" data-act="addStep">${IC.mic} Add a step</button>
     <span class="label">Proof when it's done</span>
     <div class="seg">${Object.entries(PROOF).map(([k,l])=>`<button class="${d.proof===k?"on":""}" data-act="dProof" data-v="${k}">${esc(l)}</button>`).join("")}</div>
-    <span class="label">Reward</span>
+    ${isChallenge(d)?`<div class="panel"><b>★ Adds a star</b> towards ${(kid(d.kid)||{}).goal?esc(kid(d.kid).goal.name):"their big goal"}.</div>`:`<span class="label">Reward</span>
     <div class="panel stack">
       <div class="spread"><span>Credits for finishing</span><span class="row"><button class="btn ghost small" data-act="dCred" data-d="-1">−</button><b style="font-size:24px;min-width:2ch;text-align:center">${d.credits}</b><button class="btn ghost small" data-act="dCred" data-d="1">+</button></span></div>
       <div class="stack" style="gap:6px"><span>Beat the clock</span><div class="seg">${[0,5,10,15,20].map(m=>`<button class="${d.timer===m?"on":""}" data-act="dTimer" data-m="${m}">${m?m+" min":"Off"}</button>`).join("")}</div></div>
       <div class="spread"><span>Repeat every day</span><div class="seg"><button class="${d.repeat?"on":""}" data-act="dRepeat" data-v="1">Yes</button><button class="${!d.repeat?"on":""}" data-act="dRepeat" data-v="0">No</button></div></div>
-    </div>
+    </div>`}
     <button class="btn big" data-act="saveJob">Save job</button>
     ${d.isNew?"":`<button class="btn bad" data-act="delJob">Delete job</button>`}
   </div>`};
@@ -680,10 +694,12 @@ const ACT={
     if(view.args.first){stack=[];view={name:"parent",args:{tab:"jobs"}};render();toast("Now add the first job");return}back()},
   shop(b){go("shop",{kid:b.dataset.id})},
   trophies(b){go("trophies",{kid:b.dataset.id})},
-  trophy(b){const k=kid(b.dataset.kid);const t=(k.trophies||[]).find(x=>x.id===b.dataset.id);if(!t)return;const canSave=!!(bridge()&&bridge().saveMedia);
+  quickLog(){quickLog()},
+  editGoal(b){goalEditor(kid(b.dataset.id))},
+  trophy(b){const k=kid(b.dataset.kid);const t=(k.trophies||[]).find(x=>x.id===b.dataset.id);if(!t)return;const canSave=!!(t.media&&bridge()&&bridge().saveMedia);
     const el=overlay(`<div class="stack"><div class="display" style="font-size:26px">${esc(t.title)}</div>
-      ${t.kind==="video"?`<video class="media-box" controls autoplay playsinline data-media="${t.media}"></video>`:`<img class="media-box" style="object-fit:contain" data-media="${t.media}" alt="">`}
-      <span class="muted">${new Date(t.at).toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})} · +${t.amt}</span>
+      ${!t.media?`<div class="ticon big">${TYPES[t.type]?TYPES[t.type].icon:"★"}</div>`:t.kind==="video"?`<video class="media-box" controls autoplay playsinline data-media="${t.media}"></video>`:`<img class="media-box" style="object-fit:contain" data-media="${t.media}" alt="">`}
+      <span class="muted">${new Date(t.at).toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})} ${t.star?" · ★":" · +"+t.amt}</span>
       <div class="row">${canSave?`<button class="btn" id="tsave">Save to gallery</button>`:""}<button class="btn ghost" data-close>Close</button><button class="btn bad small" id="tdel">Remove</button></div></div>`);
     const sv=el.querySelector("#tsave");if(sv)sv.onclick=async()=>{const blob=await DB.get(t.media);if(!blob){toast("File not found");return}
       const fr=new FileReader();fr.onload=()=>{const b64=String(fr.result).split(",")[1];const ext=t.kind==="video"?(blob.type.includes("mp4")?"mp4":"webm"):"jpg";
@@ -703,7 +719,7 @@ const ACT={
     const done=(after,kind)=>{j.beat=!!(j.timer&&Date.now()<=j.run.start+j.timer*60000);j.after=after||null;j.afterKind=kind||null;j.status="pending";save();sfxFanfare(k);confetti(k);
       const cheer=th.cheers[Math.floor(Math.random()*th.cheers.length)];speak(cheer);
       overlay(`<div class="celebrate stack" style="align-items:center"><div class="display big">${esc(th.done)}</div><p style="font-size:20px">${esc(cheer)}</p>
-        ${j.beat?`<span class="chip prize">Beat the clock! +${bonus(j)} bonus</span>`:""}<p class="muted">Ask a grown-up to check it. Then you get your ${esc(th.cur.toLowerCase())}.</p><button class="btn big" data-close>Back to base</button></div>`,()=>{back()})};
+        ${j.beat?`<span class="chip prize">Beat the clock! +${bonus(j)} bonus</span>`:""}<p class="muted">Ask a grown-up to check it. Then you get your ${isChallenge(j)?"star":esc(th.cur.toLowerCase())}.</p><button class="btn big" data-close>Back to base</button></div>`,()=>{back()})};
     if(j.proof==="photo")capture({mode:"photo",title:"Photo proof: show what you did!"},(id,kind)=>done(id,kind));
     else if(j.proof==="video")capture({mode:"video",title:"Video proof: film it!"},(id,kind)=>done(id,kind));
     else done()},
@@ -729,11 +745,15 @@ const ACT={
   dProof(b){keepTitle();draft.proof=b.dataset.v;render()},
   dRepeat(b){keepTitle();draft.repeat=b.dataset.v==="1";render()},
   saveJob(){keepTitle();if(!draft.title&&!draft.photo&&!draft.steps.length){toast("Give it a name, a photo or a step");return}
-    const {isNew,_new,_old,...j}=draft;if(isNew){j.status="todo";j.created=Date.now();S.jobs.push(j)}
+    const {isNew,_new,_old,...j}=draft;if(isChallenge(j)){j.credits=0;j.timer=0}if(isNew){j.status="todo";j.created=Date.now();S.jobs.push(j)}
     else{const i=S.jobs.findIndex(x=>x.id===j.id);const old=S.jobs[i];old.steps.forEach(s=>{if(!j.steps.find(x=>x.id===s.id))delMedia(s.audio)});if(_old&&_old!==j.photo)delMedia(_old);S.jobs[i]=j}
     save();draft=null;toast("Job saved");back()},
   delJob(){confirmSheet("Delete this job?","Its photo and voice notes go too.",()=>{const j=S.jobs.find(x=>x.id===draft.id);if(j){delMedia(j.photo);delMedia(j.after);j.steps.forEach(s=>delMedia(s.audio));S.jobs=S.jobs.filter(x=>x!==j);save()}draft=null;back()})},
-  approve(b){const j=S.jobs.find(x=>x.id===b.dataset.id);const k=kid(j.kid);const before=rankOf(k.earned||0);const amt=j.credits+(j.beat?bonus(j):0);
+  approve(b){const j=S.jobs.find(x=>x.id===b.dataset.id);const k=kid(j.kid);const before=rankOf(k.earned||0);
+    if(isChallenge(j)){logAchievement(k,{type:j.type,title:j.title,media:j.after,kind:j.afterKind});j.after=null;j.run=null;j.beat=false;
+      if(j.repeat){j.status="todo";j.from=tomorrow()}else{delMedia(j.photo);j.steps.forEach(s=>delMedia(s.audio));S.jobs=S.jobs.filter(x=>x!==j)}
+      save();toast(`★ for ${k.name}`);render();return}
+    const amt=j.credits+(j.beat?bonus(j):0);
     k.credits+=amt;k.earned=(k.earned||0)+amt;if(rankOf(k.earned)>before)k.rankUp=true;
     if(j.after){k.trophies=k.trophies||[];k.trophies.unshift({id:uid(),title:j.title||T(k).job,type:j.type||"tidy",media:j.after,kind:j.afterKind||"photo",at:Date.now(),amt});k.newTrophy=true}
     j.after=null;j.run=null;j.beat=false;
@@ -752,6 +772,49 @@ const ACT={
   changePin(){pinPad("New PIN","Choose 4 digits",p=>{S.pin=p;save();overlayClose();toast("PIN changed")})},
   resetAll(){confirmSheet("Delete everything?","This can't be undone.",()=>{try{localStorage.removeItem(KEY)}catch(e){}indexedDB.deleteDatabase("tq_media");load();home()})}
 };
+/* ---------- Big goal: challenges add stars towards one big reward ---------- */
+function addStar(k){if(!k.goal)return;k.goal.count=(k.goal.count||0)+1;if(k.goal.count>=k.goal.target&&!k.goal.done){k.goal.done=true;k.goalHit=true}}
+function goalCard(k,th){const g=k.goal;if(!g)return"";const n=Math.min(g.count||0,g.target),pct=Math.round(n/g.target*100);
+  return `<div class="panel goal stack" style="gap:10px"><div class="spread"><span><span class="label">Big goal</span><br><b style="font-size:20px">${esc(g.name)}</b></span>
+    ${g.photo?`<img class="tthumb" style="width:64px;height:64px" data-media="${g.photo}" alt="">`:""}</div>
+    <div class="stars" aria-label="${n} of ${g.target} stars">${Array.from({length:g.target},(_,i)=>`<i class="${i<n?"on":""}">★</i>`).join("")}</div>
+    <div class="spread"><span class="muted">${g.done?"Goal reached!":`${g.target-n} more brave, active, kind or learning things to go`}</span><b>${n}/${g.target}</b></div></div>`}
+function logAchievement(k,{type,title,media,kind}){k.trophies=k.trophies||[];
+  k.trophies.unshift({id:uid(),title:title||TYPES[type].label,type,media:media||null,kind:media?kind:null,at:Date.now(),amt:0,star:true});k.newTrophy=true;addStar(k)}
+function quickLog(preKid,state){const st=state||{kid:preKid||(S.kids[0]&&S.kids[0].id),type:"brave",title:"",media:null,kind:null};
+  overlay("");const el=overlayEl;
+  const draw=()=>{el.querySelector(".sheet").innerHTML=`<div class="stack">
+    <h2 class="display">They just did something!</h2>
+    ${S.kids.length>1?`<div class="seg">${S.kids.map(k=>`<button class="${st.kid===k.id?"on":""}" data-q="kid" data-v="${k.id}">${esc(k.name)}</button>`).join("")}</div>`:""}
+    <div class="seg">${Object.entries(TYPES).filter(([k])=>k!=="tidy").map(([k,t])=>`<button class="${st.type===k?"on":""}" data-q="type" data-v="${k}">${t.icon} ${esc(t.label)}</button>`).join("")}</div>
+    <input id="qtitle" value="${esc(st.title)}" placeholder="What did they do?" maxlength="40">
+    <div class="ideas">${TYPES[st.type].ideas.map(i=>`<button data-q="title" data-v="${esc(i)}">${esc(i)}</button>`).join("")}</div>
+    <div class="row">${st.media?`<span class="chip prize">${st.kind==="video"?"Video":"Photo"} added</span>`:`<button class="btn ghost small" data-q="photo">${IC.cam} Photo</button><button class="btn ghost small" data-q="video">${IC.cam} Video</button>`}<span class="muted">optional</span></div>
+    <div class="row"><button class="btn" data-q="save">Add a star ★</button><button class="btn ghost" data-q="cancel">Cancel</button></div></div>`;
+    const t=el.querySelector("#qtitle");t.oninput=()=>{st.title=t.value}};
+  draw();
+  el.addEventListener("click",e=>{const b=e.target.closest("[data-q]");if(!b)return;const q=b.dataset.q;
+    if(q==="kid"){st.kid=b.dataset.v;draw()}
+    else if(q==="type"){st.type=b.dataset.v;draw()}
+    else if(q==="title"){st.title=b.dataset.v;draw()}
+    else if(q==="cancel"){if(st.media)delMedia(st.media);overlayClose()}
+    else if(q==="photo"||q==="video"){capture({mode:q,title:"Proof"},(id,kind)=>{st.media=id;st.kind=kind;quickLog(null,st)})}
+    else if(q==="save"){const k=kid(st.kid);if(!k)return;st.title=(el.querySelector("#qtitle").value||"").trim();
+      logAchievement(k,st);save();overlayClose();render();toast(`★ for ${k.name}${k.goal?` · ${Math.min(k.goal.count,k.goal.target)}/${k.goal.target}`:""}`)}})}
+function goalEditor(k,draftGoal){const g=draftGoal||(k.goal&&!k.goal.done?{...k.goal}:{name:"",target:20,count:0,photo:null});
+  const el=overlay(`<div class="stack"><h2 class="display">Big goal for ${esc(k.name)}</h2>
+    <p class="muted" style="margin:0">Brave, active, kind and learning things each add a star. Chores still earn credits for the shop.</p>
+    <label class="label" for="gname">The big reward</label><input id="gname" maxlength="40" value="${esc(g.name)}" placeholder="e.g. Water park on holiday">
+    <div class="spread"><span>Stars needed</span><span class="row"><button class="btn ghost small" data-g="-5">−5</button><b id="gt" style="font-size:28px;min-width:2ch;text-align:center">${g.target}</b><button class="btn ghost small" data-g="5">+5</button></span></div>
+    <div class="row">${g.photo?`<img class="tthumb" data-media="${g.photo}" alt="">`:""}<button class="btn ghost small" id="gphoto">${IC.cam} ${g.photo?"Change photo":"Add a photo"}</button><span class="muted">optional</span></div>
+    <div class="row"><button class="btn" id="gsave">Save goal</button><button class="btn ghost" data-close>Cancel</button></div></div>`);
+  const nameIn=el.querySelector("#gname");
+  el.querySelectorAll("[data-g]").forEach(b=>b.onclick=()=>{g.target=Math.max(5,Math.min(100,g.target+ +b.dataset.g));el.querySelector("#gt").textContent=g.target});
+  el.querySelector("#gphoto").onclick=()=>{g.name=nameIn.value.trim();capture({mode:"photo",title:"Photo of the big reward"},id=>{if(g.photo&&(!k.goal||g.photo!==k.goal.photo))delMedia(g.photo);g.photo=id;goalEditor(k,g)})};
+  el.querySelector("#gsave").onclick=()=>{g.name=nameIn.value.trim();if(!g.name){toast("Name the big reward");return}
+    if(k.goal&&k.goal.photo&&k.goal.photo!==g.photo)delMedia(k.goal.photo);
+    k.goal={name:g.name,target:g.target,count:Math.min(g.count||0,g.target),photo:g.photo||null,done:false};save();overlayClose();render();toast("Goal saved")}}
+
 /* ---------- Shop sharing ---------- */
 const SHOP_TAG="TQSHOP1:";
 function encodeShop(){const list=S.rewards.map(r=>({i:r.icon,n:r.name,c:r.cost}));return SHOP_TAG+btoa(unescape(encodeURIComponent(JSON.stringify(list))))}
