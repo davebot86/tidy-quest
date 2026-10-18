@@ -1280,7 +1280,8 @@ async function buildKidFile(k){const trophies=[];
   const treats=[];for(const t of (k.treats||[]))treats.push({...t,photo:await packMedia(t.photo)});
   const g=k.goal?{...k.goal,photo:await packMedia(k.goal.photo)}:null;
   return JSON.stringify({tq:"kid",v:1,id:"x"+uid(),from:S.device,at:Date.now(),
-    kid:{id:k.id,name:k.name,theme:k.theme,earned:k.earned||0,credits:k.credits||0},face:await packMedia(k.face),goal:g,trophies,treats})}
+    kid:{id:k.id,name:k.name,theme:k.theme,earned:k.earned||0,credits:k.credits||0},face:await packMedia(k.face),goal:g,trophies,treats,
+    shop:await Promise.all(S.rewards.map(async r=>({icon:r.icon,name:r.name,cost:r.cost,by:r.by||null,photo:await packMedia(r.photo)})))})}
 async function shareFile(name,text){const b=bridge();
   if(b&&b.fileBegin){if(!b.fileBegin(name))return false;const CH=256*1024;
     for(let i=0;i<text.length;i+=CH){if(!b.fileAppend(text.slice(i,i+CH)))return false}
@@ -1305,10 +1306,14 @@ async function importKidFile(text){let d;try{d=JSON.parse(text)}catch(e){return 
     k.trophies.push({...t,media:await put(t.media),album:al});added++}
   k.treats=k.treats||[];const haveT=new Set(k.treats.map(t=>t.id));for(const t of (d.treats||[])){if(haveT.has(t.id))continue;k.treats.push({...t,photo:await put(t.photo)})}
   k.treats.sort((a,b)=>(b.at||0)-(a.at||0));
+  let shopAdded=0;const haveR=new Map(S.rewards.map(r=>[r.name.trim().toLowerCase(),r]));
+  for(const r of (d.shop||[])){const ex=haveR.get(String(r.name).trim().toLowerCase());
+    if(ex){if(!ex.photo&&r.photo)ex.photo=await put(r.photo);continue}
+    S.rewards.push({id:uid(),icon:r.icon||"⭐",name:r.name,cost:Math.max(1,parseInt(r.cost)||1),by:r.by||null,photo:await put(r.photo)});shopAdded++}
   k.trophies.sort((a,b)=>(b.at||0)-(a.at||0));
   S.usedIn.push(d.id);save();render();
   overlay(`<div class="stack" style="text-align:center;align-items:center">${avatarSVG(k,null,"avatar big")||mentorSVG(k.theme)}<h2 class="display">${esc(k.name)} ${isNew?"has arrived":"is up to date"}</h2>
-    <p style="margin:0">${x.credits?`+${x.credits} points. `:""}${d.goal&&d.goal.count?`${d.goal.count} goal stars. `:""}${added} trophy${added===1?"":"s"} added.</p><button class="btn" data-close>Done</button></div>`)}
+    <p style="margin:0">${x.credits?`+${x.credits} points. `:""}${d.goal&&d.goal.count?`${d.goal.count} goal stars. `:""}${added} trophy${added===1?"":"s"} added.${shopAdded?` ${shopAdded} shop reward${shopAdded===1?"":"s"} added.`:""}</p><button class="btn" data-close>Done</button></div>`)}
 /* A file opened from WhatsApp or Files arrives here; it waits until the app is set up, then asks for the PIN. */
 window.__checkImport=()=>{const b=bridge();if(!b||!b.hasPendingImport||!b.hasPendingImport())return;
   if(!S.pin){toast("Set up Tidy Quest first, then the file will load.");return}
