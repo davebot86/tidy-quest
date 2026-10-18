@@ -1363,11 +1363,11 @@ function videoFrame(url){return new Promise(res=>{if(!url)return res(null);const
 function blobToDataURL(b){return new Promise(res=>{if(!b)return res(null);const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>res(null);r.readAsDataURL(b)})}
 function countLines(x,text,maxW,maxLines){const words=String(text).split(/\s+/);let line="",n=1;for(const w of words){const t=line?line+" "+w:w;if(x.measureText(t).width>maxW&&line){n++;line=w}else line=t}return Math.min(n,maxLines)}
 function rrect(x,X,Y,W,H,r){x.beginPath();x.moveTo(X+r,Y);x.arcTo(X+W,Y,X+W,Y+H,r);x.arcTo(X+W,Y+H,X,Y+H,r);x.arcTo(X,Y+H,X,Y,r);x.arcTo(X,Y,X+W,Y,r);x.closePath()}
-function cover(x,img,X,Y,W,H){const iw=img.width||img.videoWidth,ih=img.height||img.videoHeight;const s=Math.max(W/iw,H/ih);const w=iw*s,h=ih*s;x.drawImage(img,X+(W-w)/2,Y+(H-h)*.25,w,h)}
+function cover(x,img,X,Y,W,H,fy=.25){const iw=img.width||img.videoWidth,ih=img.height||img.videoHeight;const s=Math.max(W/iw,H/ih);const w=iw*s,h=ih*s;x.drawImage(img,X+(W-w)/2,Y+(H-h)*fy,w,h)}
 function wrap(x,text,X,Y,maxW,lh,maxLines=3){const words=String(text).split(/\s+/);let line="",n=0;
   for(let i=0;i<words.length;i++){const t=line?line+" "+words[i]:words[i];if(x.measureText(t).width>maxW&&line){x.fillText(line,X,Y+n*lh);n++;line=words[i];if(n===maxLines-1){const rest=words.slice(i).join(" ");let r=rest;while(x.measureText(r+"…").width>maxW&&r.length>1)r=r.slice(0,-1);x.fillText(r===rest?r:r+"…",X,Y+n*lh);return n+1}}else line=t}
   if(line){x.fillText(line,X,Y+n*lh);n++}return n}
-async function makePoster(k,off){const P=POSTER[k.theme]||POSTER.army,th=T(k),M=monthOf(k,off);
+async function makePoster(k,off,lay){const P=POSTER[k.theme]||POSTER.army,th=T(k),M=monthOf(k,off);lay=lay||posterLayout(k,M);
   const df=s=>P.font.replace("{s}",s),bf=(w,s)=>`${w} ${s}px Nunito, system-ui, sans-serif`;
   try{await Promise.all([df(40),bf(900,40),bf(700,40)].map(f=>document.fonts.load(f)))}catch(e){}
   const W=1240,H=1754,c=document.createElement("canvas");c.width=W;c.height=H;const x=c.getContext("2d");
@@ -1401,13 +1401,13 @@ async function makePoster(k,off){const P=POSTER[k.theme]||POSTER.army,th=T(k),M=
     x.fillStyle=P.muted;x.font=bf(800,24);x.fillText(`BIG GOAL · ${n} OF ${g.target} STARS`,92,gy+44);x.fillStyle=P.ink;x.font=bf(900,36);wrap(x,g.name,92,gy+88,620,40,1);
     const bx=740,bw=W-120-(bx-60)-32;x.fillStyle="rgba(127,127,127,.25)";rrect(x,bx,gy+50,bw,34,17);x.fill();x.fillStyle=P.gold;if(n)rrect(x,bx,gy+50,Math.max(34,bw*n/g.target),34,17),x.fill();gy+=160}
   /* the photos, and the month's wins */
-  const pics=M.pics.slice(0,6),top=gy,bottom=H-110,avail=bottom-top,G=22;
+  const pics=lay.pics.map(id=>M.pics.find(p=>p.id===id)).filter(Boolean),top=gy,bottom=H-110,avail=bottom-top,G=22;
   const winsPanel=(X,Y,Wd,Hd)=>{if(Hd<120)return;x.fillStyle=P.panel;rrect(x,X,Y,Wd,Hd,24);x.fill();x.fillStyle=P.ink;x.font=bf(900,32);x.fillText(M.wins.length?"This month's wins":"Wins go here",X+30,Y+54);
     x.font=bf(700,28);const max=Math.floor((Hd-90)/46);M.wins.slice(0,max).forEach((w,i)=>{x.fillStyle=w.star?P.accent:P.ink;x.font=bf(900,28);x.fillText(w.star?"★":"✓",X+30,Y+104+i*46);
       x.fillStyle=P.ink;x.font=bf(700,28);let t=w.t;while(x.measureText(t).width>Wd-110&&t.length>1)t=t.slice(0,-1);x.fillText(t===w.t?t:t+"…",X+72,Y+104+i*46)});
     if(M.wins.length>max&&max>0){x.fillStyle=P.muted;x.font=bf(800,24);x.fillText(`and ${M.wins.length-max} more`,X+72,Y+104+max*46)}};
   const drawPic=async(p,X,Y,cw,ch)=>{const u=await mediaURL(p.id);const img=p.video?await videoFrame(u):await blobImg(u);
-    x.save();rrect(x,X,Y,cw,ch,24);x.clip();x.fillStyle=P.panel;x.fillRect(X,Y,cw,ch);if(img)cover(x,img,X,Y,cw,ch-60);
+    x.save();rrect(x,X,Y,cw,ch,24);x.clip();x.fillStyle=P.panel;x.fillRect(X,Y,cw,ch);if(img)cover(x,img,X,Y,cw,ch-60,(lay.fy||{})[p.id]??.25);
     x.fillStyle="rgba(0,0,0,.72)";x.fillRect(X,Y+ch-60,cw,60);x.fillStyle="#FFF";x.font=bf(900,25);
     const cap=(p.star?"★ ":"")+p.title;let t=cap;while(x.measureText(t).width>cw-36&&t.length>1)t=t.slice(0,-1);x.fillText(t===cap?t:t+"…",X+18,Y+ch-22);x.restore()};
   if(pics.length===1){const cw=(W-120-G)/2,ch=Math.min(avail,520);await drawPic(pics[0],60,top,cw,ch);winsPanel(60+cw+G,top,cw,ch)}
@@ -1419,15 +1419,45 @@ async function makePoster(k,off){const P=POSTER[k.theme]||POSTER.army,th=T(k),M=
   /* footer */
   x.fillStyle=P.title;x.globalAlpha=.75;x.font=bf(800,24);x.fillText("Tidy Quest",60,H-50);x.textAlign="right";x.fillText(`Made ${new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}`,W-60,H-50);x.textAlign="left";x.globalAlpha=1;
   return {canvas:c,M}}
+/* Arranging the poster: which photos, in what order, and how each is framed. Kept per child per month. */
+function posterKey(k,M){return k.id+"_"+M.R.a}
+function posterLayout(k,M){const all=M.pics.map(p=>p.id),saved=(S.posters||{})[posterKey(k,M)];
+  if(!saved)return {pics:all.slice(0,6),fy:{}};return {pics:saved.pics.filter(id=>all.includes(id)).slice(0,6),fy:saved.fy||{}}}
+function keepLayout(k,M,lay){S.posters=S.posters||{};S.posters[posterKey(k,M)]={pics:lay.pics,fy:lay.fy};save()}
+async function posterArrange(k,off){const M=monthOf(k,off),lay=posterLayout(k,M);
+  const thumbs={};for(const p of M.pics){const u=await mediaURL(p.id);thumbs[p.id]=p.video?await videoFrame(u).then(c=>c&&c.toDataURL?c.toDataURL("image/jpeg",.7):null):u}
+  const el=overlay(`<div class="stack"><h2 class="display">Arrange the poster</h2>
+    <p class="muted" style="margin:0">Up to 6 photos. Use the arrows to change the order, and ▲ ▼ to move the picture inside its frame.</p>
+    <div id="pa-on" class="stack" style="gap:8px"></div>
+    <h3 style="margin:6px 0 0">Not on the poster</h3><div id="pa-off" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
+    <div class="row"><button class="btn" id="pa-done">See the poster</button><button class="btn ghost" id="pa-reset">Start again</button></div></div>`);
+  const pic=id=>M.pics.find(p=>p.id===id),fy=id=>lay.fy[id]??.25;
+  const thumb=(id,h)=>`<div style="width:100%;height:${h}px;border-radius:10px;background:#0002 url('${thumbs[id]||""}') center ${Math.round(fy(id)*100)}%/cover no-repeat"></div>`;
+  const draw=()=>{if(overlayEl!==el)return;
+    el.querySelector("#pa-on").innerHTML=lay.pics.length?lay.pics.map((id,i)=>`<div class="card" style="display:grid;grid-template-columns:92px 1fr auto;gap:10px;align-items:center;padding:8px">
+      ${thumb(id,92)}<div style="min-width:0"><b style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i+1}. ${esc(pic(id).title||"")}</b>
+      <div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap"><button class="btn ghost small" data-pa="up" data-i="${i}" ${i?"":"disabled"} aria-label="Earlier">◀</button><button class="btn ghost small" data-pa="down" data-i="${i}" ${i<lay.pics.length-1?"":"disabled"} aria-label="Later">▶</button>
+      <button class="btn ghost small" data-pa="hi" data-i="${i}" aria-label="Show more of the top">▲</button><button class="btn ghost small" data-pa="lo" data-i="${i}" aria-label="Show more of the bottom">▼</button></div></div>
+      <button class="btn ghost small" data-pa="out" data-i="${i}" aria-label="Take off the poster">✕</button></div>`).join(""):`<p class="muted">No photos chosen. The poster will show the month's wins instead.</p>`;
+    const rest=M.pics.filter(p=>!lay.pics.includes(p.id));
+    el.querySelector("#pa-off").innerHTML=rest.length?rest.map(p=>`<button class="card" data-pa="in" data-id="${esc(p.id)}" style="padding:6px;text-align:left;${lay.pics.length>=6?"opacity:.45":""}">${thumb(p.id,80)}<span style="font-size:12px;font-weight:800;display:block;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">+ ${esc(p.title||"")}</span></button>`).join(""):`<p class="muted" style="grid-column:1/-1">Every photo is on.</p>`;
+    el.querySelectorAll("[data-pa]").forEach(b=>b.onclick=()=>{const i=+b.dataset.i,a=b.dataset.pa,L=lay.pics;
+      if(a==="up"&&i>0)[L[i-1],L[i]]=[L[i],L[i-1]];if(a==="down"&&i<L.length-1)[L[i+1],L[i]]=[L[i],L[i+1]];
+      if(a==="hi")lay.fy[L[i]]=Math.max(0,fy(L[i])-.15);if(a==="lo")lay.fy[L[i]]=Math.min(1,fy(L[i])+.15);
+      if(a==="out")L.splice(i,1);if(a==="in"){if(L.length>=6){toast("6 photos fit. Take one off first.");return}L.push(b.dataset.id)}
+      keepLayout(k,M,lay);draw()})};
+  draw();
+  el.querySelector("#pa-done").onclick=()=>posterSheet(k,off);
+  el.querySelector("#pa-reset").onclick=()=>{lay.pics=M.pics.map(p=>p.id).slice(0,6);lay.fy={};keepLayout(k,M,lay);draw()}}
 async function posterSheet(k,off=0){const el=overlay(`<div class="stack"><h2 class="display">${esc(k.name)}'s monthly poster</h2>
     <div class="seg"><button class="${off===0?"on":""}" id="pm0">This month</button><button class="${off===-1?"on":""}" id="pm1">Last month</button></div>
     <div id="pbox" class="muted" style="text-align:center;padding:30px 0">Making the poster…</div>
-    <div class="row" id="pact" hidden><button class="btn" id="psave">Save to the gallery</button><button class="btn ghost" data-close>Close</button></div></div>`);
+    <div class="row" id="pact" hidden><button class="btn" id="psave">Save to the gallery</button><button class="btn ghost" id="parr">Arrange photos</button><button class="btn ghost" data-close>Close</button></div></div>`);
   el.querySelector("#pm0").onclick=()=>posterSheet(k,0);el.querySelector("#pm1").onclick=()=>posterSheet(k,-1);
   let res;try{res=await makePoster(k,off)}catch(e){el.querySelector("#pbox").textContent="Couldn't make the poster. Try again.";return}
   if(overlayEl!==el)return;const url=res.canvas.toDataURL("image/jpeg",.92);
   el.querySelector("#pbox").outerHTML=`<img src="${url}" alt="${esc(k.name)}'s poster for ${esc(res.M.R.label)}" style="width:100%;border-radius:12px;box-shadow:0 8px 24px -12px rgba(0,0,0,.5)"><p class="muted" style="margin:0;font-size:14px">A4 size. Print it from the gallery, or send it to family.</p>`;
-  el.querySelector("#pact").hidden=false;const name=("TidyQuest-"+k.name+"-"+res.M.R.label).replace(/[^\w-]+/g,"-")+".jpg";
+  el.querySelector("#pact").hidden=false;el.querySelector("#parr").onclick=()=>posterArrange(k,off);const name=("TidyQuest-"+k.name+"-"+res.M.R.label).replace(/[^\w-]+/g,"-")+".jpg";
   el.querySelector("#psave").onclick=()=>{const b=bridge();if(b&&b.saveMedia){try{toast(b.saveMedia(url.split(",")[1],"image/jpeg",name)?"Saved to the gallery":"Couldn't save. Allow storage access and try again.")}catch(e){toast("Couldn't save to the gallery")}}
     else{const a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove()}}}
 /* Save every photo and video to the phone's own gallery: the family's copy, since nothing is kept online */
