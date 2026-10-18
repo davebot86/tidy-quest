@@ -727,7 +727,7 @@ let stack=[];let view=null;
 function go(name,args={},replace=false){if(view&&!replace)stack.push(view);view={name,args};render()}
 function back(){if(overlayClose()){return true}if(!stack.length)return false;view=stack.pop();render();return true}
 window.appBack=()=>back()?"handled":"exit";
-function home(){stack=[];const kids=S.kids;
+function home(){setTimeout(()=>window.__checkImport&&window.__checkImport(),400);stack=[];const kids=S.kids;
   if(!S.pin){view={name:"welcome",args:{}}}
   else if(kids.length===1){view={name:"hq",args:{kid:kids[0].id}}}
   else{view={name:"pick",args:{}}}
@@ -1279,6 +1279,11 @@ async function importKidFile(text){let d;try{d=JSON.parse(text)}catch(e){return 
   S.usedIn.push(d.id);save();render();
   overlay(`<div class="stack" style="text-align:center;align-items:center">${avatarSVG(k,null,"avatar big")||mentorSVG(k.theme)}<h2 class="display">${esc(k.name)} ${isNew?"has arrived":"is up to date"}</h2>
     <p style="margin:0">${x.credits?`+${x.credits} points. `:""}${d.goal&&d.goal.count?`${d.goal.count} goal stars. `:""}${added} trophy${added===1?"":"s"} added.</p><button class="btn" data-close>Done</button></div>`)}
+/* A file opened from WhatsApp or Files arrives here; it waits until the app is set up, then asks for the PIN. */
+window.__checkImport=()=>{const b=bridge();if(!b||!b.hasPendingImport||!b.hasPendingImport())return;
+  if(!S.pin){toast("Set up Tidy Quest first, then the file will load.");return}
+  pinPad("Load a Tidy Quest file","Grown-ups only: enter your PIN",p=>{if(p!==S.pin)return false;overlayClose();
+    const t=b.takePendingImport();if(t){toast("Opening the file…");importKidFile(t)}})};
 /* ---------- QR link between tablets (no internet needed) ---------- */
 const QR_TAG="TQ1:";
 function packQR(obj){return QR_TAG+btoa(unescape(encodeURIComponent(JSON.stringify(obj))))}

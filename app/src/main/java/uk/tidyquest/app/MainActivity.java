@@ -41,6 +41,7 @@ import com.google.zxing.integration.android.IntentResult;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
@@ -58,6 +59,7 @@ public class MainActivity extends Activity {
     private PermissionRequest pendingPermission;
     private ValueCallback<Uri[]> fileCallback;
     private TextToSpeech tts;
+    private String pendingImport;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -234,6 +236,18 @@ public class MainActivity extends Activity {
             }
 
             @JavascriptInterface
+            public String takePendingImport() {
+                String t = pendingImport;
+                pendingImport = null;
+                return t == null ? "" : t;
+            }
+
+            @JavascriptInterface
+            public boolean hasPendingImport() {
+                return pendingImport != null;
+            }
+
+            @JavascriptInterface
             public void copy(String text) {
                 runOnUiThread(() -> {
                     ClipboardManager cm = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
@@ -242,8 +256,49 @@ public class MainActivity extends Activity {
             }
         }, "AndroidTTS");
 
+        handleIncoming(getIntent());
         if (savedInstanceState != null) web.restoreState(savedInstanceState);
         else web.loadUrl(START_URL);
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if (handleIncoming(intent) && web != null)
+            web.evaluateJavascript("window.__checkImport && window.__checkImport()", null);
+    }
+
+    /** A Tidy Quest file opened from WhatsApp, email or Files: keep its text until the page takes it. */
+    private boolean handleIncoming(Intent intent) {
+        if (intent == null) return false;
+        Uri uri = null;
+        String action = intent.getAction();
+        if (Intent.ACTION_VIEW.equals(action)) uri = intent.getData();
+        else if (Intent.ACTION_SEND.equals(action)) {
+            Object extra = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+            if (extra instanceof Uri) uri = (Uri) extra;
+        }
+        if (uri == null) return false;
+        try (InputStream in = getContentResolver().openInputStream(uri)) {
+            if (in == null) return false;
+            ByteArrayOutputStream buf = new ByteArrayOutputStream();
+            byte[] b = new byte[64 * 1024];
+            int n;
+            long total = 0;
+            while ((n = in.read(b)) > 0) {
+                buf.write(b, 0, n);
+                total += n;
+                if (total > 200L * 1024 * 1024) return false;
+            }
+            String text = buf.toString("UTF-8");
+            if (!text.contains("\"tq\"")) return false;
+            pendingImport = text;
+            intent.setAction(null);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private File shareFile;

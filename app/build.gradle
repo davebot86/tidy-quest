@@ -10,8 +10,8 @@ android {
         applicationId 'uk.tidyquest.app'
         minSdk 26
         targetSdk 34
-        versionCode 8
-        versionName '0.8-trial'
+        versionCode 9
+        versionName '0.9-trial'
     }
 
     // Fixed trial key so updates install over the top and keep each family's data.
