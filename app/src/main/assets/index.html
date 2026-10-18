@@ -494,7 +494,7 @@ function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2
 function load(){
   try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}
   if(!S){S={pin:null,kids:[],jobs:[],rewards:DEFAULT_REWARDS.map(r=>({...r,id:uid()})),requests:[]}}
-  S.device=S.device||("d"+uid());S.wishes=S.wishes||[];delete S.lastSend;
+  S.device=S.device||("d"+uid());S.wishes=S.wishes||[];S.shopGone=S.shopGone||[];S.rewards.forEach(r=>{if(r.at==null)r.at=0});delete S.lastSend;
   S.kids.forEach(k=>{if(k.goal&&!k.goal.id)k.goal.id="g:"+String(k.goal.name||"").trim().toLowerCase();
     if(!k.ledger){k.ledger=[{id:"o"+uid(),t:Date.now(),d:k.credits||0,e:k.earned||0,s:k.goal?(k.goal.count||0):0,g:k.goal?k.goal.id:null,why:"start"}]}recalc(k,true)});S.pendingIn=S.pendingIn||{};S.usedIn=S.usedIn||[];S.sent=S.sent||[];
   S.jobs.forEach(j=>{if(!j.type)j.type="tidy";if(!j.proof)j.proof=j.afterReq?"photo":"none"});
@@ -1173,9 +1173,9 @@ const ACT={
     el.querySelector("#gskip").onclick=()=>finish(null);
     el.querySelector("#gphoto").onclick=()=>capture({mode:"photo",title:"Enjoying "+r.name},id=>finish(id))},
   refund(b){const r=S.requests.find(x=>x.id===b.dataset.id);const k=kid(r.kid);if(k)post(k,{d:r.cost,why:"refund"});S.requests=S.requests.filter(x=>x!==r);save();toast("Credits returned");render()},
-  addReward(){S.rewards.push({id:uid(),icon:"⭐",name:"New reward",cost:5});S.shopAt=Date.now();save();render()},
-  delReward(b){const r=S.rewards.find(x=>x.id===b.dataset.id);if(r)delMedia(r.photo);S.rewards=S.rewards.filter(x=>x!==r);S.shopAt=Date.now();save();render()},
-  rPhoto(b){const r=S.rewards.find(x=>x.id===b.dataset.id);capture({mode:"photo",title:"Photo of: "+r.name},id=>{if(r.photo)delMedia(r.photo);r.photo=id;S.shopAt=Date.now();save();render()})},
+  addReward(){S.rewards.push({id:uid(),icon:"⭐",name:"New reward",cost:5,at:Date.now()});S.shopAt=Date.now();save();render()},
+  delReward(b){const r=S.rewards.find(x=>x.id===b.dataset.id);if(r){delMedia(r.photo);S.shopGone.push({id:r.id,name:r.name,at:Date.now()})}S.rewards=S.rewards.filter(x=>x!==r);S.shopAt=Date.now();save();render()},
+  rPhoto(b){const r=S.rewards.find(x=>x.id===b.dataset.id);capture({mode:"photo",title:"Photo of: "+r.name},id=>{if(r.photo)delMedia(r.photo);r.photo=id;r.at=Date.now();S.shopAt=Date.now();save();render()})},
   addKid(){const n=$("#newkid").value.trim();if(!n)return;const k={id:uid(),name:n,theme:"karate",credits:0,earned:0};S.kids.push(k);save();go("style",{kid:k.id,back:"parent"})},
   kidStyle(b){go("style",{kid:b.dataset.id,back:"parent"})},
   delKid(b){const k=kid(b.dataset.id);confirmSheet(`Remove ${k.name}?`,"This deletes their picture, jobs, credits, stars and every trophy video. It can't be undone.",()=>{S.jobs.filter(j=>j.kid===k.id).forEach(j=>{delMedia(j.photo);delMedia(j.after);j.steps.forEach(s=>delMedia(s.audio))});(k.trophies||[]).forEach(t=>{delMedia(t.media);albumDel(t.album)});(k.treats||[]).forEach(t=>delMedia(t.photo));delMedia(k.face);
@@ -1308,7 +1308,7 @@ async function buildKidFile(k){const trophies=[];
   return JSON.stringify({tq:"kid",v:2,id:"x"+uid(),from:S.device,at:Date.now(),
     ledger:k.ledger||[],
     kid:{id:k.id,name:k.name,theme:k.theme,earned:k.earned||0,credits:k.credits||0},face:await packMedia(k.face),goal:g,trophies,treats,
-    shopAt:S.shopAt||0,shop:await Promise.all(S.rewards.map(async r=>({icon:r.icon,name:r.name,cost:r.cost,by:r.by||null,photo:await packMedia(r.photo)})))})}
+    shopAt:S.shopAt||0,shopGone:S.shopGone||[],shop:await Promise.all(S.rewards.map(async r=>({id:r.id,at:r.at||0,icon:r.icon,name:r.name,cost:r.cost,by:r.by||null,photo:await packMedia(r.photo)})))})}
 async function shareFile(name,text){const b=bridge();
   if(b&&b.fileBegin){if(!b.fileBegin(name))return false;const CH=256*1024;
     for(let i=0;i<text.length;i+=CH){if(!b.fileAppend(text.slice(i,i+CH)))return false}
@@ -1339,11 +1339,15 @@ async function importKidFile(text){let d;try{d=JSON.parse(text)}catch(e){return 
   k.treats=k.treats||[];const haveT=new Set(k.treats.map(t=>t.id));for(const t of (d.treats||[])){if(haveT.has(t.id))continue;k.treats.push({...t,photo:await put(t.photo)})}
   k.treats.sort((a,b)=>(b.at||0)-(a.at||0));
   let shopAdded=0;
-  if(d.shop&&(d.shopAt||0)>(S.shopAt||0)){const old=new Map(S.rewards.map(r=>[r.name.trim().toLowerCase(),r]));const next=[];
-    for(const r of d.shop){const ex=old.get(String(r.name).trim().toLowerCase());
-      next.push({id:ex?ex.id:uid(),icon:r.icon||"⭐",name:r.name,cost:Math.max(1,parseInt(r.cost)||1),by:r.by||null,photo:r.photo?await put(r.photo):(ex?ex.photo:null)});
-      if(ex&&r.photo&&ex.photo)delMedia(ex.photo);if(ex)old.delete(String(r.name).trim().toLowerCase());else shopAdded++}
-    old.forEach(r=>delMedia(r.photo));S.rewards=next;S.shopAt=d.shopAt;shopAdded=shopAdded||-1}
+  if(d.shop){const key=n=>String(n||"").trim().toLowerCase();const byId=new Map(S.rewards.map(r=>[r.id,r])),byName=new Map(S.rewards.map(r=>[key(r.name),r]));
+    const gone=new Map((S.shopGone||[]).map(g=>[g.id,g]));let changed=false;
+    for(const g of (d.shopGone||[])){const r=byId.get(g.id)||byName.get(key(g.name));if(r&&(r.at||0)<=g.at){delMedia(r.photo);S.rewards=S.rewards.filter(x=>x!==r);changed=true}if(!gone.has(g.id)){S.shopGone.push(g);gone.set(g.id,g)}}
+    for(const r of d.shop){const tomb=gone.get(r.id);if(tomb&&tomb.at>=(r.at||0))continue;
+      const ex=byId.get(r.id)||byName.get(key(r.name));
+      if(ex){if(!S.rewards.includes(ex))continue;if((r.at||0)>(ex.at||0)){ex.name=r.name;ex.cost=Math.max(1,parseInt(r.cost)||1);ex.icon=r.icon||ex.icon;ex.at=r.at;if(r.photo){delMedia(ex.photo);ex.photo=await put(r.photo)}changed=true}
+        else if(!ex.photo&&r.photo){ex.photo=await put(r.photo);changed=true}}
+      else{S.rewards.push({id:r.id||uid(),icon:r.icon||"⭐",name:r.name,cost:Math.max(1,parseInt(r.cost)||1),by:r.by||null,at:r.at||0,photo:await put(r.photo)});shopAdded++;changed=true}}
+    if(changed&&!shopAdded)shopAdded=-1}
   S.usedIn.push(d.id);save();render();
   overlay(`<div class="stack" style="text-align:center;align-items:center">${avatarSVG(k,null,"avatar big")||mentorSVG(k.theme)}<h2 class="display">${esc(k.name)} ${isNew?"has arrived":"is up to date"}</h2>
     <p style="margin:0">${k.credits} points${k.goal?`, ${Math.min(k.goal.count,k.goal.target)}/${k.goal.target} stars towards ${esc(k.goal.name)}`:""}. ${added} trophy${added===1?"":"s"} added.${shopAdded?" Shop updated to match.":""}</p><button class="btn" data-close>Done</button></div>`)}
@@ -1432,7 +1436,7 @@ Object.assign(ACT,{
       catch(e){btn.disabled=false;btn.textContent="Make the file and send";toast("Couldn't make the file. Try again.")}}},
   addWish(b){wishSheet(kid(b.dataset.id))},
   wishYes(b){const w=S.wishes.find(x=>x.id===b.dataset.id);if(!w)return;const name=($("#wn-"+w.id).value||"").trim()||w.name||"New reward";const cost=Math.max(1,Math.min(999,parseInt($("#wc-"+w.id).value)||10));
-    S.rewards.push({id:uid(),icon:w.icon||"⭐",name,cost,photo:w.photo||null,by:w.kid});S.shopAt=Date.now();S.wishes=S.wishes.filter(x=>x!==w);const k=kid(w.kid);
+    S.rewards.push({id:uid(),icon:w.icon||"⭐",name,cost,photo:w.photo||null,by:w.kid,at:Date.now()});S.shopAt=Date.now();S.wishes=S.wishes.filter(x=>x!==w);const k=kid(w.kid);
     if(k){k.wishNews={name,cost}}save();render();toast(`${name} is in the shop for ${cost}`)},
   wishNo(b){const w=S.wishes.find(x=>x.id===b.dataset.id);if(!w)return;delMedia(w.photo);S.wishes=S.wishes.filter(x=>x!==w);save();render();toast("Wish removed")},
   resend(){try{bridge().fileReshare("Send "+S.lastSend.file)}catch(e){toast("Couldn't find the file. Make a new one.")}},
@@ -1454,7 +1458,7 @@ document.addEventListener("click",e=>{
   if(e.target.closest("[data-close]")){overlayClose();return}
   const b=e.target.closest("[data-act]");if(!b||b.disabled)return;const f=ACT[b.dataset.act];if(f)f(b)});
 document.addEventListener("change",e=>{const t=e.target;
-  if(t.dataset.rw){const r=S.rewards.find(x=>x.id===t.dataset.id);if(!r)return;r[t.dataset.rw]=t.dataset.rw==="cost"?Math.max(1,parseInt(t.value)||1):t.value.trim()||r[t.dataset.rw];S.shopAt=Date.now();save()}
+  if(t.dataset.rw){const r=S.rewards.find(x=>x.id===t.dataset.id);if(!r)return;r[t.dataset.rw]=t.dataset.rw==="cost"?Math.max(1,parseInt(t.value)||1):t.value.trim()||r[t.dataset.rw];r.at=Date.now();S.shopAt=Date.now();save()}
   if(t.dataset.kn){const k=kid(t.dataset.kn);if(k&&t.value.trim()){k.name=t.value.trim();save()}}});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")back()});
 window.addEventListener("popstate",()=>{});
