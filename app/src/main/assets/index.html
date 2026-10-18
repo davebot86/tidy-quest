@@ -745,7 +745,7 @@ function go(name,args={},replace=false){if(view&&!replace)stack.push(view);view=
 function back(){if(overlayClose()){return true}if(!stack.length)return false;view=stack.pop();render();return true}
 window.appBack=()=>back()?"handled":"exit";
 function home(){setTimeout(()=>window.__checkImport&&window.__checkImport(),400);stack=[];const kids=S.kids;
-  if(!S.pin){view={name:"welcome",args:{}}}
+  if(!S.pin||!kids.length){view={name:"welcome",args:{}}}
   else if(kids.length===1){view={name:"hq",args:{kid:kids[0].id}}}
   else{view={name:"pick",args:{}}}
   render()}
@@ -762,7 +762,12 @@ function overlay(html,onClose){overlayClose();overlayEl=document.createElement("
 function overlayClose(){if(!overlayEl)return false;overlayEl.remove();overlayEl=null;const f=overlayOnClose;overlayOnClose=null;if(f)f();return true}
 
 /* ---------- Welcome / setup ---------- */
-VIEWS.welcome=()=>{setBodyTheme(null,true);return `
+VIEWS.welcome=()=>{setBodyTheme(null,true);
+  if(S.pin&&S.family&&!S.kids.length)return `<div class="stack" style="padding-top:12vh;text-align:center;align-items:center">
+    <span class="label">Joining your family</span><h1 class="display" style="font-size:40px">Tidy Quest</h1>
+    <p>Connecting… your family's children, points and goals will appear here in a few seconds. You need to be online.</p>
+    <button class="btn ghost" data-act="setupJoin">Use a different family code</button></div>`;
+  return `
   <div class="stack" style="padding-top:8vh">
     <span class="label">Set up</span>
     <h1 class="display" style="font-size:44px">Tidy Quest</h1>
@@ -773,6 +778,9 @@ VIEWS.welcome=()=>{setBodyTheme(null,true);return `
       <p class="muted" style="margin:0">You can add more children later.</p>
     </div>
     <button class="btn big" data-act="setupPin">Next: set a grown-up PIN</button>
+    <div class="panel stack" style="margin-top:10px"><b>Joining someone else's family?</b>
+      <p class="muted" style="margin:0">For the other parent, grandparents, aunties and uncles. If someone already uses Tidy Quest for your child, they can send you a family code. Don't add the child again here.</p>
+      <button class="btn ghost" data-act="setupJoin">Join a family with a code</button></div>
   </div>`};
 
 function pinPad(title,sub,onDone){let val="";
@@ -1092,6 +1100,9 @@ const ACT={
   setupPin(){const n=$("#kidname").value.trim();if(!n){toast("Add your child's name");$("#kidname").focus();return}
     pinPad("Choose a 4-digit PIN","Only grown-ups should know it",p1=>{overlayClose();setTimeout(()=>pinPad("Type it again","To make sure",p2=>{if(p1!==p2){toast("PINs didn't match. Try again.");overlayClose();return}
       S.pin=p2;const k={id:uid(),name:n,theme:"army",credits:0,earned:0};S.kids.push(k);save();overlayClose();stack=[];view={name:"style",args:{kid:k.id,first:true}};render()}),200)})},
+  setupJoin(){if(S.pin){Sync.joinMenu();return}
+    pinPad("Choose a 4-digit PIN","Only grown-ups should know it",p1=>{overlayClose();setTimeout(()=>pinPad("Type it again","To make sure",p2=>{if(p1!==p2){toast("PINs didn't match. Try again.");overlayClose();return}
+      S.pin=p2;save();overlayClose();setTimeout(()=>Sync.joinMenu(),150)}),200)})},
   openKid(b){go("hq",{kid:b.dataset.id})},
   style(b){go("style",{kid:b.dataset.id})},
   setStyle(b){const k=kid(b.dataset.id);k.theme=b.dataset.theme;save();sfxFanfare(k);
@@ -1451,7 +1462,7 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
       if(S.kidGone.includes(id)||last[id]===txt)continue;let d;try{d=JSON.parse(txt)}catch(e){continue}
       const r=await mergeKid(d,true);last[r.k.id]=txt;changed=true;r.news.forEach(e=>news.push({k:r.k,e}))}
     setState("on");
-    if(changed){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}liveRender();alerts(news)}
+    if(changed){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}if(view&&view.name==="welcome"&&S.kids.length){overlayClose();home();toast("You're in! Welcome to the family.")}else{liveRender();alerts(news)}}
     first=true;push()}
   function alerts(news){if(!news.length)return;const say=({k,e})=>{const w=String(e.why||"");
       if(w.startsWith("buy "))return `🛍️ ${k.name} just bought ${w.slice(4)}!`;
