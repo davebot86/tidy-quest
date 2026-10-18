@@ -296,6 +296,11 @@ body.parent{--world:#EEF1F4;--bg:#EEF1F4;--panel:#fff;--ink:#17202A;--muted:#5B6
 .tmedia video,.tmedia img{width:100%;height:100%;object-fit:cover}
 .tplay{position:absolute;inset:0;display:grid;place-items:center;color:#fff}
 .tplay svg{width:44px;height:44px;filter:drop-shadow(0 2px 6px #0008)}
+.wishbtn{display:flex;gap:14px;align-items:center;text-align:left;width:100%}
+.wplus{width:52px;height:52px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:32px;font-weight:900;background:var(--accent);color:var(--accent-ink);box-shadow:0 4px 0 var(--accent-edge)}
+.wicons{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.wicons button{font-size:26px;height:48px;border-radius:12px;border:2px solid var(--line);background:var(--bg)}
+.wicons button.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
 .pstrip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
 .pstrip img{width:96px;height:96px;object-fit:cover;border-radius:10px;flex:none}
 .pstrip.story figure{margin:0;flex:none;display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:700;color:var(--muted)}
@@ -486,7 +491,7 @@ function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2
 function load(){
   try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}
   if(!S){S={pin:null,kids:[],jobs:[],rewards:DEFAULT_REWARDS.map(r=>({...r,id:uid()})),requests:[]}}
-  S.device=S.device||("d"+uid());S.pendingIn=S.pendingIn||{};S.usedIn=S.usedIn||[];S.sent=S.sent||[];
+  S.device=S.device||("d"+uid());S.wishes=S.wishes||[];S.pendingIn=S.pendingIn||{};S.usedIn=S.usedIn||[];S.sent=S.sent||[];
   S.jobs.forEach(j=>{if(!j.type)j.type="tidy";if(!j.proof)j.proof=j.afterReq?"photo":"none"});
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast("Couldn't save. The tablet may be low on space.")}}
@@ -813,6 +818,7 @@ VIEWS.hq=({kid:id})=>{const k=kid(id);if(!k){home();return""}setBodyTheme(k);con
   ${(k.trophies||[]).length||(k.treats||[]).length?`<button class="panel hallstrip" data-act="trophies" data-id="${k.id}"><span class="grow"><b>${esc(th.hall)}</b><br><span class="muted">${(k.trophies||[]).length} wins · ${(k.treats||[]).length} rewards earned</span></span>
     ${[...(k.treats||[]).filter(t=>t.photo).map(t=>({media:t.photo,kind:"photo"})),...(k.trophies||[]).filter(t=>t.media)].slice(0,3).map(t=>t.kind==="video"?`<video class="tthumb" muted playsinline preload="metadata" data-media="${t.media}"></video>`:`<img class="tthumb" data-media="${t.media}" alt="">`).join("")}</button>`:""}`};
 VIEWS.hq.after=({kid:id})=>{const k=kid(id);
+  if(k&&k.wishNews){const w=k.wishNews;delete k.wishNews;save();setTimeout(()=>{sfxFanfare(k);confetti(k);overlay(`<div class="celebrate stack" style="align-items:center">${mentorSVG(k.theme)}<span class="label">Your wish is in the shop</span><div class="display big">${esc(w.name)}</div><p style="margin:0">It costs ${w.cost} ${esc(T(k).cur.toLowerCase())}. ${k.credits>=w.cost?"You can get it now!":`You need ${w.cost-k.credits} more.`}</p><button class="btn big" data-close>Brilliant</button></div>`)},300);return}
   const n=document.querySelector("[data-count]");if(n&&!matchMedia("(prefers-reduced-motion: reduce)").matches){const to=+n.dataset.count,t0=performance.now();if(to>0){n.textContent="0";
     const step=t=>{const p=Math.min(1,(t-t0)/700);n.textContent=Math.round(to*(1-Math.pow(1-p,3)));if(p<1)requestAnimationFrame(step)};requestAnimationFrame(step)}}
   if(k&&k.goalHit&&k.goal){delete k.goalHit;delete k.newTrophy;save();const g=k.goal;
@@ -887,13 +893,15 @@ VIEWS.shop=({kid:id})=>{const k=kid(id);setBodyTheme(k);const th=T(k);
   <div class="topbar"><button class="iconbtn" data-act="back" aria-label="Back">${IC.back}</button><h1 class="display grow on-world">${esc(th.shop)}</h1>
     <span class="panel" style="padding:6px 14px;font-weight:900;font-size:22px;display:flex;align-items:center">${coinSVG()}${k.credits}</span></div>
   ${stageHTML(k,say(k,"shop"))}
+  ${(()=>{const w=S.wishes.filter(x=>x.kid===k.id);return `<button class="panel wishbtn" data-act="addWish" data-id="${k.id}"><span class="wplus">+</span><span><b style="font-size:19px">Add a wish</b><br><span class="muted" style="font-weight:700">Something you'd like in the ${esc(th.shop)}? Snap it and ask.</span></span></button>
+  ${w.length?`<div class="panel stack"><b>Your wishes</b>${w.map(x=>`<div class="spread"><span class="row" style="gap:10px">${x.photo?`<img class="tthumb" data-media="${x.photo}" alt="">`:`<span style="font-size:30px">${esc(x.icon)}</span>`}<b>${esc(x.name||"My wish")}</b></span><span class="chip wait">Waiting for a grown-up</span></div>`).join("")}</div>`:""}`})()}
   ${mine.length?`<div class="panel stack"><b>On its way</b>${mine.map(r=>`<div class="spread"><span>${esc(r.icon)} ${esc(r.name)}</span><span class="chip wait">Ask a grown-up</span></div>`).join("")}</div>`:""}
-  <div class="shopgrid">${S.rewards.map(r=>`<div class="reward">${r.photo?`<img class="rphoto" data-media="${r.photo}" alt="">`:`<span class="ico">${esc(r.icon)}</span>`}<span class="n">${esc(r.name)}</span>
+  <div class="shopgrid">${S.rewards.map(r=>`<div class="reward">${r.photo?`<img class="rphoto" data-media="${r.photo}" alt="">`:`<span class="ico">${esc(r.icon)}</span>`}<span class="n">${esc(r.name)}${r.by===k.id?`<br><span class="chip">Your idea</span>`:""}</span>
     <button class="btn small" data-act="buy" data-kid="${k.id}" data-id="${r.id}" ${k.credits<r.cost?"disabled":""}>${r.cost} ${esc(th.cur.toLowerCase())}</button></div>`).join("")}</div>`};
 
 /* ---------- Parent area ---------- */
 const PTABS=[["jobs","Jobs"],["check","To check"],["rewards","Rewards"],["kids","Children"],["link","Link tablets"],["settings","Settings"]];
-function pendingCount(){return S.jobs.filter(j=>j.status==="pending").length+S.requests.filter(r=>r.status==="asked").length}
+function pendingCount(){return S.jobs.filter(j=>j.status==="pending").length+S.requests.filter(r=>r.status==="asked").length+(S.wishes||[]).length}
 VIEWS.parent=({tab="jobs"})=>{setBodyTheme(null,true);const pc=pendingCount();
   const head=`<div class="spread"><h1 class="display">Grown-ups</h1><button class="btn ghost small" data-act="exitParent">Back to kids</button></div>
   <div class="tabs" role="tablist">${PTABS.map(([k,l])=>`<button class="tab ${tab===k?"on":""}" role="tab" data-act="ptab" data-tab="${k}">${l}${k==="check"&&pc?`<span class="n">${pc}</span>`:""}</button>`).join("")}</div>`;
@@ -907,9 +915,15 @@ const PARENT={
       <span class="stack" style="gap:4px;min-width:0"><span class="t">${esc(j.title||"Untitled job")}</span><span class="muted">${esc(k?k.name:"?")} · ${j.steps.length} steps${j.repeat?" · daily":""}</span>
       <span>${j.status==="pending"?`<span class="chip wait">To check</span>`:j.status==="todo"&&j.from&&j.from>today()?`<span class="chip">Back tomorrow</span>`:`<span class="chip">Live</span>`}</span></span>
       <span class="chip prize">${isChallenge(j)?"★":"+"+j.credits}</span></button>`}).join("")}</div>`:`<div class="panel empty"><b>No jobs yet.</b><p class="muted">Tap New job, photograph the mess, then record one voice note per step: "Lego in the red box", "pants in the washing basket". Clear steps get better results.</p></div>`}`},
-  check(){const jobs=S.jobs.filter(j=>j.status==="pending");const reqs=S.requests.filter(r=>r.status==="asked");
-    if(!jobs.length&&!reqs.length)return `<div class="panel empty muted">Nothing waiting. Finished jobs and reward requests appear here.</div>`;
-    return `<div class="stack">${jobs.map(j=>{const k=kid(j.kid);const th=T(k);const earned=j.credits+(j.beat?bonus(j):0);return `<div class="panel stack">
+  check(){const jobs=S.jobs.filter(j=>j.status==="pending");const reqs=S.requests.filter(r=>r.status==="asked");const wishes=S.wishes||[];
+    if(!jobs.length&&!reqs.length&&!wishes.length)return `<div class="panel empty muted">Nothing waiting. Finished jobs, reward requests and shop wishes appear here.</div>`;
+    return `<div class="stack">${wishes.map(w=>{const k=kid(w.kid);return `<div class="panel stack">
+      <b>${esc(k?k.name:"?")} wishes for: ${esc(w.name||"something new")}</b>
+      <div class="row" style="gap:14px;align-items:center">${w.photo?`<img data-media="${w.photo}" alt="${esc(w.name)}" style="width:120px;height:120px;object-fit:cover;border-radius:14px">`:`<span style="font-size:64px">${esc(w.icon)}</span>`}
+        <div class="stack" style="gap:6px;flex:1;min-width:160px"><label class="label" for="wn-${w.id}">Name in the shop</label><input id="wn-${w.id}" value="${esc(w.name)}" maxlength="40" placeholder="e.g. Lego minifigure">
+        <label class="label" for="wc-${w.id}">Price in ${esc(T(k).cur.toLowerCase())}</label><input id="wc-${w.id}" type="number" min="1" max="999" value="${w.suggest||10}" style="width:120px"></div></div>
+      <div class="row"><button class="btn good" data-act="wishYes" data-id="${w.id}">Add to shop</button><button class="btn bad" data-act="wishNo" data-id="${w.id}">Not this time</button></div></div>`}).join("")}
+      ${jobs.map(j=>{const k=kid(j.kid);const th=T(k);const earned=j.credits+(j.beat?bonus(j):0);return `<div class="panel stack">
       <div class="spread"><b>${esc(k.name)}: ${esc(j.title||"Job")}</b>${j.beat?`<span class="chip prize">Beat the clock</span>`:""}</div>
       <div class="pair">${j.photo?`<figure style="margin:0"><img data-media="${j.photo}" alt="Before"><figcaption class="label">Before</figcaption></figure>`:""}${j.after&&j.afterKind!=="video"?`<figure style="margin:0"><img data-media="${j.after}" alt="Proof"><figcaption class="label">Proof</figcaption></figure>`:""}</div>
       ${j.run&&(j.run.progress||[]).length?`<div class="stack" style="gap:6px"><span class="label">Progress</span><div class="pstrip">${j.run.progress.map(id=>`<img data-media="${id}" alt="Progress photo">`).join("")}</div></div>`:""}
@@ -1211,6 +1225,22 @@ function goalEditor(k,draftGoal){const g=draftGoal||(k.goal&&!k.goal.done?{...k.
     if(k.goal&&k.goal.photo&&k.goal.photo!==g.photo)delMedia(k.goal.photo);
     k.goal={name:g.name,target:g.target,count:Math.min(g.count||0,g.target),photo:g.photo||null,done:false,backers:g.backers};save();overlayClose();render();toast("Goal saved")}}
 
+/* ---------- Wishes: the child suggests something for the shop ---------- */
+const WISH_ICONS=["🍫","🍭","🍦","🧁","🍕","🎮","📺","🎬","🧸","🚗","⚽","🛴","🎨","📚","🏊","🎢","🌙","🪙"];
+function wishSheet(k,state){const st=state||{icon:"🍫",name:"",photo:null};const th=T(k);
+  const el=overlay(`<div class="stack"><div class="row" style="gap:12px">${mentorSVG(k.theme,"avatar")}<h2 class="display" style="flex:1">What would you like, ${esc(k.name)}?</h2></div>
+    <button class="photo-slot" id="wsnap" aria-label="Take a photo of it" style="aspect-ratio:16/10">${st.photo?`<img data-media="${st.photo}" alt="Your wish"><span class="retake">Retake</span>`:`<span class="stack" style="align-items:center">${IC.cam.replace("<svg",'<svg style="width:44px;height:44px"')}<b>Snap a photo of it</b><span class="muted">or pick a picture below</span></span>`}</button>
+    <div class="wicons">${WISH_ICONS.map(i=>`<button data-wi="${i}" class="${st.icon===i&&!st.photo?"on":""}" aria-label="${i}">${i}</button>`).join("")}</div>
+    <label class="label" for="wname">What is it called?</label><input id="wname" value="${esc(st.name)}" maxlength="40" placeholder="e.g. Kinder egg">
+    <div class="row"><button class="btn" id="wsend">Ask a grown-up</button><button class="btn ghost" data-close>Cancel</button></div></div>`,()=>{});
+  const keep=()=>{st.name=el.querySelector("#wname").value.trim()};
+  el.querySelectorAll("[data-wi]").forEach(b=>b.onclick=()=>{keep();st.icon=b.dataset.wi;if(st.photo){delMedia(st.photo);st.photo=null}wishSheet(k,st)});
+  el.querySelector("#wsnap").onclick=()=>{keep();capture({mode:"photo",title:"Snap your wish"},id=>{if(st.photo)delMedia(st.photo);st.photo=id;wishSheet(k,st)})};
+  el.querySelector("[data-close]").addEventListener("click",()=>{if(st.photo)delMedia(st.photo)},{capture:true});
+  el.querySelector("#wsend").onclick=()=>{keep();if(!st.name&&!st.photo){toast("Snap a photo or type what it is");return}
+    S.wishes.push({id:uid(),kid:k.id,name:st.name,icon:st.icon,photo:st.photo,at:Date.now()});save();overlayClose();sfxFanfare(k);
+    const line=`Good choice, ${k.name}. A grown-up will decide the price.`;speak(line);render();toast("Wish sent to a grown-up")}}
+
 /* ---------- Shop sharing ---------- */
 const SHOP_TAG="TQSHOP1:";
 function encodeShop(){const list=S.rewards.map(r=>({i:r.icon,n:r.name,c:r.cost}));return SHOP_TAG+btoa(unescape(encodeURIComponent(JSON.stringify(list))))}
@@ -1363,6 +1393,11 @@ Object.assign(ACT,{
         S.lastSend={kid:k.id,name:k.name,credits:k.credits,stars:k.goal&&!k.goal.done?(k.goal.count||0):0,at:Date.now(),file:name};
         k.credits=0;if(k.goal&&!k.goal.done)k.goal.count=0;save();overlayClose();render();toast(`${k.name}'s points and stars are in the file`)}
       catch(e){btn.disabled=false;btn.textContent="Make the file and send";toast("Couldn't make the file. Try again.")}}},
+  addWish(b){wishSheet(kid(b.dataset.id))},
+  wishYes(b){const w=S.wishes.find(x=>x.id===b.dataset.id);if(!w)return;const name=($("#wn-"+w.id).value||"").trim()||w.name||"New reward";const cost=Math.max(1,Math.min(999,parseInt($("#wc-"+w.id).value)||10));
+    S.rewards.push({id:uid(),icon:w.icon||"⭐",name,cost,photo:w.photo||null,by:w.kid});S.wishes=S.wishes.filter(x=>x!==w);const k=kid(w.kid);
+    if(k){k.wishNews={name,cost}}save();render();toast(`${name} is in the shop for ${cost}`)},
+  wishNo(b){const w=S.wishes.find(x=>x.id===b.dataset.id);if(!w)return;delMedia(w.photo);S.wishes=S.wishes.filter(x=>x!==w);save();render();toast("Wish removed")},
   resend(){try{bridge().fileReshare("Send "+S.lastSend.file)}catch(e){toast("Couldn't find the file. Make a new one.")}},
   undoSend(){const L=S.lastSend;confirmSheet("Put the points back?",`Only do this if the file was never opened on the other phone, or ${L.name} gets them twice.`,()=>{const k=kid(L.kid);
     if(k){k.credits+=L.credits;if(k.goal&&!k.goal.done)k.goal.count=Math.min(k.goal.target,(k.goal.count||0)+L.stars)}delete S.lastSend;save();render();toast("Points put back")},"Put them back","Cancel")},
