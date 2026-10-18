@@ -36,7 +36,7 @@
   --radius:16px; --card-radius:16px; --card-border:1px solid var(--line); --card-shadow:0 1px 0 rgba(23,32,42,.06),0 6px 18px -10px rgba(23,32,42,.25);
 }
 /* Dojo */
-body[data-theme="karate"]{--bg:#EFE5CF;--panel:#FBF6EA;--ink:#221A13;--muted:#76685A;--line:#DCCDAF;--accent:#B3261E;--accent-ink:#FFF8EE;--accent2:#B8862F;
+body[data-theme="karate"]{--bg:#EFE5CF;--panel:#FBF6EA;--ink:#221A13;--muted:#76685A;--line:#DCCDAF;--accent:#1C4B47;--accent-ink:#FFF8EE;--accent2:#B8862F;
   --stage:#3A2A1E;--stage-ink:#F6EBD3;--bubble:#FBF6EA;--bubble-ink:#221A13;--fig:#221A13;--display:"Shippori","Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",Georgia,serif;--dweight:800;
   --world:
     repeating-linear-gradient(90deg,rgba(120,90,50,.035) 0 2px,transparent 2px 7px),
@@ -128,10 +128,10 @@ h2.display{font-size:clamp(22px,5.4vw,30px)}
 .bubble::before{content:"";position:absolute;left:-10px;bottom:22px;border:10px solid transparent;border-right-color:var(--bubble);border-left:0}
 .bubble small{display:block;font-size:14px;font-weight:700;opacity:.65;margin-bottom:2px}
 body[data-theme="karate"] .stage{background:
-  radial-gradient(70px 70px at 74px 62px,#B3261E 98%,transparent 100%),
+  radial-gradient(70px 70px at 74px 62px,#E8B04B 98%,transparent 100%),
   repeating-linear-gradient(90deg,rgba(0,0,0,.18) 0 2px,transparent 2px 46px),
   linear-gradient(#3A2A1E,#2B1F16)}
-body[data-theme="karate"] .bubble{border-radius:4px;border-left:4px solid #B3261E}
+body[data-theme="karate"] .bubble{border-radius:4px;border-left:4px solid #1C4B47}
 body[data-theme="hero"] .stage{background:radial-gradient(circle,rgba(16,22,51,.18) 2px,transparent 2.5px) 0 0/10px 10px,#FFD23F;border:3px solid #101633;box-shadow:5px 5px 0 #101633}
 body[data-theme="hero"] .bubble{border:3px solid #101633;border-radius:22px}
 body[data-theme="hero"] .bubble::before{border-right-color:#101633;left:-13px}
@@ -235,13 +235,13 @@ body[data-theme="karate"] .stamp{border-radius:6px}
 .kidpick .avatar{width:84px;height:93px}
 
 /* Parent area: calm and neutral */
-body.parent{--world:#F4EEE2;--bg:#F4EEE2;--panel:#FFFDF8;--ink:#221A13;--muted:#6F6253;--line:#E4D9C4;--accent:#B3261E;--accent-ink:#fff;--accent2:#C98A1B;
+body.parent{--world:#F4EEE2;--bg:#F4EEE2;--panel:#FFFDF8;--ink:#221A13;--muted:#6F6253;--line:#E4D9C4;--accent:#1C4B47;--accent-ink:#fff;--accent2:#C98A1B;
   --display:"Nunito",system-ui,sans-serif;--dweight:900;--dspace:0;--card-radius:16px;--card-border:1px solid #D8DEE5;--card-shadow:0 1px 0 rgba(23,32,42,.04)}
 .tabs{display:flex;flex-wrap:wrap;gap:6px;padding-bottom:4px}
 .tab{padding:9px 16px;border-radius:999px;font-weight:700;white-space:nowrap;border:1.5px solid var(--line);background:var(--panel)}
 .tab.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 .brandrow{display:flex;align-items:center;gap:8px;font-weight:900;font-size:14px;color:var(--muted)}.brandrow i{width:12px;height:12px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--panel),0 0 0 3.5px var(--ink)}
-.today{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center}.today .av{width:56px;height:62px}.today .badge.av{width:56px;height:56px}.today .nm{font-weight:900;font-size:19px;line-height:1.1}.today .facts{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}.today .facts span{background:rgba(179,38,30,.08);border-radius:999px;padding:3px 10px;font-size:13px;font-weight:800}.today .facts span.hot{background:var(--warn);color:#fff}
+.today{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center}.today .av{width:56px;height:62px}.today .badge.av{width:56px;height:56px}.today .nm{font-weight:900;font-size:19px;line-height:1.1}.today .facts{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}.today .facts span{background:rgba(28,75,71,.08);border-radius:999px;padding:3px 10px;font-size:13px;font-weight:800}.today .facts span.hot{background:var(--warn);color:#fff}
 .tab .n{display:inline-block;min-width:22px;padding:0 6px;margin-left:6px;border-radius:999px;background:var(--warn);color:#fff;font-size:13px}
 .jobcard{display:grid;grid-template-columns:72px 1fr auto;gap:14px;align-items:center;text-align:left;width:100%;background:var(--panel);border:var(--card-border);border-radius:var(--card-radius);padding:10px}
 .thumb{width:72px;height:72px;border-radius:12px;object-fit:cover;background:rgba(127,127,127,.15)}
@@ -332,7 +332,7 @@ body.parent{--world:#F4EEE2;--bg:#F4EEE2;--panel:#FFFDF8;--ink:#221A13;--muted:#
 /* ===== v0.8 visual layer: game-quality worlds =====
    Each world: a saturated ground, warm paper (or deep glass) cards with a solid "lip",
    one hero accent and a complementary gold/cyan for rewards. */
-body[data-theme="karate"]{--panel:#FFF7E8;--ink:#24170F;--muted:#7A6450;--line:#E6D3B0;--card-edge:#C9A86A;--accent:#C8322A;--accent-edge:#8A1C16;--accent-ink:#FFF7E8;--accent2:#E8B04B;--on-bg:#FFF3DC;--fig:#24170F;
+body[data-theme="karate"]{--panel:#FFF7E8;--ink:#24170F;--muted:#7A6450;--line:#E6D3B0;--card-edge:#C9A86A;--accent:#1C4B47;--accent-edge:#0E2A27;--accent-ink:#FFF7E8;--accent2:#E8B04B;--on-bg:#FFF3DC;--fig:#24170F;
   background-color:#1C4B47;background-size:100px 50px;background-attachment:fixed;
   background-image:radial-gradient(circle at 100% 150%,#1C4B47 24%,#235E58 24% 28%,#1C4B47 28% 36%,#235E58 36% 40%,transparent 40%),
     radial-gradient(circle at 0 150%,#1C4B47 24%,#235E58 24% 28%,#1C4B47 28% 36%,#235E58 36% 40%,transparent 40%),
@@ -346,7 +346,7 @@ body[data-theme="pop"]{--panel:#FFF5FB;--ink:#2A0F45;--muted:#7A5A8E;--line:#EBD
   --world:radial-gradient(50% 35% at 10% 0%,rgba(255,46,147,.45),transparent 70%),radial-gradient(50% 35% at 90% 5%,rgba(49,215,242,.35),transparent 70%),#2A0F45}
 body[data-theme="space"]{--panel:#16224F;--ink:#EAF1FF;--muted:#9DB0E0;--line:#2B3C7A;--card-edge:#0A1238;--accent:#FF8A3D;--accent-edge:#A9501A;--accent-ink:#1A0C02;--accent2:#5FE0FF;--on-bg:#EAF1FF;--fig:#5FE0FF}
 body[data-theme="football"]{--panel:#FFFFFF;--ink:#13261A;--muted:#4E6A57;--line:#D3E4D7;--card-edge:#14592C;--accent:#D62828;--accent-edge:#8E1414;--accent-ink:#FFFFFF;--accent2:#F2C14E;--on-bg:#FFFFFF;--fig:#13261A}
-body.parent{--card-edge:#E4D9C4;--accent-edge:#7E1A14;--on-bg:#221A13}
+body.parent{--card-edge:#E4D9C4;--accent-edge:#0E2A27;--on-bg:#221A13}
 
 .on-world{color:var(--on-bg)}
 .section-title.on-world h2,.topbar .on-world h1,h1.on-world{text-shadow:0 2px 0 rgba(0,0,0,.25)}
@@ -419,7 +419,7 @@ const THEMES={
     empty:"No training today. Rest well, young warrior.",shop:"Dojo Shop",hall:"Dojo Wall of Fame",hello:"Dojo",call:"Hai!",stepWord:"Move",
     ranks:["White Belt","Yellow Belt","Orange Belt","Green Belt","Blue Belt","Brown Belt","Black Belt"],
     belts:["#f4f4f4","#f2d22e","#f08a24","#3a9a4a","#2d62c4","#7a4a26","#151515"],
-    cheers:["Strong focus!","Sensei is impressed!","Osu!"],wave:"triangle",notes:[330,440,554,659],swatch:["#3A2A1E","#B3261E","#F6EBD3"],
+    cheers:["Strong focus!","Sensei is impressed!","Osu!"],wave:"triangle",notes:[330,440,554,659],swatch:["#3A2A1E","#1C4B47","#F6EBD3"],
     m:{name:"Sensei",days:["Sunday, {name}. Rest the body, tidy the mind.", "Monday, {name}. A new week starts on a clean mat.", "Tuesday. Small steps, every day, {name}.", "Wednesday, {name}. Halfway up the mountain. Keep climbing.", "Thursday. Focus, {name}. One thing at a time.", "Friday, {name}. Finish the week with honour.", "Saturday. Train hard, then play hard, {name}."],greet:["Welcome to the dojo, {name}.","Bow, {name}. Today we train.","A calm room makes a calm mind, {name}."],
       today:"You have {n} today.",none:"No training today. Rest, and be ready.",
       start:"Each move picks something up. Listen, then do the move. Shout Hai when it is done.",
@@ -585,7 +585,7 @@ function costume(theme,k){const r=rankOf((k&&k.earned)||0);
       body:`<path d="M24 220 Q28 158 72 146 L100 178 L128 146 Q172 158 176 220Z" fill="#f8f7f2" stroke="#c9c4b8" stroke-width="3"/>
         <path d="M72 146 L100 204 L128 146" fill="none" stroke="#d8d2c4" stroke-width="7"/>
         <rect x="40" y="200" width="120" height="14" rx="4" fill="${THEMES.karate.belts[r]}" stroke="#0003" stroke-width="2"/>`,
-      front:`<path d="M44 62 Q100 44 156 62 L156 74 Q100 56 44 74Z" fill="#c0262d"/><path d="M152 66 l30 6 l-8 8z M152 70 l24 18 l-10 4z" fill="#c0262d"/>`},
+      front:`<path d="M44 62 Q100 44 156 62 L156 74 Q100 56 44 74Z" fill="#1C4B47"/><path d="M152 66 l30 6 l-8 8z M152 70 l24 18 l-10 4z" fill="#1C4B47"/>`},
     army:{back:"",
       body:`<path d="M22 220 Q26 156 72 146 L100 168 L128 146 Q174 156 178 220Z" fill="#5b6b35"/>
         <circle cx="55" cy="185" r="12" fill="#3f4b24"/><circle cx="140" cy="200" r="14" fill="#3f4b24"/><circle cx="96" cy="210" r="9" fill="#7a8a4a"/><circle cx="150" cy="168" r="8" fill="#7a8a4a"/>
@@ -648,11 +648,11 @@ function faceEditor(k,mediaId){const img=new Image();let zoom=1,ox=0,oy=0,drag=n
 
 /* ---------- Scenes: an illustrated place for each master to stand in ---------- */
 function sceneSVG(theme){const S={
-  karate:`<defs><linearGradient id="skK" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2B1638"/><stop offset=".55" stop-color="#B8322A"/><stop offset="1" stop-color="#F2A65A"/></linearGradient></defs>
+  karate:`<defs><linearGradient id="skK" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#12322F"/><stop offset=".55" stop-color="#D9873A"/><stop offset="1" stop-color="#F2C14E"/></linearGradient></defs>
     <rect width="400" height="220" fill="url(#skK)"/><circle cx="292" cy="104" r="50" fill="#FFE1A0" opacity=".92"/>
-    <path d="M0 150 L60 112 L110 140 L170 98 L240 146 L300 118 L400 150 V220 H0Z" fill="#5A2440" opacity=".85"/>
-    <g fill="#2A1226"><rect x="330" y="96" width="6" height="64"/><path d="M312 104 h42 l-8 -10 h-26z M316 120 h34 l-7 -9 h-20z M320 136 h26 l-6 -8 h-14z"/></g>
-    <path d="M0 0 C40 30 70 26 110 40" stroke="#2A1226" stroke-width="4" fill="none"/><g fill="#F7B7C8">${[[18,14],[40,26],[62,30],[86,34],[104,42],[30,6],[74,20]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="5"/>`).join("")}</g>
+    <path d="M0 150 L60 112 L110 140 L170 98 L240 146 L300 118 L400 150 V220 H0Z" fill="#24564F" opacity=".85"/>
+    <g fill="#0E2A27"><rect x="330" y="96" width="6" height="64"/><path d="M312 104 h42 l-8 -10 h-26z M316 120 h34 l-7 -9 h-20z M320 136 h26 l-6 -8 h-14z"/></g>
+    <path d="M0 0 C40 30 70 26 110 40" stroke="#0E2A27" stroke-width="4" fill="none"/><g fill="#E8B04B">${[[18,14],[40,26],[62,30],[86,34],[104,42],[30,6],[74,20]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="5"/>`).join("")}</g>
     <rect y="168" width="400" height="52" fill="#C9A86A"/><path d="M0 168 H400 M100 168 V220 M200 168 V220 M300 168 V220" stroke="#A88850" stroke-width="2"/><rect y="164" width="400" height="6" fill="#6B3A22"/>`,
   army:`<defs><linearGradient id="skA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6E8FA8"/><stop offset="1" stop-color="#D8D2A8"/></linearGradient></defs>
     <rect width="400" height="220" fill="url(#skA)"/><path d="M0 150 Q100 100 200 140 T400 128 V220 H0Z" fill="#56693A"/><path d="M0 170 Q120 140 260 166 T400 160 V220 H0Z" fill="#44542D"/>
@@ -689,7 +689,7 @@ function mentorSVG(theme,cls="mentor"){
       <path d="M43 50 Q49 43 56 49" stroke="#F4F1EA" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M64 49 Q71 43 77 50" stroke="#F4F1EA" stroke-width="5" fill="none" stroke-linecap="round"/>
       <path d="M45 57 Q50 61 55 57" stroke="#3A2A1E" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M65 57 Q70 61 75 57" stroke="#3A2A1E" stroke-width="2.6" fill="none" stroke-linecap="round"/>
       <path d="M41 66 Q60 75 79 66 Q82 94 60 116 Q38 94 41 66Z" fill="#F4F1EA"/><path d="M45 68 Q60 59 75 68 Q67 72 60 68 Q53 72 45 68Z" fill="#DDD6C8"/>
-      <rect x="22" y="128" width="76" height="8" fill="#B3261E"/>`},
+      <rect x="22" y="128" width="76" height="8" fill="#24170F"/>`},
     army:()=>{const sk="#D9A47C";return `<path d="M6 136 Q10 96 60 92 Q110 96 114 136Z" fill="#556B2F"/><path d="M46 93 L60 108 L74 93" fill="#3F5022"/>
       <path d="M18 112 l8 6 l8 -6 M18 118 l8 6 l8 -6 M18 124 l8 6 l8 -6" stroke="#E0B23C" stroke-width="2.5" fill="none"/>
       ${head(sk)}<rect x="37" y="60" width="46" height="24" rx="12" fill="${sk}"/>
@@ -1372,7 +1372,7 @@ function nextTreat(k){const rs=S.rewards.filter(r=>r.cost>0);if(!rs.length)retur
   if(can)return {r:can,have:true};const nx=rs.filter(r=>r.cost>k.credits).sort((a,b)=>a.cost-b.cost)[0];return nx?{r:nx,have:false,need:nx.cost-k.credits}:null}
 /* ---------- Monthly poster: one A4 picture of the month, in the child's world, to save and pin on the wall ---------- */
 const POSTER={
-  karate:{bg:"#1C4B47",panel:"#FFF7E8",ink:"#24170F",muted:"#7A6450",accent:"#C8322A",gold:"#E8B04B",title:"#FFF3DC",font:"800 {s}px Shippori, 'Noto Serif JP', Georgia, serif"},
+  karate:{bg:"#1C4B47",panel:"#FFF7E8",ink:"#24170F",muted:"#7A6450",accent:"#B8862F",gold:"#E8B04B",title:"#FFF3DC",font:"800 {s}px Shippori, 'Noto Serif JP', Georgia, serif"},
   army:{bg:"#3E4A2C",panel:"#F1E7C8",ink:"#232A15",muted:"#5E5A40",accent:"#E8742A",gold:"#F2C14E",title:"#F1E7C8",font:"{s}px Stencil, Impact, sans-serif"},
   hero:{bg:"#1B2B7A",panel:"#FFFFFF",ink:"#101633",muted:"#4A5280",accent:"#E5332A",gold:"#FFD23F",title:"#FFD23F",font:"{s}px Bangers, Impact, sans-serif"},
   pop:{bg:"#2A0F45",panel:"#FFF5FB",ink:"#2A0F45",muted:"#7A5A8E",accent:"#FF2E93",gold:"#31D7F2",title:"#FFF5FB",font:"{s}px Bungee, Impact, sans-serif"},
