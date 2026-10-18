@@ -1336,7 +1336,7 @@ function videoFrame(url){return new Promise(res=>{if(!url)return res(null);const
 function blobToDataURL(b){return new Promise(res=>{if(!b)return res(null);const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>res(null);r.readAsDataURL(b)})}
 function countLines(x,text,maxW,maxLines){const words=String(text).split(/\s+/);let line="",n=1;for(const w of words){const t=line?line+" "+w:w;if(x.measureText(t).width>maxW&&line){n++;line=w}else line=t}return Math.min(n,maxLines)}
 function rrect(x,X,Y,W,H,r){x.beginPath();x.moveTo(X+r,Y);x.arcTo(X+W,Y,X+W,Y+H,r);x.arcTo(X+W,Y+H,X,Y+H,r);x.arcTo(X,Y+H,X,Y,r);x.arcTo(X,Y,X+W,Y,r);x.closePath()}
-function cover(x,img,X,Y,W,H){const iw=img.width||img.videoWidth,ih=img.height||img.videoHeight;const s=Math.max(W/iw,H/ih);const w=iw*s,h=ih*s;x.drawImage(img,X+(W-w)/2,Y+(H-h)/2,w,h)}
+function cover(x,img,X,Y,W,H){const iw=img.width||img.videoWidth,ih=img.height||img.videoHeight;const s=Math.max(W/iw,H/ih);const w=iw*s,h=ih*s;x.drawImage(img,X+(W-w)/2,Y+(H-h)*.25,w,h)}
 function wrap(x,text,X,Y,maxW,lh,maxLines=3){const words=String(text).split(/\s+/);let line="",n=0;
   for(let i=0;i<words.length;i++){const t=line?line+" "+words[i]:words[i];if(x.measureText(t).width>maxW&&line){x.fillText(line,X,Y+n*lh);n++;line=words[i];if(n===maxLines-1){const rest=words.slice(i).join(" ");let r=rest;while(x.measureText(r+"…").width>maxW&&r.length>1)r=r.slice(0,-1);x.fillText(r===rest?r:r+"…",X,Y+n*lh);return n+1}}else line=t}
   if(line){x.fillText(line,X,Y+n*lh);n++}return n}
@@ -1350,9 +1350,9 @@ async function makePoster(k,off){const P=POSTER[k.theme]||POSTER.army,th=T(k),M=
   x.fillStyle=P.title;x.textBaseline="alphabetic";{const tt=`${k.name}'s ${M.R.month}`;let fs=104;x.font=df(fs);while(x.measureText(tt).width>W-120&&fs>48){fs-=4;x.font=df(fs)}x.fillText(tt,60,150)}
   x.font=bf(800,32);x.globalAlpha=.85;x.fillText(`${th.hall} · ${M.R.label}`,62,200);x.globalAlpha=1;
   /* the master's stage */
-  const sy=236,sh=380;x.save();rrect(x,60,sy,W-120,sh,34);x.clip();
+  const sy=236,sh=330;x.save();rrect(x,60,sy,W-120,sh,34);x.clip();
   const scene=await svgImg(sceneSVG(k.theme).replace(/class="scene"/,""),1120,616);if(scene)x.drawImage(scene,60,sy-(616-sh)/2,1120,616);else{x.fillStyle=P.panel;x.fillRect(60,sy,W-120,sh)}
-  const men=await svgImg(mentorSVG(k.theme,"m"),300,340);if(men)x.drawImage(men,90,sy+sh-340,300,340);
+  const men=await svgImg(mentorSVG(k.theme,"m"),270,306);if(men)x.drawImage(men,100,sy+sh-306,270,306);
   x.restore();x.lineWidth=6;x.strokeStyle="rgba(0,0,0,.25)";rrect(x,60,sy,W-120,sh,34);x.stroke();
   {const line=(MONTH_LINE[k.theme]||MONTH_LINE.army).replace(/\{name\}/g,k.name),bw=W-120-430+40,tw2=bw-72;x.font=bf(900,40);
    const n=countLines(x,line,tw2,3),bh=92+n*50;const by=sy+(sh-bh)/2;
@@ -1384,10 +1384,10 @@ async function makePoster(k,off){const P=POSTER[k.theme]||POSTER.army,th=T(k),M=
     x.fillStyle="rgba(0,0,0,.72)";x.fillRect(X,Y+ch-60,cw,60);x.fillStyle="#FFF";x.font=bf(900,25);
     const cap=(p.star?"★ ":"")+p.title;let t=cap;while(x.measureText(t).width>cw-36&&t.length>1)t=t.slice(0,-1);x.fillText(t===cap?t:t+"…",X+18,Y+ch-22);x.restore()};
   if(pics.length===1){const cw=(W-120-G)/2,ch=Math.min(avail,520);await drawPic(pics[0],60,top,cw,ch);winsPanel(60+cw+G,top,cw,ch)}
-  else if(pics.length){const cols=Math.min(3,pics.length),rows=Math.ceil(pics.length/cols),cw=(W-120-G*(cols-1))/cols;
-    const ch=Math.min(cols===2?420:330,(avail-G*(rows-1)-(M.wins.length?200:0))/rows);
+  else if(pics.length){const cols=pics.length===4?2:Math.min(3,pics.length),rows=Math.ceil(pics.length/cols),cw=(W-120-G*(cols-1))/cols;
+    const room=avail-G*(rows-1),ch=rows===1?Math.min(cols===2?440:360,room-(M.wins.length&&room>=520?200:0)):Math.min(cols===2?360:300,room/rows);
     for(let i=0;i<pics.length;i++)await drawPic(pics[i],60+(i%cols)*(cw+G),top+Math.floor(i/cols)*(ch+G),cw,ch);
-    const used=rows*ch+(rows-1)*G+G;winsPanel(60,top+used,W-120,Math.min(avail-used,90+Math.min(M.wins.length,8)*46))}
+    const used=rows*ch+(rows-1)*G+G;if(M.wins.length&&avail-used>=150)winsPanel(60,top+used,W-120,Math.min(avail-used,90+Math.min(M.wins.length,8)*46))}
   else winsPanel(60,top,W-120,Math.min(avail,90+Math.max(1,Math.min(M.wins.length,14))*46));
   /* footer */
   x.fillStyle=P.title;x.globalAlpha=.75;x.font=bf(800,24);x.fillText("Tidy Quest",60,H-50);x.textAlign="right";x.fillText(`Made ${new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}`,W-60,H-50);x.textAlign="left";x.globalAlpha=1;
