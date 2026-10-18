@@ -232,7 +232,7 @@ body[data-theme="karate"] .stamp{border-radius:6px}
 /* Parent area: calm and neutral */
 body.parent{--world:#EEF1F4;--bg:#EEF1F4;--panel:#fff;--ink:#17202A;--muted:#5B6673;--line:#D8DEE5;--accent:#0F6E68;--accent-ink:#fff;--accent2:#C98A1B;
   --display:"Nunito",system-ui,sans-serif;--dweight:900;--dspace:0;--card-radius:16px;--card-border:1px solid #D8DEE5;--card-shadow:0 1px 0 rgba(23,32,42,.04)}
-.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;padding-bottom:4px}
 .tab{padding:9px 16px;border-radius:999px;font-weight:700;white-space:nowrap;border:1.5px solid var(--line);background:var(--panel)}
 .tab.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 .tab .n{display:inline-block;min-width:22px;padding:0 6px;margin-left:6px;border-radius:999px;background:var(--warn);color:#fff;font-size:13px}
@@ -503,7 +503,7 @@ function load(){
   if(!S){S={pin:null,kids:[],jobs:[],rewards:DEFAULT_REWARDS.map(r=>({...r,id:uid()})),requests:[]}}
   S.device=S.device||("d"+uid());S.wishes=S.wishes||[];S.library=S.library||[];S.shopGone=S.shopGone||[];S.rewards.forEach(r=>{if(r.at==null)r.at=0});delete S.lastSend;
   S.kids.forEach(k=>{if(k.goal&&!k.goal.id)k.goal.id="g:"+String(k.goal.name||"").trim().toLowerCase();
-    if(!k.ledger){k.ledger=[{id:"o"+uid(),t:Date.now(),d:k.credits||0,e:k.earned||0,s:k.goal?(k.goal.count||0):0,g:k.goal?k.goal.id:null,why:"start"}]}recalc(k,true)});S.pendingIn=S.pendingIn||{};S.reqDone=S.reqDone||[];S.wishDone=S.wishDone||[];S.kidGone=S.kidGone||[];S.usedIn=S.usedIn||[];S.sent=S.sent||[];
+    if(!k.ledger){k.ledger=[{id:"o"+uid(),t:Date.now(),d:k.credits||0,e:k.earned||0,s:k.goal?(k.goal.count||0):0,g:k.goal?k.goal.id:null,why:"start"}]}recalc(k,true);try{fixTrophies(k)}catch(e){}});S.pendingIn=S.pendingIn||{};S.reqDone=S.reqDone||[];S.wishDone=S.wishDone||[];S.kidGone=S.kidGone||[];S.usedIn=S.usedIn||[];S.sent=S.sent||[];
   S.jobs.forEach(j=>{if(!j.type)j.type="tidy";if(!j.proof)j.proof=j.afterReq?"photo":"none"});
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast("Couldn't save. The tablet may be low on space.")}if(window.Sync)Sync.soon()}
@@ -931,7 +931,7 @@ VIEWS.shop=({kid:id})=>{const k=kid(id);setBodyTheme(k);const th=T(k);
     <button class="btn small" data-act="buy" data-kid="${k.id}" data-id="${r.id}" ${k.credits<r.cost?"disabled":""}>${r.cost} ${esc(th.cur.toLowerCase())}</button></div>`).join("")}</div>`};
 
 /* ---------- Parent area ---------- */
-const PTABS=[["jobs","Jobs"],["check","To check"],["rewards","Rewards"],["kids","Children"],["link","Link tablets"],["settings","Settings"]];
+const PTABS=[["jobs","Jobs"],["check","To check"],["rewards","Rewards"],["kids","Children"],["link","Link & sync"],["settings","Settings"]];
 function pendingCount(){return S.jobs.filter(j=>j.status==="pending").length+S.requests.filter(r=>r.status==="asked").length+(S.wishes||[]).length}
 VIEWS.parent=({tab="jobs"})=>{setBodyTheme(null,true);const pc=pendingCount();
   const head=`<div class="spread"><h1 class="display">Grown-ups</h1><button class="btn ghost small" data-act="exitParent">Back to kids</button></div>
@@ -1122,7 +1122,7 @@ const ACT={
       const fr=new FileReader();fr.onload=()=>{const b64=String(fr.result).split(",")[1];const ext=t.kind==="video"?(blob.type.includes("mp4")?"mp4":"webm"):"jpg";
         try{const ok=bridge().saveMedia(b64,blob.type||(t.kind==="video"?"video/webm":"image/jpeg"),("TidyQuest-"+k.name+"-"+t.title).replace(/[^\w-]+/g,"-").slice(0,60)+"."+ext);toast(ok?"Saved to the gallery":"Couldn't save. Allow storage access and try again.")}catch(e){toast("Couldn't save to the gallery")}};fr.readAsDataURL(blob)};
     el.querySelector("#tdel").onclick=()=>{overlayClose();pinPad("Grown-ups only","Enter your PIN to remove it",p=>{if(p!==S.pin)return false;overlayClose();
-      k.trophies=k.trophies.filter(x=>x!==t);delMedia(t.media);albumDel(t.album);save();render();toast("Removed")})}},
+      k.trophies=k.trophies.filter(x=>x!==t);k.tGone=k.tGone||[];k.tGone.push(t.id);delMedia(t.media);albumDel(t.album);save();render();toast("Removed")})}},
   selfie(b){const k=kid(b.dataset.id);capture({mode:"photo",facing:"user",title:"Smile, "+k.name+"!"},id=>faceEditor(k,id))},
   noFace(b){const k=kid(b.dataset.id);delMedia(k.face);k.face=null;save();render()},
   job(b){go("job",{id:b.dataset.id})},
@@ -1211,6 +1211,16 @@ function recalc(k,quiet){const L=k.ledger||[];let d=0,e=0,st=0;const gid=k.goal&
   k.credits=d;k.earned=Math.max(0,openE+e);
   if(k.goal){k.goal.count=Math.max(0,st);const hit=k.goal.count>=k.goal.target;if(hit&&!k.goal.done){k.goal.done=true;if(!quiet)k.goalHit=true}else if(!hit)k.goal.done=false}}
 function post(k,{d=0,e=0,s=0,why=""}){k.ledger=k.ledger||[];k.ledger.push({id:"e"+uid(),t:Date.now(),d,e,s,g:s&&k.goal?k.goal.id:null,why,by:S.device});recalc(k)}
+/* Wall of Fame wins rebuilt from the history (ids come from the history entry, so every phone makes the same ones and nothing doubles) */
+function fixTrophies(k){k.trophies=k.trophies||[];k.tGone=k.tGone||[];const gone=new Set(k.tGone);
+  const near=(t,title,at)=>t.title===title&&Math.abs((t.at||0)-(at||0))<15*60000;
+  k.trophies=k.trophies.filter(t=>!gone.has(t.id));
+  const real=k.trophies.filter(t=>!String(t.id).startsWith("L"));
+  k.trophies=k.trophies.filter(t=>!String(t.id).startsWith("L")||!real.some(r=>near(r,t.title,t.at)));
+  for(const e of (k.ledger||[])){const w=String(e.why||"");const job=w.startsWith("job "),star=w.startsWith("star ");if(!job&&!star)continue;
+    const id="L"+e.id,title=w.slice(job?4:5).trim()||(job?T(k).job:"A star");if(gone.has(id)||k.trophies.some(t=>t.id===id||near(t,title,e.t)))continue;
+    k.trophies.push({id,title,type:job?"tidy":null,media:null,kind:null,at:e.t||0,amt:e.d||0,star:star})}
+  k.trophies.sort((a,b)=>(b.at||0)-(a.at||0))}
 /* ---------- Big goal: challenges add stars towards one big reward ---------- */
 function addStar(k,title){if(!k.goal)return;post(k,{s:1,why:"star "+(title||"")})}
 function goalCard(k,th){const g=k.goal;if(!g)return"";const n=Math.min(g.count||0,g.target),pct=Math.round(n/g.target*100);
@@ -1346,7 +1356,7 @@ async function buildKidFile(k){const trophies=[];
   const g=k.goal?{...k.goal,photo:await packMedia(k.goal.photo)}:null;
   return JSON.stringify({tq:"kid",v:2,id:"x"+uid(),from:S.device,at:Date.now(),
     ledger:k.ledger||[],
-    kid:{id:k.id,name:k.name,theme:k.theme,earned:k.earned||0,credits:k.credits||0},face:await packMedia(k.face),goal:g,trophies,treats,
+    tGone:k.tGone||[],kid:{id:k.id,name:k.name,theme:k.theme,earned:k.earned||0,credits:k.credits||0},face:await packMedia(k.face),goal:g,trophies,treats,
     library:await Promise.all([...S.library,...S.jobs.filter(j=>j.kid===k.id).map(j=>({...j,id:"t"+j.id,at:j.created||0}))].filter((t,i,arr)=>arr.findIndex(x=>tplKey(x)===tplKey(t))===i).map(async t=>({id:t.id,title:t.title,type:t.type,credits:t.credits,timer:t.timer,proof:t.proof,repeat:!!t.repeat,at:t.at||0,
       photo:await packMedia(t.photo),steps:await Promise.all((t.steps||[]).map(async x=>({text:x.text,audio:await packMedia(x.audio)})))}))),
     shopAt:S.shopAt||0,shopGone:S.shopGone||[],shop:await Promise.all(S.rewards.map(async r=>({id:r.id,at:r.at||0,icon:r.icon,name:r.name,cost:r.cost,by:r.by||null,photo:await packMedia(r.photo)})))})}
@@ -1382,6 +1392,7 @@ async function mergeKid(d,live){const x=d.kid;const seenL=new Set();let k=findKi
   k.trophies=k.trophies||[];const have=new Set(k.trophies.map(t=>t.id));let added=0;
   for(const t of (d.trophies||[])){if(have.has(t.id)){const m=k.trophies.find(y=>y.id===t.id);if(m&&!m.media&&t.media)m.media=await put(t.media);if(m&&!m.album&&t.album)m.album={before:await put(t.album.before),progress:(await Promise.all((t.album.progress||[]).map(put))).filter(Boolean)};continue}const al=t.album?{before:await put(t.album.before),progress:(await Promise.all((t.album.progress||[]).map(put))).filter(Boolean)}:null;
     k.trophies.push({...t,media:await put(t.media),album:al});added++}
+  k.tGone=k.tGone||[];for(const id of (d.tGone||[]))if(!k.tGone.includes(id))k.tGone.push(id);fixTrophies(k);
   k.treats=k.treats||[];const haveT=new Set(k.treats.map(t=>t.id));for(const t of (d.treats||[])){if(haveT.has(t.id)){const m=k.treats.find(y=>y.id===t.id);if(m&&!m.photo&&t.photo)m.photo=await put(t.photo);continue}k.treats.push({...t,photo:await put(t.photo)})}
   k.treats.sort((a,b)=>(b.at||0)-(a.at||0));
   let shopAdded=0;
@@ -1446,7 +1457,7 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
       .map(t=>({id:t.id,title:t.title,type:t.type,credits:t.credits,timer:t.timer,proof:t.proof,repeat:!!t.repeat,at:t.at||0,photo:null,steps:(t.steps||[]).map(x=>({text:x.text,audio:null}))}));
     const g=k.goal?{id:k.goal.id,name:k.goal.name,target:k.goal.target,backers:srt(k.goal.backers),setAt:k.goal.setAt||0,editAt:k.goal.editAt||0,photo:null}:null;
     return JSON.stringify({tq:"kid",v:2,live:1,kid:{id:k.id,name:k.name,theme:k.theme},ledger:srt(k.ledger),goal:g,
-      trophies:srt(k.trophies).map(t=>({...t,media:null,album:null})),treats:srt(k.treats).map(t=>({...t,photo:null})),
+      trophies:srt(k.trophies).map(t=>({...t,media:null,album:null})),tGone:[...(k.tGone||[])].sort(),treats:srt(k.treats).map(t=>({...t,photo:null})),
       library:srt(tpls,tplKey),shopGone:srt(S.shopGone),shop:srt(S.rewards).map(r=>({id:r.id,at:r.at||0,icon:r.icon,name:r.name,cost:r.cost,by:r.by||null,photo:null})),
       requests:srt(S.requests.filter(r=>r.kid===k.id)),reqDone:[...S.reqDone].sort(),wishes:srt(S.wishes.filter(w=>w.kid===k.id)).map(w=>({...w,photo:null})),wishDone:[...S.wishDone].sort()})}
   function setState(s,err){st.state=s;st.err=err||"";if(s==="on")st.at=Date.now();if(view&&view.name==="parent"&&view.args&&view.args.tab==="link"){const el=$("#syncpanel");if(el)el.outerHTML=panel()}}
