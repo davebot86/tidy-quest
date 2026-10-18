@@ -969,6 +969,7 @@ VIEWS.trophies=({kid:id})=>{const k=kid(id);setBodyTheme(k);const th=T(k);const 
   <div class="topbar"><button class="iconbtn" data-act="back" aria-label="Back">${IC.back}</button><h1 class="display grow on-world">${esc(th.hall)}</h1></div>
   ${stageHTML(k,say(k,"hall"))}
   <button class="btn big" data-act="poster" data-id="${k.id}">Make my poster for the wall</button>
+  ${bridge()&&bridge().saveMedia&&galleryItems(k).length?`<button class="btn ghost" data-act="saveAll" data-id="${k.id}">Save all photos and videos to this phone</button>`:""}
   ${list.length?`<div class="tgrid">${list.map(t=>`<button class="tcard" data-act="trophy" data-kid="${k.id}" data-id="${t.id}">
     <span class="tmedia">${!t.media?`<span class="ticon">${TYPES[t.type]?TYPES[t.type].icon:"★"}</span>`:t.kind==="video"?`<video muted playsinline preload="metadata" data-media="${t.media}"></video><span class="tplay">${IC.play}</span>`:`<img data-media="${t.media}" alt="">`}</span>
     <span class="t">${esc(t.title)}</span><span class="muted" style="font-size:14px;font-weight:700">${new Date(t.at).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}${t.star?" · ★":""}</span></button>`).join("")}</div>`
@@ -1059,7 +1060,7 @@ const PARENT={
       <p class="muted" style="margin:0;font-size:14px">Points you add here also count towards ${esc(k.name)}'s rank.</p>
       <div class="spread" style="border-top:2px solid var(--line);padding-top:10px"><span><b>${esc(th.m.name)}'s messages</b> <span class="muted">${k.says&&(k.says.d||[]).some(x=>String(x||"").trim())?`${(k.says.d||[]).filter(x=>String(x||"").trim()).length} of 7 days written by you`:"a different line each day"}</span></span>
         <button class="btn ghost small" data-act="editSays" data-id="${k.id}">Write</button></div>
-      <div class="row" style="gap:8px"><button class="btn small" data-act="poster" data-id="${k.id}">Monthly poster</button><button class="btn ghost small" data-act="kidStyle" data-id="${k.id}">Picture &amp; world</button><button class="btn bad small" data-act="delKid" data-id="${k.id}">Remove ${esc(k.name)}</button></div></div>`}).join("")}</div>
+      <div class="row" style="gap:8px"><button class="btn small" data-act="poster" data-id="${k.id}">Monthly poster</button><button class="btn ghost small" data-act="saveAll" data-id="${k.id}">Save photos to phone</button><button class="btn ghost small" data-act="kidStyle" data-id="${k.id}">Picture &amp; world</button><button class="btn bad small" data-act="delKid" data-id="${k.id}">Remove ${esc(k.name)}</button></div></div>`}).join("")}</div>
     <div class="panel row"><input id="newkid" placeholder="Add a child's name" maxlength="20" style="flex:1;min-width:160px"><button class="btn" data-act="addKid">Add</button></div>`},
   link(){return `${Sync.panel()}
     <div class="panel stack"><b>Send a child to another phone</b><p class="muted" style="margin:0">Makes one file with their picture, rank, points, goal stars, trophies and the shop. Send it by WhatsApp; the other phone taps it and opens it in Tidy Quest. Both phones keep everything and nothing is counted twice, so send it whenever you want the other phone to catch up.</p>
@@ -1296,6 +1297,10 @@ const ACT={
     S.jobs=S.jobs.filter(j=>j.kid!==k.id);S.requests=S.requests.filter(r=>r.kid!==k.id);S.kids=S.kids.filter(x=>x!==k);S.kidGone.push(k.id);if(window.Sync)Sync.forget(k.id);save();render()})},
   adj(b){const k=kid(b.dataset.id);const d=+b.dataset.d;if(d<0&&k.credits<=0)return;post(k,{d,e:d,why:"grown-up"});save();render()},
   poster(b){posterSheet(kid(b.dataset.id),0)},
+  saveAll(b){const k=kid(b.dataset.id);const n=galleryItems(k).filter(x=>!(S.saved||[]).includes(x.id)).length,all=galleryItems(k).length;
+    const el=overlay(`<div class="stack"><h2 class="display">Save ${esc(k.name)}'s photos and videos</h2><p class="muted" style="margin:0">Copies go into this phone's photo gallery, in date order. Tidy Quest doesn't keep anything online, so this is your keepsake copy.</p>
+      <div class="row">${n?`<button class="btn" id="gnew">Save ${n} new</button>`:""}<button class="btn ${n?"ghost":""}" id="gall">Save all ${all}</button><button class="btn ghost" data-close>Cancel</button></div></div>`);
+    const gn=el.querySelector("#gnew");if(gn)gn.onclick=()=>saveAllToGallery(k,true);el.querySelector("#gall").onclick=()=>saveAllToGallery(k,false)},
   nameDev(b){const id=b.dataset.id;const el=overlay(`<div class="stack"><h2 class="display">Whose phone is this?</h2>
       <div class="seg">${["Mummy's phone","Daddy's phone","Grandma's phone","Grandad's phone",`${S.kids[0]?S.kids[0].name+"'s tablet":"Kids' tablet"}`].map(n=>`<button data-n="${esc(n)}">${esc(n)}</button>`).join("")}</div>
       <label class="label" for="dn">Or type a name</label><input id="dn" value="${esc(b.dataset.v||"")}" maxlength="24" placeholder="e.g. Mummy's phone">
@@ -1425,6 +1430,20 @@ async function posterSheet(k,off=0){const el=overlay(`<div class="stack"><h2 cla
   el.querySelector("#pact").hidden=false;const name=("TidyQuest-"+k.name+"-"+res.M.R.label).replace(/[^\w-]+/g,"-")+".jpg";
   el.querySelector("#psave").onclick=()=>{const b=bridge();if(b&&b.saveMedia){try{toast(b.saveMedia(url.split(",")[1],"image/jpeg",name)?"Saved to the gallery":"Couldn't save. Allow storage access and try again.")}catch(e){toast("Couldn't save to the gallery")}}
     else{const a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove()}}}
+/* Save every photo and video to the phone's own gallery: the family's copy, since nothing is kept online */
+function galleryItems(k){const out=[],seen=new Set(),add=(id,kind,title,at)=>{if(!id||seen.has(id))return;seen.add(id);out.push({id,kind,title,at})};
+  for(const t of (k.trophies||[])){add(t.media,t.kind==="video"?"video":"photo",t.title,t.at);if(t.album){add(t.album.before,"photo",t.title+" before",t.at);(t.album.progress||[]).forEach((x,i)=>add(x,"photo",t.title+" progress "+(i+1),t.at))}}
+  for(const t of (k.treats||[]))add(t.photo,"photo",t.name,t.at);return out}
+function blobB64(blob){return new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result).split(",")[1]);fr.onerror=()=>res(null);fr.readAsDataURL(blob)})}
+async function saveAllToGallery(k,onlyNew){const b=bridge();if(!b||!b.saveMedia){toast("Saving to the gallery works in the phone app");return}
+  S.saved=S.saved||[];const items=galleryItems(k).filter(x=>!onlyNew||!S.saved.includes(x.id));if(!items.length){toast("Nothing new to save");return}
+  const el=overlay(`<div class="stack" style="text-align:center"><h2 class="display">Saving to your photos</h2><p id="gsp" style="margin:0;font-weight:800">0 of ${items.length}</p><div class="meter"><i id="gsb" style="width:0%"></i></div></div>`);
+  let ok=0,fail=0;for(let i=0;i<items.length;i++){const it=items[i];try{const blob=await DB.get(it.id);if(!blob){fail++;continue}const b64=await blobB64(blob);
+      const ext=it.kind==="video"?(String(blob.type).includes("mp4")?"mp4":"webm"):"jpg";const day=new Date(it.at||Date.now()).toISOString().slice(0,10);
+      const name=("TidyQuest-"+k.name+"-"+day+"-"+(it.title||"win")).replace(/[^\w-]+/g,"-").slice(0,70)+"."+ext;
+      if(b64&&b.saveMedia(b64,blob.type||(it.kind==="video"?"video/webm":"image/jpeg"),name)){ok++;if(!S.saved.includes(it.id))S.saved.push(it.id)}else fail++}catch(e){fail++}
+    const p=el.querySelector("#gsp"),bar=el.querySelector("#gsb");if(p)p.textContent=`${i+1} of ${items.length}`;if(bar)bar.style.width=Math.round((i+1)/items.length*100)+"%"}
+  save();overlayClose();toast(fail?`Saved ${ok}. ${fail} couldn't be saved; allow storage access and try again.`:`Saved ${ok} to your phone's photos`)}
 /* ---------- Big goal: challenges add stars towards one big reward ---------- */
 function addStar(k,title,id){if(!k.goal)return;post(k,{s:1,why:"star "+(title||""),id:id||null})}
 function goalCard(k,th){const g=k.goal;if(!g)return"";const n=Math.min(g.count||0,g.target),pct=Math.round(n/g.target*100);
@@ -1747,11 +1766,12 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
   async function upload(id,blob){if(S.up.includes(id))return true;if(S.noUp.includes(id))return false;let b=await shrink(blob);
     if(b.size>MAX){S.noUp.push(id);return false}
     const data=await blobToB64(b);const n=Math.ceil(data.length/CH);for(let i=0;i<n;i++)await part(id,i).set({d:data.slice(i*CH,(i+1)*CH)});
-    await part(id).set({t:b.type||"application/octet-stream",n,at:Date.now()});S.up.push(id);return true}
+    await part(id).set({t:b.type||"application/octet-stream",n,at:Date.now(),got:[S.device]});S.up.push(id);return true}
   async function download(id){if(await DB.get(id))return true;if(tried.has(id))return false;
     const m=await part(id).get();if(!m.exists)return false;tried.add(id);const {t,n}=m.data();let data="";
     for(let i=0;i<n;i++){const c=await part(id,i).get();if(!c.exists)return false;data+=c.data().d}
-    await DB.put(id,b64ToBlob(data,t));if(!S.up.includes(id))S.up.push(id);return true}
+    await DB.put(id,b64ToBlob(data,t));if(!S.up.includes(id))S.up.push(id);
+    await part(id).set({got:firebase.firestore.FieldValue.arrayUnion(S.device)},{merge:true}).catch(()=>{});return true}
   const mst={sent:0,recv:0,wait:0,big:0,fail:0,now:"",err:""};
   function showM(){const el=document.getElementById("mstat");if(el)el.innerHTML=mline();report()}
   /* each phone posts a small status card to the family record, so everyone can see who is on which version and what is sending */
@@ -1774,8 +1794,8 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
   async function media(){if(!ref||!first)return;if(mBusy){mAgain=true;return}mBusy=true;let got=false;
     const list=[];for(const sl of slots()){const L=sl.get(),cur=lastData[sl.key];const hasL=L?!!(await DB.get(L).catch(()=>null)):false;
       const good=cur&&cur.v===MV;
-      if(good&&cur.id&&cur.id!==L&&(!hasL||(cur.at||0)>born(L)))list.push({sl,dir:"down",cur});
-      else if(hasL&&(!good||(cur.id!==L&&born(L)>(cur.at||0))||(cur.id===L&&!S.up.includes(L))))list.push({sl,dir:"up",L,size:(await DB.get(L)).size||0})}
+      if(good&&cur.id&&cur.id!==L&&!cur.gone&&(!hasL||(cur.at||0)>born(L)))list.push({sl,dir:"down",cur});
+      else if(hasL&&!(good&&cur.gone&&cur.id===L)&&(!good||(cur.id!==L&&born(L)>(cur.at||0))||(cur.id===L&&!S.up.includes(L))))list.push({sl,dir:"up",L,size:(await DB.get(L)).size||0})}
     list.sort((a,b)=>(a.dir==="down"?0:1)-(b.dir==="down"?0:1)||(a.size||0)-(b.size||0));
     const counted=new Set();mst.wait=list.length;mst.fail=0;mst.err="";mst.big=S.noUp.length;
     let i=0;for(const it of list){i++;mst.now=(it.dir==="up"?"Sending ":"Getting ")+i+" of "+list.length+"…";showM();
@@ -1784,7 +1804,18 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
       catch(e){mst.fail++;mst.err=e&&e.message||String(e);console.log("media",e)}
       mst.wait=list.length-i;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
     mst.now=list.length?(mst.fail?"Some didn't send. Tap Sync photos now to try again.":"All done."):"";showM();
-    mBusy=false;if(got){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}liveRender()}else{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}if(mAgain){mAgain=false;media()}}
+    mBusy=false;clearOut(list.length>0);if(got){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}liveRender()}else{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}if(mAgain){mAgain=false;media()}}
+  /* the online copy is a postbox, not a store: once every linked phone has a picture it is deleted, and anything left is cleared after 7 days */
+  let clearAt=0;const KEEP=7*86400000;
+  async function clearOut(force){if(!ref||!db)return;if(!force&&Date.now()-clearAt<10*60000)return;clearAt=Date.now();
+    try{const now=Date.now();const devs=Object.entries(lastData).filter(([k,v])=>k.startsWith("dev_")&&v&&now-(v.at||0)<30*86400000).map(([k])=>k.slice(4));
+      if(!devs.includes(S.device))devs.push(S.device);
+      const ids=new Map();for(const [k,v] of Object.entries(lastData))if(k.startsWith("m_")&&v&&v.id&&v.v===MV&&!v.gone){if(!ids.has(v.id))ids.set(v.id,[]);ids.get(v.id).push(k)}
+      for(const [id,keys] of ids){const m=await part(id).get();let clear=!m.exists;
+        if(m.exists){const d=m.data();clear=devs.every(x=>(d.got||[]).includes(x))||now-(d.at||0)>KEEP;
+          if(clear){for(let i=0;i<(d.n||0);i++)await part(id,i).delete();await part(id).delete()}}
+        if(clear){const up={};for(const k of keys){up[k]={...lastData[k],gone:true};lastData[k]=up[k]}await ref.set(up,{merge:true})}}}
+    catch(e){console.log("clear",e)}}
   function push(){if(!ref||!first)return;clearTimeout(mT);mT=setTimeout(media,400);const up={};
     for(const k of S.kids){const txt=lite(k);if(last[k.id]!==txt){up["k_"+k.id]=txt;last[k.id]=txt}}
     if(!Object.keys(up).length)return;up.at=firebase.firestore.FieldValue.serverTimestamp();
