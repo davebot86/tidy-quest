@@ -1001,6 +1001,9 @@ VIEWS.shop=({kid:id})=>{const k=kid(id);setBodyTheme(k);const th=T(k);
 
 /* ---------- Parent area ---------- */
 const PTABS=[["jobs","Jobs"],["check","To check"],["rewards","Rewards"],["kids","Children"],["link","Link & sync"],["settings","Settings"]];
+/* Together mode: a grown-up's phone the child plays on with them, so checks happen there and then. Own-tablet mode: a child's device sends proof and shop requests to the grown-ups. */
+const together=()=>(S.deviceRole||"together")==="together";
+function grownUpOK(title,sub,fn){if(!S.pin){fn();return}pinPad(title,sub,p=>{if(p!==S.pin)return false;overlayClose();fn()})}
 function pendingCount(){return S.jobs.filter(j=>j.status==="pending").length+S.requests.filter(r=>r.status==="asked").length+(S.wishes||[]).length}
 VIEWS.parent=({tab="jobs"})=>{setBodyTheme(null,true);const pc=pendingCount();
   const head=`<div class="spread"><div class="stack" style="gap:2px"><span class="brandrow"><i></i>Tidy Quest</span><h1 class="display" style="font-size:34px">Grown-ups</h1></div><button class="btn ghost small" data-act="exitParent">Back to kids</button></div>
@@ -1073,7 +1076,10 @@ const PARENT={
     <div class="panel stack"><b>Move credits to this tablet</b><p class="muted" style="margin:0">Use this tablet's code, then scan the code the other tablet shows back. Each transfer works once only.</p>
       <div class="row">${S.kids.map(k=>`<button class="btn ghost small" data-act="receiveCredits" data-id="${k.id}">Receive for ${esc(k.name)}</button>`).join("")}</div></div>
     ${S.sent.length?`<div class="panel stack"><span class="label">Sent from this tablet</span>${S.sent.slice(-5).reverse().map(x=>`<div class="spread"><span>${x.amt} credits for ${esc(x.name)}</span><span class="muted">${new Date(x.at).toLocaleDateString("en-GB")}</span></div>`).join("")}</div>`:""}`},
-  settings(){const cur=S.alertSound||"world";return `<div class="panel stack"><b>Alert sound on this phone</b>
+  settings(){const cur=S.alertSound||"world";const role=S.deviceRole||"together";return `<div class="panel stack"><b>How is this device used?</b>
+      <div class="seg"><button class="${role==="together"?"on":""}" data-act="setRole" data-v="together">A grown-up’s phone: we play together</button><button class="${role==="child"?"on":""}" data-act="setRole" data-v="child">A child’s own tablet</button></div>
+      <p class="muted" style="margin:0">${role==="together"?"When a quest is done, the app hands straight to you: approve it with your PIN there and then, and treats from the shop are handed over the same way. Nothing waits in To check.":"Finished quests and shop treats are sent to the grown-ups’ phones to check and approve."}</p></div>
+    <div class="panel stack"><b>Alert sound on this phone</b>
       <p class="muted" style="margin:0">Plays when something happens on another linked phone: a job finished, points or a star earned, something bought from the shop. "Each child's world" gives every child their own sound — a gong for the Dojo, a bugle for the Army, a whistle for Football — so you know who it is without looking. Purchases always ring the till.</p>
       <div class="seg">${Object.entries(SOUND_NAMES).map(([key,l])=>`<button class="${cur===key?"on":""}" data-act="alertPick" data-v="${key}">${esc(l)}</button>`).join("")}</div>
       <div class="row" style="gap:8px">${cur==="world"?S.kids.map(k=>`<button class="btn ghost small" data-act="alertTest" data-v="${WORLD_SOUND[k.theme]||"bell"}">▶ ${esc(k.name)} (${esc(SOUND_NAMES[WORLD_SOUND[k.theme]]||"Doorbell")})</button>`).join(""):cur!=="off"?`<button class="btn ghost small" data-act="alertTest" data-v="${cur}">▶ Play it</button>`:""}<button class="btn ghost small" data-act="alertTest" data-v="till">▶ Shop till</button></div>
@@ -1218,14 +1224,22 @@ const ACT={
     const done=(after,kind)=>{j.beat=!!(j.timer&&Date.now()<=j.run.start+j.timer*60000);j.after=after||null;j.afterKind=kind||null;j.status="pending";j.doneAt=Date.now();save();sfxFanfare(k);confetti(k);
       const cheer=th.cheers[Math.floor(Math.random()*th.cheers.length)];speak(cheer);
       overlay(`<div class="celebrate stack" style="align-items:center">${mentorSVG(k.theme)}<div class="display big">${esc(th.done)}</div><p style="font-size:20px;margin:0">${esc(cheer)}</p>
-        ${j.beat?`<span class="chip prize">Beat the clock! +${bonus(j)} bonus</span>`:""}<p class="muted">Ask a grown-up to check it. Then you get your ${isChallenge(j)?"star":esc(th.cur.toLowerCase())}.</p><button class="btn big" data-close>Back to base</button></div>`,()=>{back()})};
+        ${j.beat?`<span class="chip prize">Beat the clock! +${bonus(j)} bonus</span>`:""}${together()?`<p style="font-weight:800;margin:0">Show your grown-up now!</p>
+        ${j.after&&j.afterKind!=="video"?`<img class="media-box" style="object-fit:cover;max-height:28vh" data-media="${j.after}" alt="Your proof">`:""}
+        <button class="btn big good" id="tgok">Grown-up: approve ${isChallenge(j)?"★":"+"+(j.credits+(j.beat?bonus(j):0))}</button>
+        <div class="row" style="justify-content:center"><button class="btn ghost small" id="tgno">Not done yet</button><button class="btn ghost small" data-close>Check it later</button></div>`
+        :`<p class="muted">Ask a grown-up to check it. Then you get your ${isChallenge(j)?"star":esc(th.cur.toLowerCase())}.</p><button class="btn big" data-close>Back to base</button>`}</div>`,()=>{back()});
+      if(together()&&overlayEl){const o=overlayEl;
+        o.querySelector("#tgok").onclick=()=>grownUpOK("Grown-up check","Enter your PIN to approve",async()=>{overlayOnClose=null;overlayClose();stack=[];view={name:"hq",args:{kid:k.id}};await ACT.approve({dataset:{id:j.id}});if(!overlayEl){confetti(k);sfxTick(k);speak((th.call||"Done!")+" Well done, "+k.name+"!")}});
+        o.querySelector("#tgno").onclick=()=>grownUpOK("Grown-up check","Enter your PIN to send it back",()=>{ACT.sendBack({dataset:{id:j.id}});toast("Have another go!")})}};
     if(j.proof==="photo")capture({mode:"photo",title:"Photo proof: show what you did!"},(id,kind)=>done(id,kind));
     else if(j.proof==="video")capture({mode:"video",title:"Video proof: film it!"},(id,kind)=>done(id,kind));
     else done()},
   buy(b){const k=kid(b.dataset.kid);const r=S.rewards.find(x=>x.id===b.dataset.id);const th=T(k);if(k.credits<r.cost)return;
     overlay(`<div class="stack" style="text-align:center;align-items:center">${r.photo?`<img class="rphoto" data-media="${r.photo}" alt="" style="max-width:280px">`:`<span style="font-size:64px">${esc(r.icon)}</span>`}<h2 class="display">${esc(r.name)}</h2><p>Spend ${r.cost} ${esc(th.cur.toLowerCase())}?</p>
       <div class="row"><button class="btn" id="yesbuy">Yes please</button><button class="btn ghost" data-close>Not yet</button></div></div>`).querySelector("#yesbuy").onclick=()=>{
-      post(k,{d:-r.cost,why:"buy "+r.name});S.requests.push({id:uid(),kid:k.id,name:r.name,icon:r.icon,cost:r.cost,status:"asked",at:Date.now()});save();overlayClose();sfxFanfare(k);confetti(k);render();toast("Ask a grown-up for your "+r.name)}},
+      const rid=uid();post(k,{d:-r.cost,why:"buy "+r.name});S.requests.push({id:rid,kid:k.id,name:r.name,icon:r.icon,cost:r.cost,status:"asked",at:Date.now()});save();overlayClose();sfxFanfare(k);confetti(k);render();
+      if(together())setTimeout(()=>grownUpOK("Grown-up: hand it over?",`${k.name} bought ${r.name}. Enter your PIN.`,()=>ACT.given({dataset:{id:rid}})),700);else toast("Ask a grown-up for your "+r.name)}},
   parent(){pinPad("Grown-ups only","Enter your PIN",p=>{if(p!==S.pin)return false;overlayClose();go("parent",{tab:pendingCount()?"check":"jobs"})})},
   exitParent(){home()},
   ptab(b){view.args.tab=b.dataset.tab;render()},
@@ -1289,6 +1303,7 @@ const ACT={
     const done=n=>{if(!n)return;Sync.nick(id,n);overlayClose();toast("Named: "+n)};
     el.querySelectorAll("[data-n]").forEach(x=>x.onclick=()=>done(x.dataset.n));el.querySelector("#dnok").onclick=()=>done(el.querySelector("#dn").value.trim())},
   editSays(b){saysEditor(kid(b.dataset.id))},
+  setRole(b){S.deviceRole=b.dataset.v;save();render();toast(b.dataset.v==="together"?"Together mode: approve on the spot":"Own-tablet mode: proof goes to the grown-ups")},
   alertPick(b){S.alertSound=b.dataset.v;save();render();if(b.dataset.v!=="off"&&b.dataset.v!=="world")playSound(b.dataset.v)},
   alertTest(b){playSound(b.dataset.v)},
   changePin(){pinPad("New PIN","Choose 4 digits",p=>{S.pin=p;save();overlayClose();toast("PIN changed")})},
