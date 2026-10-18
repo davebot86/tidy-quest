@@ -40,6 +40,21 @@ jobs:
           done
           ls -l "$out"
 
+      - name: Bundle Firebase for live sync
+        run: |
+          set -e
+          mkdir -p /tmp/fb && cd /tmp/fb
+          npm pack firebase@10.14.1 --silent >/dev/null
+          tar xzf firebase-10.14.1.tgz
+          out="$GITHUB_WORKSPACE/app/src/main/assets/vendor"
+          mkdir -p "$out"
+          for f in firebase-app-compat.js firebase-auth-compat.js firebase-firestore-compat.js; do
+            src=$(find package -name "$f" | head -1)
+            if [ -z "$src" ]; then echo "::error::$f not found in firebase package"; find package -maxdepth 2 -name "*compat*"; exit 1; fi
+            cp "$src" "$out/$f"
+          done
+          ls -l "$out"
+
       - name: Use the runner's preinstalled Android SDK
         run: |
           echo "sdk.dir=$ANDROID_HOME" > local.properties

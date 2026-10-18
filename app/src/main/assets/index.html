@@ -399,6 +399,9 @@ body[data-theme="karate"] .seal,body[data-theme="army"] .seal,body[data-theme="h
 <main id="app" aria-live="polite"></main>
 <canvas id="confetti" hidden></canvas>
 <input type="file" id="filepick" accept="image/*" hidden>
+<script src="vendor/firebase-app-compat.js"></script>
+<script src="vendor/firebase-auth-compat.js"></script>
+<script src="vendor/firebase-firestore-compat.js"></script>
 <script>
 "use strict";
 /* ---------- Themes ---------- */
@@ -500,10 +503,10 @@ function load(){
   if(!S){S={pin:null,kids:[],jobs:[],rewards:DEFAULT_REWARDS.map(r=>({...r,id:uid()})),requests:[]}}
   S.device=S.device||("d"+uid());S.wishes=S.wishes||[];S.library=S.library||[];S.shopGone=S.shopGone||[];S.rewards.forEach(r=>{if(r.at==null)r.at=0});delete S.lastSend;
   S.kids.forEach(k=>{if(k.goal&&!k.goal.id)k.goal.id="g:"+String(k.goal.name||"").trim().toLowerCase();
-    if(!k.ledger){k.ledger=[{id:"o"+uid(),t:Date.now(),d:k.credits||0,e:k.earned||0,s:k.goal?(k.goal.count||0):0,g:k.goal?k.goal.id:null,why:"start"}]}recalc(k,true)});S.pendingIn=S.pendingIn||{};S.usedIn=S.usedIn||[];S.sent=S.sent||[];
+    if(!k.ledger){k.ledger=[{id:"o"+uid(),t:Date.now(),d:k.credits||0,e:k.earned||0,s:k.goal?(k.goal.count||0):0,g:k.goal?k.goal.id:null,why:"start"}]}recalc(k,true)});S.pendingIn=S.pendingIn||{};S.reqDone=S.reqDone||[];S.wishDone=S.wishDone||[];S.kidGone=S.kidGone||[];S.usedIn=S.usedIn||[];S.sent=S.sent||[];
   S.jobs.forEach(j=>{if(!j.type)j.type="tidy";if(!j.proof)j.proof=j.afterReq?"photo":"none"});
 }
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast("Couldn't save. The tablet may be low on space.")}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast("Couldn't save. The tablet may be low on space.")}if(window.Sync)Sync.soon()}
 
 const DB=(()=>{let p;function open(){return p||(p=new Promise((res,rej)=>{const r=indexedDB.open("tq_media",1);
   r.onupgradeneeded=()=>r.result.createObjectStore("b");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}))}
@@ -973,7 +976,7 @@ const PARENT={
       <p class="muted" style="margin:0;font-size:14px">Points you add here also count towards ${esc(k.name)}'s rank.</p>
       <div class="row" style="gap:8px"><button class="btn ghost small" data-act="kidStyle" data-id="${k.id}">Picture &amp; world</button><button class="btn bad small" data-act="delKid" data-id="${k.id}">Remove ${esc(k.name)}</button></div></div>`}).join("")}</div>
     <div class="panel row"><input id="newkid" placeholder="Add a child's name" maxlength="20" style="flex:1;min-width:160px"><button class="btn" data-act="addKid">Add</button></div>`},
-  link(){return `
+  link(){return `${Sync.panel()}
     <div class="panel stack"><b>Send a child to another phone</b><p class="muted" style="margin:0">Makes one file with their picture, rank, points, goal stars, trophies and the shop. Send it by WhatsApp; the other phone taps it and opens it in Tidy Quest. Both phones keep everything and nothing is counted twice, so send it whenever you want the other phone to catch up.</p>
       <div class="row" style="gap:8px">${S.kids.map(k=>`<button class="btn small" data-act="sendKid" data-id="${k.id}">Share ${esc(k.name)}'s progress</button>`).join("")}</div></div>
     ${S.lastSend?`<div class="panel stack"><b>Last sent: ${esc(S.lastSend.name)}, ${new Date(S.lastSend.at).toLocaleString("en-GB",{weekday:"short",hour:"2-digit",minute:"2-digit"})}</b>
@@ -989,7 +992,7 @@ const PARENT={
       <div class="row">${S.kids.map(k=>`<button class="btn ghost small" data-act="receiveCredits" data-id="${k.id}">Receive for ${esc(k.name)}</button>`).join("")}</div></div>
     ${S.sent.length?`<div class="panel stack"><span class="label">Sent from this tablet</span>${S.sent.slice(-5).reverse().map(x=>`<div class="spread"><span>${x.amt} credits for ${esc(x.name)}</span><span class="muted">${new Date(x.at).toLocaleDateString("en-GB")}</span></div>`).join("")}</div>`:""}`},
   settings(){return `<div class="panel stack"><b>Grown-up PIN</b><p class="muted" style="margin:0">Keeps children out of this area.</p><button class="btn ghost" data-act="changePin">Change PIN</button></div>
-    <div class="panel stack"><b>Trial notes</b><p class="muted" style="margin:0">Everything is saved on this device only. Uninstalling the app deletes it.</p></div>
+    <div class="panel stack"><b>Trial notes</b><p class="muted" style="margin:0">Everything is saved on this device. With live sync on, points, stars, the shop and history are also kept online for your family; photos, videos and voice notes stay only on the phone that took them. Uninstalling deletes what is on this phone.</p></div>
     <div class="panel stack"><b>Start again</b><p class="muted" style="margin:0">Deletes all children, jobs, photos and credits.</p><button class="btn bad" data-act="resetAll">Delete everything</button></div>`}
 };
 
@@ -1173,20 +1176,20 @@ const ACT={
   sendBack(b){const j=S.jobs.find(x=>x.id===b.dataset.id);((j.run&&j.run.progress)||[]).forEach(delMedia);delMedia(j.after);j.after=null;j.run=null;j.beat=false;j.status="todo";save();toast("Sent back to have another go");render()},
   given(b){const r=S.requests.find(x=>x.id===b.dataset.id);const k=kid(r.kid);
     const finish=photo=>{if(k){k.treats=k.treats||[];k.treats.unshift({id:uid(),name:r.name,icon:r.icon,cost:r.cost,at:Date.now(),photo:photo||null});k.newTreat=true}
-      S.requests=S.requests.filter(x=>x!==r);save();overlayClose();render();toast("Enjoy!")};
+      S.requests=S.requests.filter(x=>x!==r);S.reqDone.push(r.id);save();overlayClose();render();toast("Enjoy!")};
     const el=overlay(`<div class="stack" style="text-align:center;align-items:center"><span style="font-size:56px">${esc(r.icon)}</span><h2 class="display">${esc(k?k.name:"")} gets ${esc(r.name)}</h2>
       <p class="muted" style="margin:0">Take a photo of them with it? It goes in their collection of rewards they've earned.</p>
       <div class="row"><button class="btn" id="gphoto">${IC.cam} Take a photo</button><button class="btn ghost" id="gskip">Skip</button></div></div>`);
     el.querySelector("#gskip").onclick=()=>finish(null);
     el.querySelector("#gphoto").onclick=()=>capture({mode:"photo",title:"Enjoying "+r.name},id=>finish(id))},
-  refund(b){const r=S.requests.find(x=>x.id===b.dataset.id);const k=kid(r.kid);if(k)post(k,{d:r.cost,why:"refund"});S.requests=S.requests.filter(x=>x!==r);save();toast("Credits returned");render()},
+  refund(b){const r=S.requests.find(x=>x.id===b.dataset.id);const k=kid(r.kid);if(k)post(k,{d:r.cost,why:"refund"});S.requests=S.requests.filter(x=>x!==r);S.reqDone.push(r.id);save();toast("Credits returned");render()},
   addReward(){S.rewards.push({id:uid(),icon:"⭐",name:"New reward",cost:5,at:Date.now()});S.shopAt=Date.now();save();render()},
   delReward(b){const r=S.rewards.find(x=>x.id===b.dataset.id);if(r){delMedia(r.photo);S.shopGone.push({id:r.id,name:r.name,at:Date.now()})}S.rewards=S.rewards.filter(x=>x!==r);S.shopAt=Date.now();save();render()},
   rPhoto(b){const r=S.rewards.find(x=>x.id===b.dataset.id);capture({mode:"photo",title:"Photo of: "+r.name},id=>{if(r.photo)delMedia(r.photo);r.photo=id;r.at=Date.now();S.shopAt=Date.now();save();render()})},
   addKid(){const n=$("#newkid").value.trim();if(!n)return;const k={id:uid(),name:n,theme:"karate",credits:0,earned:0};S.kids.push(k);save();go("style",{kid:k.id,back:"parent"})},
   kidStyle(b){go("style",{kid:b.dataset.id,back:"parent"})},
   delKid(b){const k=kid(b.dataset.id);confirmSheet(`Remove ${k.name}?`,"This deletes their picture, jobs, credits, stars and every trophy video. It can't be undone.",()=>{S.jobs.filter(j=>j.kid===k.id).forEach(j=>{delMedia(j.photo);delMedia(j.after);j.steps.forEach(s=>delMedia(s.audio))});(k.trophies||[]).forEach(t=>{delMedia(t.media);albumDel(t.album)});(k.treats||[]).forEach(t=>delMedia(t.photo));delMedia(k.face);
-    S.jobs=S.jobs.filter(j=>j.kid!==k.id);S.requests=S.requests.filter(r=>r.kid!==k.id);S.kids=S.kids.filter(x=>x!==k);save();render()})},
+    S.jobs=S.jobs.filter(j=>j.kid!==k.id);S.requests=S.requests.filter(r=>r.kid!==k.id);S.kids=S.kids.filter(x=>x!==k);S.kidGone.push(k.id);if(window.Sync)Sync.forget(k.id);save();render()})},
   adj(b){const k=kid(b.dataset.id);const d=+b.dataset.d;if(d<0&&k.credits<=0)return;post(k,{d,e:d,why:"grown-up"});save();render()},
   changePin(){pinPad("New PIN","Choose 4 digits",p=>{S.pin=p;save();overlayClose();toast("PIN changed")})},
   resetAll(){confirmSheet("Delete everything?","This can't be undone.",()=>{try{localStorage.removeItem(KEY)}catch(e){}indexedDB.deleteDatabase("tq_media");load();home()})}
@@ -1345,7 +1348,12 @@ async function importKidFile(text){let d;try{d=JSON.parse(text)}catch(e){return 
   if(!d||d.tq!=="kid"||!d.kid)return toast("That file isn't a Tidy Quest file.");
   if(d.from===S.device)return toast("That file came from this phone. Open it on the other phone.");
   if(!d.ledger&&S.usedIn.includes(d.id))return toast("This file has already been added on this phone.");
-  const x=d.kid;let k=findKidFor(x.id,x.name),isNew=false;
+  const r=await mergeKid(d,false);const k=r.k,isNew=r.isNew,added=r.added,shopAdded=r.shopAdded,libAdded=r.libAdded;
+  S.usedIn.push(d.id);if(S.usedIn.length>300)S.usedIn.shift();save();render();
+  overlay(`<div class="stack" style="text-align:center;align-items:center">${avatarSVG(k,null,"avatar big")||mentorSVG(k.theme)}<h2 class="display">${esc(k.name)} ${isNew?"has arrived":"is up to date"}</h2>
+    <p style="margin:0">${k.credits} points${k.goal?`, ${Math.min(k.goal.count,k.goal.target)}/${k.goal.target} stars towards ${esc(k.goal.name)}`:""}. ${added} trophy${added===1?"":"s"} added.${shopAdded?" Shop updated to match.":""}${libAdded?` ${libAdded} job${libAdded===1?"":"s"} added to Use again.`:""}</p><button class="btn" data-close>Done</button></div>`)}
+/* Merges one child's data (from a file or from live sync) into this phone. Everything is added, never taken away, so it is safe to repeat. */
+async function mergeKid(d,live){const x=d.kid;const seenL=new Set();let k=findKidFor(x.id,x.name),isNew=false;
   if(!k){k={id:x.id,name:x.name,theme:x.theme,credits:0,earned:0};S.kids.push(k);isNew=true}
   else if(k.id!==x.id){S.jobs.forEach(j=>{if(j.kid===k.id)j.kid=x.id});S.requests.forEach(r=>{if(r.kid===k.id)r.kid=x.id});k.id=x.id}
   const put=async m=>m?await putMedia(b64ToBlob(m.data,m.type)):null;
@@ -1357,13 +1365,13 @@ async function importKidFile(text){let d;try{d=JSON.parse(text)}catch(e){return 
     else if(mine.id===g.id){if((g.editAt||0)>(mine.editAt||0)){mine.name=g.name;mine.target=g.target}
       const ids=new Set((mine.backers||[]).map(b=>b.id));mine.backers=(mine.backers||[]).concat((g.backers||[]).filter(b=>!ids.has(b.id)));
       if(g.photo&&!mine.photo)mine.photo=await put(g.photo)}}
-  if(d.ledger){const ids=new Set(k.ledger.map(e=>e.id));for(const e of d.ledger)if(!ids.has(e.id))k.ledger.push(e)}
+  if(d.ledger){const ids=new Set(k.ledger.map(e=>e.id));ids.forEach(i=>seenL.add(i));for(const e of d.ledger)if(!ids.has(e.id))k.ledger.push(e)}
   else{const gid=k.goal&&k.goal.id;k.ledger.push({id:"f"+d.id,t:d.at||Date.now(),d:x.credits||0,e:Math.max(0,(x.earned||0)-(k.earned||0)),s:d.goal?(d.goal.count||0):0,g:gid,why:"old file"})}
   k.ledger.sort((p,q)=>(p.t||0)-(q.t||0));recalc(k);
   k.trophies=k.trophies||[];const have=new Set(k.trophies.map(t=>t.id));let added=0;
-  for(const t of (d.trophies||[])){if(have.has(t.id))continue;const al=t.album?{before:await put(t.album.before),progress:(await Promise.all((t.album.progress||[]).map(put))).filter(Boolean)}:null;
+  for(const t of (d.trophies||[])){if(have.has(t.id)){const m=k.trophies.find(y=>y.id===t.id);if(m&&!m.media&&t.media)m.media=await put(t.media);if(m&&!m.album&&t.album)m.album={before:await put(t.album.before),progress:(await Promise.all((t.album.progress||[]).map(put))).filter(Boolean)};continue}const al=t.album?{before:await put(t.album.before),progress:(await Promise.all((t.album.progress||[]).map(put))).filter(Boolean)}:null;
     k.trophies.push({...t,media:await put(t.media),album:al});added++}
-  k.treats=k.treats||[];const haveT=new Set(k.treats.map(t=>t.id));for(const t of (d.treats||[])){if(haveT.has(t.id))continue;k.treats.push({...t,photo:await put(t.photo)})}
+  k.treats=k.treats||[];const haveT=new Set(k.treats.map(t=>t.id));for(const t of (d.treats||[])){if(haveT.has(t.id)){const m=k.treats.find(y=>y.id===t.id);if(m&&!m.photo&&t.photo)m.photo=await put(t.photo);continue}k.treats.push({...t,photo:await put(t.photo)})}
   k.treats.sort((a,b)=>(b.at||0)-(a.at||0));
   let shopAdded=0;
   if(d.shop){const key=n=>String(n||"").trim().toLowerCase();const byId=new Map(S.rewards.map(r=>[r.id,r])),byName=new Map(S.rewards.map(r=>[key(r.name),r]));
@@ -1376,12 +1384,19 @@ async function importKidFile(text){let d;try{d=JSON.parse(text)}catch(e){return 
       else{S.rewards.push({id:r.id||uid(),icon:r.icon||"⭐",name:r.name,cost:Math.max(1,parseInt(r.cost)||1),by:r.by||null,at:r.at||0,photo:await put(r.photo)});shopAdded++;changed=true}}
     if(changed&&!shopAdded)shopAdded=-1}
   let libAdded=0;for(const t of (d.library||[])){const ex=S.library.find(x=>tplKey(x)===tplKey(t));if(ex&&(ex.at||0)>=(t.at||0))continue;
-    const nt={id:ex?ex.id:(t.id||"t"+uid()),title:t.title,type:t.type||"tidy",credits:t.credits||0,timer:t.timer||0,proof:t.proof||"none",repeat:!!t.repeat,at:t.at||0,photo:await put(t.photo),steps:[]};
-    for(const x of (t.steps||[]))nt.steps.push({text:x.text,audio:await put(x.audio)});
-    if(ex){delMedia(ex.photo);ex.steps.forEach(x=>delMedia(x.audio));Object.assign(ex,nt)}else{S.library.push(nt);libAdded++}}
-  S.usedIn.push(d.id);save();render();
-  overlay(`<div class="stack" style="text-align:center;align-items:center">${avatarSVG(k,null,"avatar big")||mentorSVG(k.theme)}<h2 class="display">${esc(k.name)} ${isNew?"has arrived":"is up to date"}</h2>
-    <p style="margin:0">${k.credits} points${k.goal?`, ${Math.min(k.goal.count,k.goal.target)}/${k.goal.target} stars towards ${esc(k.goal.name)}`:""}. ${added} trophy${added===1?"":"s"} added.${shopAdded?" Shop updated to match.":""}${libAdded?` ${libAdded} job${libAdded===1?"":"s"} added to Use again.`:""}</p><button class="btn" data-close>Done</button></div>`)}
+    const nt={id:ex?ex.id:(t.id||"t"+uid()),title:t.title,type:t.type||"tidy",credits:t.credits||0,timer:t.timer||0,proof:t.proof||"none",repeat:!!t.repeat,at:t.at||0,photo:t.photo?await put(t.photo):(ex?ex.photo:null),steps:[]};
+    const keep=new Set([nt.photo]);
+    for(const [i,x] of (t.steps||[]).entries()){const old=ex&&ex.steps&&ex.steps[i]&&ex.steps[i].text===x.text?ex.steps[i].audio:null;const a=x.audio?await put(x.audio):old;keep.add(a);nt.steps.push({text:x.text,audio:a})}
+    if(ex){if(!keep.has(ex.photo))delMedia(ex.photo);(ex.steps||[]).forEach(x=>{if(!keep.has(x.audio))delMedia(x.audio)});Object.assign(ex,nt)}else{S.library.push(nt);libAdded++}}
+  /* grown-up requests (things bought, waiting to be handed over) and wishes: added, or crossed off once handled on any phone */
+  const capT=a=>{while(a.length>400)a.shift()};
+  for(const id of (d.reqDone||[]))if(!S.reqDone.includes(id))S.reqDone.push(id);capT(S.reqDone);
+  for(const id of (d.wishDone||[]))if(!S.wishDone.includes(id))S.wishDone.push(id);capT(S.wishDone);
+  S.requests=S.requests.filter(r=>!S.reqDone.includes(r.id));S.wishes=S.wishes.filter(w=>!S.wishDone.includes(w.id));
+  for(const r of (d.requests||[]))if(!S.reqDone.includes(r.id)&&!S.requests.some(y=>y.id===r.id))S.requests.push({...r,kid:k.id});
+  for(const w of (d.wishes||[]))if(!S.wishDone.includes(w.id)&&!S.wishes.some(y=>y.id===w.id))S.wishes.push({...w,kid:k.id,photo:w.photo?await put(w.photo):null});
+  const news=(d.ledger||[]).filter(e=>!seenL.has(e.id)&&e.by&&e.by!==S.device&&(e.t||0)>Date.now()-20*60000);
+  return {k,isNew,added,shopAdded,libAdded,news}}
 /* A file opened from WhatsApp or Files arrives here; it waits until the app is set up, then asks for the PIN. */
 window.__checkImport=()=>{const b=bridge();if(!b||!b.hasPendingImport||!b.hasPendingImport())return;
   if(!S.pin){toast("Set up Tidy Quest first, then the file will load.");return}
@@ -1410,9 +1425,84 @@ function scanQR(cb){const b=bridge();
     <div class="row"><button class="btn" id="qrgo">Use code</button><button class="btn ghost" data-close>Cancel</button></div></div>`);
   el.querySelector("#qrgo").onclick=()=>{const t=el.querySelector("#qrin").value;overlayClose();cb(t)}}
 function findKidFor(id,name){return kid(id)||S.kids.find(k=>k.name.trim().toLowerCase()===String(name||"").trim().toLowerCase())}
+/* ---------- Live sync (Firebase). Each child is one text field in the family's online record; phones merge it the same way as files, so nothing doubles or goes missing. Photos stay on the phone. ---------- */
+const FB_CFG={apiKey:"AIzaSyAvK_SjvIwoEfUYMc-fAehF3sFyYOqmmZg",authDomain:"project-tidy-quest.firebaseapp.com",projectId:"project-tidy-quest",storageBucket:"project-tidy-quest.firebasestorage.app",messagingSenderId:"952684727287",appId:"1:952684727287:web:cb6ebd04598f519fb27cf2"};
+const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=null,q=Promise.resolve();const last={};
+  const st={state:"off",at:0,err:""};
+  const has=()=>typeof firebase!=="undefined"&&firebase.firestore&&firebase.auth;
+  const srt=(a,f=x=>x.id)=>[...(a||[])].sort((p,r)=>{const A=String(f(p)),B=String(f(r));return A<B?-1:A>B?1:0});
+  function lite(k){const tpls=[...S.library,...S.jobs.filter(j=>j.kid===k.id).map(j=>({...j,id:"t"+j.id,at:j.created||0}))].filter((t,i,arr)=>arr.findIndex(y=>tplKey(y)===tplKey(t))===i)
+      .map(t=>({id:t.id,title:t.title,type:t.type,credits:t.credits,timer:t.timer,proof:t.proof,repeat:!!t.repeat,at:t.at||0,photo:null,steps:(t.steps||[]).map(x=>({text:x.text,audio:null}))}));
+    const g=k.goal?{id:k.goal.id,name:k.goal.name,target:k.goal.target,backers:srt(k.goal.backers),setAt:k.goal.setAt||0,editAt:k.goal.editAt||0,photo:null}:null;
+    return JSON.stringify({tq:"kid",v:2,live:1,kid:{id:k.id,name:k.name,theme:k.theme},ledger:srt(k.ledger),goal:g,
+      trophies:srt(k.trophies).map(t=>({...t,media:null,album:null})),treats:srt(k.treats).map(t=>({...t,photo:null})),
+      library:srt(tpls,tplKey),shopGone:srt(S.shopGone),shop:srt(S.rewards).map(r=>({id:r.id,at:r.at||0,icon:r.icon,name:r.name,cost:r.cost,by:r.by||null,photo:null})),
+      requests:srt(S.requests.filter(r=>r.kid===k.id)),reqDone:[...S.reqDone].sort(),wishes:srt(S.wishes.filter(w=>w.kid===k.id)).map(w=>({...w,photo:null})),wishDone:[...S.wishDone].sort()})}
+  function setState(s,err){st.state=s;st.err=err||"";if(s==="on")st.at=Date.now();if(view&&view.name==="parent"&&view.args&&view.args.tab==="link"){const el=$("#syncpanel");if(el)el.outerHTML=panel()}}
+  async function start(){if(!S.family)return;if(!has()){setState("nosdk");return}clearTimeout(retry);setState("connecting");
+    try{if(!firebase.apps.length){firebase.initializeApp(FB_CFG);try{firebase.firestore().settings({experimentalAutoDetectLongPolling:true})}catch(e){}}
+      const auth=firebase.auth();if(!auth.currentUser)await auth.signInAnonymously();
+      db=firebase.firestore();ref=db.collection("families").doc(S.family);first=false;if(unsub)unsub();
+      unsub=ref.onSnapshot({includeMetadataChanges:false},snap=>{q=q.then(()=>onSnap(snap)).catch(e=>console.log(e))},e=>{setState("error",e.message);unsub=null;retry=setTimeout(start,30000)});
+    }catch(e){setState("error",e.message||String(e));retry=setTimeout(start,30000)}}
+  async function onSnap(snap){const data=snap.data()||{};let changed=false;const news=[];
+    for(const id of (data.gone||[]))if(!S.kidGone.includes(id)){S.kidGone.push(id);const k=kid(id);if(k){S.kids=S.kids.filter(x=>x!==k);changed=true}}
+    for(const key of Object.keys(data)){if(key.slice(0,2)!=="k_")continue;const id=key.slice(2),txt=data[key];
+      if(S.kidGone.includes(id)||last[id]===txt)continue;let d;try{d=JSON.parse(txt)}catch(e){continue}
+      const r=await mergeKid(d,true);last[r.k.id]=txt;changed=true;r.news.forEach(e=>news.push({k:r.k,e}))}
+    setState("on");
+    if(changed){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}liveRender();alerts(news)}
+    first=true;push()}
+  function alerts(news){if(!news.length)return;const say=({k,e})=>{const w=String(e.why||"");
+      if(w.startsWith("buy "))return `🛍️ ${k.name} just bought ${w.slice(4)}!`;
+      if(w.startsWith("job "))return `${T(k).call||"🥋"} ${k.name} earned ${e.d} ${e.d===1?"point":"points"}: ${w.slice(4)}`;
+      if(w.startsWith("star "))return `⭐ ${k.name} earned a star: ${w.slice(5)}`;
+      if(w==="refund")return `↩️ ${k.name} got ${e.d} points back`;
+      if(e.d)return `${k.name}: ${e.d>0?"+":""}${e.d} points`;if(e.s)return `⭐ ${k.name}: ${e.s>0?"+":""}${e.s} stars`;return ""};
+    const lines=news.map(say).filter(Boolean);if(!lines.length)return;
+    banner(lines[lines.length-1]+(lines.length>1?` (and ${lines.length-1} more)`:""))}
+  function banner(msg){const t=document.createElement("div");t.className="toast";t.style.cssText="top:calc(14px + env(safe-area-inset-top));bottom:auto;font-size:17px;max-width:92vw";t.textContent=msg;document.body.appendChild(t);
+    try{if(typeof sfxPop==="function")sfxPop()}catch(e){}setTimeout(()=>t.remove(),6000)}
+  async function liveRender(){if(!view||["job","edit","style","welcome"].includes(view.name)||overlayEl)return;const a=document.activeElement;if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))return;
+    const y=window.scrollY;await render();window.scrollTo(0,y)}
+  function soon(){if(!ref||!first)return;clearTimeout(timer);timer=setTimeout(push,1200)}
+  function push(){if(!ref||!first)return;const up={};
+    for(const k of S.kids){const txt=lite(k);if(last[k.id]!==txt){up["k_"+k.id]=txt;last[k.id]=txt}}
+    if(!Object.keys(up).length)return;up.at=firebase.firestore.FieldValue.serverTimestamp();
+    ref.set(up,{merge:true}).then(()=>setState("on")).catch(e=>{for(const k in up)if(k.startsWith("k_"))delete last[k.slice(2)];setState("error",e.message)})}
+  function forget(id){delete last[id];if(ref){const fv=firebase.firestore.FieldValue;ref.set({gone:fv.arrayUnion(id),["k_"+id]:fv.delete()},{merge:true}).catch(()=>{})}}
+  function newFamily(){const a=new Uint8Array(18);crypto.getRandomValues(a);return "fam"+Array.from(a,b=>b.toString(36).padStart(2,"0")).join("").slice(0,26)}
+  function code(){return packQR({t:"fam",f:S.family,from:S.device})}
+  function create(){S.family=newFamily();save();start();showCode()}
+  function showCode(){const el=showQR(code(),"Family code","On the other phone or tablet: Grown-ups → Link → Join a family, then scan this. Anyone with this code can see your family's Tidy Quest, so only share it with family.",
+      `<button class="btn ghost" id="famshare">Send as a message instead</button>`);
+    el.querySelector("#famshare").onclick=()=>{const t="Join our family on Tidy Quest: open Tidy Quest → Grown-ups → Link → Join a family → Paste a code, and paste this:\n\n"+code();const b=bridge();
+      if(b&&b.share)b.share(t);else if(b&&b.copy){b.copy(t);toast("Copied")}else{try{navigator.clipboard.writeText(t);toast("Copied")}catch(e){}}}}
+  function joinPrompt(d){if(!d.f||d.f.length<20)return toast("That family code isn't complete.");if(d.f===S.family)return toast("This phone is already in that family.");
+    confirmSheet("Join this family?","This phone's children, points, stars, shop and history are merged with the family's. Nothing is lost or counted twice, and from now on both stay in step.",()=>{
+      S.family=d.f;Object.keys(last).forEach(k=>delete last[k]);save();if(unsub){unsub();unsub=null}start();toast("Joining…");render()},"Join","Cancel")}
+  function joinMenu(){const el=overlay(`<div class="stack"><h2 class="display">Join a family</h2><p class="muted" style="margin:0">Scan the family code on the other phone, or paste the message they sent you.</p>
+      <button class="btn" id="jscan">${IC.cam} Scan the code</button><textarea id="jtext" rows="3" placeholder="Or paste the message here"></textarea><button class="btn ghost" id="jgo">Join with pasted code</button></div>`);
+    el.querySelector("#jscan").onclick=()=>{overlayClose();scanQR(handleCode)};
+    el.querySelector("#jgo").onclick=()=>{const d=unpackQR(el.querySelector("#jtext").value);overlayClose();if(d&&d.t==="fam")joinPrompt(d);else toast("That isn't a family code.")}}
+  function leave(){confirmSheet("Stop live sync on this phone?","Everything stays on this phone, it just stops updating with the others. You can join again with the family code.",()=>{
+      if(unsub)unsub();unsub=null;ref=null;delete S.family;Object.keys(last).forEach(k=>delete last[k]);setState("off");save();render()},"Stop syncing","Keep syncing")}
+  function panel(){const on=!!S.family;const t=st.at?new Date(st.at).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}):"";
+    const line=!on?"":st.state==="on"?`<span style="color:var(--good,#2e7d32);font-weight:900">● Live</span> <span class="muted">· up to date${t?" at "+t:""}</span>`
+      :st.state==="connecting"?`<span class="muted">● Connecting…</span>`:st.state==="nosdk"?`<span style="color:#b3261e;font-weight:900">● Live sync needs the latest update of the app</span>`
+      :`<span style="color:#b3261e;font-weight:900">● Offline</span> <span class="muted">· changes are saved here and catch up when there's internet${st.err?` (${esc(st.err).slice(0,80)})`:""}</span>`;
+    return `<div class="panel stack" id="syncpanel"><b>Live sync between phones</b>
+      ${on?`<div>${line}</div><p class="muted" style="margin:0">Points, stars, the big goal, the shop, wishes, things bought and the history update on every linked phone and tablet within seconds. Photos, videos and voice notes stay on the phone that took them.</p>
+        <div class="row" style="gap:8px"><button class="btn small" data-act="famCode">Show family code</button><button class="btn ghost small" data-act="famLeave">Stop syncing here</button></div>`
+      :`<p class="muted" style="margin:0">Link phones over the internet so points, stars, the shop and the history stay the same everywhere. Start the family on one phone, then join on the others.</p>
+        <div class="row" style="gap:8px"><button class="btn small" data-act="famNew">Start a family</button><button class="btn ghost small" data-act="famJoin">Join a family</button></div>`}</div>`}
+  return {start,soon,push,forget,panel,joinPrompt,create,showCode,joinMenu,leave,status:st}})();
+window.Sync=Sync;
+Object.assign(ACT,{famNew(){Sync.create()},famJoin(){Sync.joinMenu()},famCode(){Sync.showCode()},famLeave(){Sync.leave()}});
 function handleCode(text){const d=unpackQR(text);
   if(!d){toast("That isn't a Tidy Quest code.");return}
   if(d.from&&d.from===S.device){toast("That code is from this tablet. Scan it on the other one.");return}
+  if(d.t==="fam")return Sync.joinPrompt(d);
   if(d.t==="shop"){S.rewards=d.list;save();render();toast("Shop loaded");return}
   if(d.t==="setup")return applySetup(d);
   if(d.t==="req")return sendCredits(d);
@@ -1467,9 +1557,9 @@ Object.assign(ACT,{
       catch(e){btn.disabled=false;btn.textContent="Make the file and send";toast("Couldn't make the file. Try again.")}}},
   addWish(b){wishSheet(kid(b.dataset.id))},
   wishYes(b){const w=S.wishes.find(x=>x.id===b.dataset.id);if(!w)return;const name=($("#wn-"+w.id).value||"").trim()||w.name||"New reward";const cost=Math.max(1,Math.min(999,parseInt($("#wc-"+w.id).value)||10));
-    S.rewards.push({id:uid(),icon:w.icon||"⭐",name,cost,photo:w.photo||null,by:w.kid,at:Date.now()});S.shopAt=Date.now();S.wishes=S.wishes.filter(x=>x!==w);const k=kid(w.kid);
+    S.rewards.push({id:uid(),icon:w.icon||"⭐",name,cost,photo:w.photo||null,by:w.kid,at:Date.now()});S.shopAt=Date.now();S.wishes=S.wishes.filter(x=>x!==w);S.wishDone.push(w.id);const k=kid(w.kid);
     if(k){k.wishNews={name,cost}}save();render();toast(`${name} is in the shop for ${cost}`)},
-  wishNo(b){const w=S.wishes.find(x=>x.id===b.dataset.id);if(!w)return;delMedia(w.photo);S.wishes=S.wishes.filter(x=>x!==w);save();render();toast("Wish removed")},
+  wishNo(b){const w=S.wishes.find(x=>x.id===b.dataset.id);if(!w)return;delMedia(w.photo);S.wishes=S.wishes.filter(x=>x!==w);S.wishDone.push(w.id);save();render();toast("Wish removed")},
   resend(){try{bridge().fileReshare("Send "+S.lastSend.file)}catch(e){toast("Couldn't find the file. Make a new one.")}},
   undoSend(){const L=S.lastSend;confirmSheet("Put the points back?",`Only do this if the file was never opened on the other phone, or ${L.name} gets them twice.`,()=>{const k=kid(L.kid);
     if(k){k.credits+=L.credits;if(k.goal&&!k.goal.done)k.goal.count=Math.min(k.goal.target,(k.goal.count||0)+L.stars)}delete S.lastSend;save();render();toast("Points put back")},"Put them back","Cancel")},
@@ -1494,7 +1584,7 @@ document.addEventListener("change",e=>{const t=e.target;
 document.addEventListener("keydown",e=>{if(e.key==="Escape")back()});
 window.addEventListener("popstate",()=>{});
 
-load();home();
+load();home();if(S.family)Sync.start();
 </script>
 </body>
 </html>
