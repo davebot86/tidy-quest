@@ -491,7 +491,9 @@ function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2
 function load(){
   try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}
   if(!S){S={pin:null,kids:[],jobs:[],rewards:DEFAULT_REWARDS.map(r=>({...r,id:uid()})),requests:[]}}
-  S.device=S.device||("d"+uid());S.wishes=S.wishes||[];S.pendingIn=S.pendingIn||{};S.usedIn=S.usedIn||[];S.sent=S.sent||[];
+  S.device=S.device||("d"+uid());S.wishes=S.wishes||[];delete S.lastSend;
+  S.kids.forEach(k=>{if(k.goal&&!k.goal.id)k.goal.id="g:"+String(k.goal.name||"").trim().toLowerCase();
+    if(!k.ledger){k.ledger=[{id:"o"+uid(),t:Date.now(),d:k.credits||0,e:k.earned||0,s:k.goal?(k.goal.count||0):0,g:k.goal?k.goal.id:null,why:"start"}]}recalc(k,true)});S.pendingIn=S.pendingIn||{};S.usedIn=S.usedIn||[];S.sent=S.sent||[];
   S.jobs.forEach(j=>{if(!j.type)j.type="tidy";if(!j.proof)j.proof=j.afterReq?"photo":"none"});
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast("Couldn't save. The tablet may be low on space.")}}
@@ -948,13 +950,13 @@ const PARENT={
       <div class="spread"><span><b>${k.credits}</b> ${esc(th.cur)} · ${esc(th.ranks[rankOf(k.earned||0)])} (${k.earned||0} earned)</span>
       <span class="row" style="gap:6px"><button class="btn ghost small" data-act="adj" data-id="${k.id}" data-d="-1">−1</button><button class="btn ghost small" data-act="adj" data-id="${k.id}" data-d="1">+1</button><button class="btn ghost small" data-act="adj" data-id="${k.id}" data-d="5">+5</button></span></div>
       <div class="spread" style="border-top:2px solid var(--line);padding-top:10px"><span>${k.goal?`<b>Big goal:</b> ${esc(k.goal.name)} · ${Math.min(k.goal.count,k.goal.target)}/${k.goal.target} ★${k.goal.done?" · reached!":""}`:`<b>No big goal yet.</b> <span class="muted">Challenges add stars towards one.</span>`}</span>
-        <button class="btn ${k.goal&&!k.goal.done?"ghost ":""}small" data-act="editGoal" data-id="${k.id}">${!k.goal?"Set a goal":k.goal.done?"New goal":"Edit"}</button></div>
+        <button class="btn ${k.goal?"ghost ":""}small" data-act="editGoal" data-id="${k.id}">${!k.goal?"Set a goal":"Edit"}</button></div>
       <p class="muted" style="margin:0;font-size:14px">Points you add here also count towards ${esc(k.name)}'s rank.</p>
       <div class="row" style="gap:8px"><button class="btn ghost small" data-act="kidStyle" data-id="${k.id}">Picture &amp; world</button><button class="btn bad small" data-act="delKid" data-id="${k.id}">Remove ${esc(k.name)}</button></div></div>`}).join("")}</div>
     <div class="panel row"><input id="newkid" placeholder="Add a child's name" maxlength="20" style="flex:1;min-width:160px"><button class="btn" data-act="addKid">Add</button></div>`},
   link(){return `
-    <div class="panel stack"><b>Send a child to another phone</b><p class="muted" style="margin:0">Makes one file with their picture, rank, points, goal stars and every trophy photo and video. Send it by WhatsApp or email, then open it on the other phone with <b>Receive from a file</b>. Points and stars move with the file; everything else is copied.</p>
-      <div class="row" style="gap:8px">${S.kids.map(k=>`<button class="btn small" data-act="sendKid" data-id="${k.id}">Send ${esc(k.name)}</button>`).join("")}</div></div>
+    <div class="panel stack"><b>Send a child to another phone</b><p class="muted" style="margin:0">Makes one file with their picture, rank, points, goal stars, trophies and the shop. Send it by WhatsApp; the other phone taps it and opens it in Tidy Quest. Both phones keep everything and nothing is counted twice, so send it whenever you want the other phone to catch up.</p>
+      <div class="row" style="gap:8px">${S.kids.map(k=>`<button class="btn small" data-act="sendKid" data-id="${k.id}">Share ${esc(k.name)}'s progress</button>`).join("")}</div></div>
     ${S.lastSend?`<div class="panel stack"><b>Last sent: ${esc(S.lastSend.name)}, ${new Date(S.lastSend.at).toLocaleString("en-GB",{weekday:"short",hour:"2-digit",minute:"2-digit"})}</b>
       <p class="muted" style="margin:0">Carrying ${S.lastSend.credits} points${S.lastSend.stars?` and ${S.lastSend.stars} stars`:""}.</p>
       <div class="row" style="gap:8px">${bridge()&&bridge().fileReshare?`<button class="btn ghost small" data-act="resend">Send it again</button>`:""}<button class="btn bad small" data-act="undoSend">It never arrived: put points back</button></div></div>`:""}
@@ -1111,7 +1113,7 @@ const ACT={
   buy(b){const k=kid(b.dataset.kid);const r=S.rewards.find(x=>x.id===b.dataset.id);const th=T(k);if(k.credits<r.cost)return;
     overlay(`<div class="stack" style="text-align:center;align-items:center">${r.photo?`<img class="rphoto" data-media="${r.photo}" alt="" style="max-width:280px">`:`<span style="font-size:64px">${esc(r.icon)}</span>`}<h2 class="display">${esc(r.name)}</h2><p>Spend ${r.cost} ${esc(th.cur.toLowerCase())}?</p>
       <div class="row"><button class="btn" id="yesbuy">Yes please</button><button class="btn ghost" data-close>Not yet</button></div></div>`).querySelector("#yesbuy").onclick=()=>{
-      k.credits-=r.cost;S.requests.push({id:uid(),kid:k.id,name:r.name,icon:r.icon,cost:r.cost,status:"asked",at:Date.now()});save();overlayClose();sfxFanfare(k);confetti(k);render();toast("Ask a grown-up for your "+r.name)}},
+      post(k,{d:-r.cost,why:"buy "+r.name});S.requests.push({id:uid(),kid:k.id,name:r.name,icon:r.icon,cost:r.cost,status:"asked",at:Date.now()});save();overlayClose();sfxFanfare(k);confetti(k);render();toast("Ask a grown-up for your "+r.name)}},
   parent(){pinPad("Grown-ups only","Enter your PIN",p=>{if(p!==S.pin)return false;overlayClose();go("parent",{tab:pendingCount()?"check":"jobs"})})},
   exitParent(){home()},
   ptab(b){view.args.tab=b.dataset.tab;render()},
@@ -1140,7 +1142,7 @@ const ACT={
       if(j.repeat){j.status="todo";j.from=tomorrow()}else{delMedia(j.photo);j.steps.forEach(s=>delMedia(s.audio));S.jobs=S.jobs.filter(x=>x!==j)}
       save();toast(`★ for ${k.name}`);render();return}
     const amt=j.credits+(j.beat?bonus(j):0);
-    k.credits+=amt;k.earned=(k.earned||0)+amt;if(rankOf(k.earned)>before)k.rankUp=true;
+    post(k,{d:amt,e:amt,why:"job "+(j.title||"")});if(rankOf(k.earned)>before)k.rankUp=true;
     if(j.after||album){k.trophies=k.trophies||[];k.trophies.unshift({id:uid(),title:j.title||T(k).job,type:j.type||"tidy",media:j.after||null,kind:j.after?(j.afterKind||"photo"):null,at:Date.now(),amt,album});k.newTrophy=true}
     else if(album)albumDel(album);
     j.after=null;j.run=null;j.beat=false;
@@ -1157,7 +1159,7 @@ const ACT={
       <div class="row"><button class="btn" id="gphoto">${IC.cam} Take a photo</button><button class="btn ghost" id="gskip">Skip</button></div></div>`);
     el.querySelector("#gskip").onclick=()=>finish(null);
     el.querySelector("#gphoto").onclick=()=>capture({mode:"photo",title:"Enjoying "+r.name},id=>finish(id))},
-  refund(b){const r=S.requests.find(x=>x.id===b.dataset.id);const k=kid(r.kid);if(k)k.credits+=r.cost;S.requests=S.requests.filter(x=>x!==r);save();toast("Credits returned");render()},
+  refund(b){const r=S.requests.find(x=>x.id===b.dataset.id);const k=kid(r.kid);if(k)post(k,{d:r.cost,why:"refund"});S.requests=S.requests.filter(x=>x!==r);save();toast("Credits returned");render()},
   addReward(){S.rewards.push({id:uid(),icon:"⭐",name:"New reward",cost:5});save();render()},
   delReward(b){const r=S.rewards.find(x=>x.id===b.dataset.id);if(r)delMedia(r.photo);S.rewards=S.rewards.filter(x=>x!==r);save();render()},
   rPhoto(b){const r=S.rewards.find(x=>x.id===b.dataset.id);capture({mode:"photo",title:"Photo of: "+r.name},id=>{if(r.photo)delMedia(r.photo);r.photo=id;save();render()})},
@@ -1165,12 +1167,18 @@ const ACT={
   kidStyle(b){go("style",{kid:b.dataset.id,back:"parent"})},
   delKid(b){const k=kid(b.dataset.id);confirmSheet(`Remove ${k.name}?`,"This deletes their picture, jobs, credits, stars and every trophy video. It can't be undone.",()=>{S.jobs.filter(j=>j.kid===k.id).forEach(j=>{delMedia(j.photo);delMedia(j.after);j.steps.forEach(s=>delMedia(s.audio))});(k.trophies||[]).forEach(t=>{delMedia(t.media);albumDel(t.album)});(k.treats||[]).forEach(t=>delMedia(t.photo));delMedia(k.face);
     S.jobs=S.jobs.filter(j=>j.kid!==k.id);S.requests=S.requests.filter(r=>r.kid!==k.id);S.kids=S.kids.filter(x=>x!==k);save();render()})},
-  adj(b){const k=kid(b.dataset.id);const d=+b.dataset.d;k.credits=Math.max(0,k.credits+d);if(d>0)k.earned=(k.earned||0)+d;else k.earned=Math.max(0,(k.earned||0)+d);save();render()},
+  adj(b){const k=kid(b.dataset.id);const d=+b.dataset.d;if(d<0&&k.credits<=0)return;post(k,{d,e:d,why:"grown-up"});save();render()},
   changePin(){pinPad("New PIN","Choose 4 digits",p=>{S.pin=p;save();overlayClose();toast("PIN changed")})},
   resetAll(){confirmSheet("Delete everything?","This can't be undone.",()=>{try{localStorage.removeItem(KEY)}catch(e){}indexedDB.deleteDatabase("tq_media");load();home()})}
 };
+/* ---------- Points and stars are a log of entries, so phones can merge without losing or doubling anything ---------- */
+function recalc(k,quiet){const L=k.ledger||[];let d=0,e=0,st=0;const gid=k.goal&&k.goal.id;
+  let openE=0;for(const x of L){d+=x.d||0;if(x.why==="start")openE=Math.max(openE,x.e||0);else e+=x.e||0;if(gid&&x.g===gid)st+=x.s||0}
+  k.credits=d;k.earned=Math.max(0,openE+e);
+  if(k.goal){k.goal.count=Math.max(0,st);const hit=k.goal.count>=k.goal.target;if(hit&&!k.goal.done){k.goal.done=true;if(!quiet)k.goalHit=true}else if(!hit)k.goal.done=false}}
+function post(k,{d=0,e=0,s=0,why=""}){k.ledger=k.ledger||[];k.ledger.push({id:"e"+uid(),t:Date.now(),d,e,s,g:s&&k.goal?k.goal.id:null,why,by:S.device});recalc(k)}
 /* ---------- Big goal: challenges add stars towards one big reward ---------- */
-function addStar(k){if(!k.goal)return;k.goal.count=(k.goal.count||0)+1;if(k.goal.count>=k.goal.target&&!k.goal.done){k.goal.done=true;k.goalHit=true}}
+function addStar(k){if(!k.goal)return;post(k,{s:1,why:"star"})}
 function goalCard(k,th){const g=k.goal;if(!g)return"";const n=Math.min(g.count||0,g.target),pct=Math.round(n/g.target*100);
   return `<div class="panel goal stack" style="gap:10px"><div class="spread"><span><span class="label">Big goal</span><br><b style="font-size:20px">${esc(g.name)}</b></span>
     ${g.photo?`<img class="tthumb" style="width:64px;height:64px" data-media="${g.photo}" alt="">`:""}</div>
@@ -1203,11 +1211,12 @@ function quickLog(preKid,state){const st=state||{kid:preKid||(S.kids[0]&&S.kids[
     else if(q==="photo"||q==="video"){capture({mode:q,title:"Proof"},(id,kind)=>{st.media=id;st.kind=kind;quickLog(null,st)})}
     else if(q==="save"){const k=kid(st.kid);if(!k)return;st.title=(el.querySelector("#qtitle").value||"").trim();
       logAchievement(k,st);save();overlayClose();render();toast(`★ for ${k.name}${k.goal?` · ${Math.min(k.goal.count,k.goal.target)}/${k.goal.target}`:""}`)}})}
-function goalEditor(k,draftGoal){const g=draftGoal||(k.goal&&!k.goal.done?{...k.goal,backers:(k.goal.backers||[]).slice()}:{name:"",target:20,count:0,photo:null,backers:[]});g.backers=g.backers||[];
+function goalEditor(k,draftGoal){const g=draftGoal||(k.goal?{...k.goal,backers:(k.goal.backers||[]).slice(),stars:k.goal.count||0}:{name:"",target:20,count:0,stars:0,photo:null,backers:[]});g.backers=g.backers||[];if(g.stars==null)g.stars=g.count||0;
   const el=overlay(`<div class="stack"><h2 class="display">Big goal for ${esc(k.name)}</h2>
     <p class="muted" style="margin:0">Brave, active, kind and learning things each add a star. Chores still earn credits for the shop.</p>
     <label class="label" for="gname">The big reward</label><input id="gname" maxlength="40" value="${esc(g.name)}" placeholder="e.g. Water park on holiday">
     <div class="spread"><span>Stars needed</span><span class="row"><button class="btn ghost small" data-g="-5">−5</button><b id="gt" style="font-size:28px;min-width:2ch;text-align:center">${g.target}</b><button class="btn ghost small" data-g="5">+5</button></span></div>
+    <div class="spread"><span>Stars earned so far</span><span class="row"><button class="btn ghost small" data-gs="-1">−1</button><b id="gs" style="font-size:28px;min-width:2ch;text-align:center">${g.stars}</b><button class="btn ghost small" data-gs="1">+1</button></span></div>
     <div class="stack" style="gap:8px;border-top:1px solid var(--line);padding-top:12px"><b>Backers</b><span class="muted" style="margin-top:-6px">Family helping with the big reward, like an uncle adding to the holiday fund.</span>
       ${g.backers.map((x,i)=>`<div class="spread"><span><b>${esc(x.name)}</b>${x.gift?` · ${esc(x.gift)}`:""}${x.msg?`<br><span class="muted">“${esc(x.msg)}”</span>`:""}</span><button class="btn bad small" data-rmb="${i}">Remove</button></div>`).join("")}
       <div class="row" style="gap:8px"><input id="bname" placeholder="Who, e.g. Uncle Steve" maxlength="30" style="flex:1;min-width:140px"><input id="bgift" placeholder="Giving, e.g. £10" maxlength="30" style="flex:1;min-width:120px"></div>
@@ -1220,10 +1229,14 @@ function goalEditor(k,draftGoal){const g=draftGoal||(k.goal&&!k.goal.done?{...k.
     g.backers.push({id:uid(),name:n,gift:el.querySelector("#bgift").value.trim(),msg:el.querySelector("#bmsg").value.trim()});goalEditor(k,g)};
   el.querySelectorAll("[data-rmb]").forEach(b=>b.onclick=()=>{keepName();g.backers.splice(+b.dataset.rmb,1);goalEditor(k,g)});
   el.querySelectorAll("[data-g]").forEach(b=>b.onclick=()=>{g.target=Math.max(5,Math.min(100,g.target+ +b.dataset.g));el.querySelector("#gt").textContent=g.target});
+  el.querySelectorAll("[data-gs]").forEach(b=>b.onclick=()=>{g.stars=Math.max(0,Math.min(g.target,g.stars+ +b.dataset.gs));el.querySelector("#gs").textContent=g.stars});
   el.querySelector("#gphoto").onclick=()=>{g.name=nameIn.value.trim();capture({mode:"photo",title:"Photo of the big reward"},id=>{if(g.photo&&(!k.goal||g.photo!==k.goal.photo))delMedia(g.photo);g.photo=id;goalEditor(k,g)})};
   el.querySelector("#gsave").onclick=()=>{g.name=nameIn.value.trim();if(!g.name){toast("Name the big reward");return}
     if(k.goal&&k.goal.photo&&k.goal.photo!==g.photo)delMedia(k.goal.photo);
-    k.goal={name:g.name,target:g.target,count:Math.min(g.count||0,g.target),photo:g.photo||null,done:false,backers:g.backers};save();overlayClose();render();toast("Goal saved")}}
+    const keepId=k.goal&&k.goal.id&&!(k.goal.done&&g.stars===0)?k.goal.id:"g"+uid();
+    k.goal={id:keepId,name:g.name,target:g.target,count:k.goal&&k.goal.id===keepId?k.goal.count:0,photo:g.photo||null,done:k.goal&&k.goal.id===keepId?k.goal.done:false,backers:g.backers,setAt:k.goal&&k.goal.id===keepId?(k.goal.setAt||0):Date.now(),editAt:Date.now()};
+    recalc(k,true);const diff=g.stars-(k.goal.count||0);if(diff)post(k,{s:diff,why:"grown-up set stars"});
+    save();overlayClose();render();toast("Goal saved")}}
 
 /* ---------- Wishes: the child suggests something for the shop ---------- */
 const WISH_ICONS=["🍫","🍭","🍦","🧁","🍕","🎮","📺","🎬","🧸","🚗","⚽","🛴","🎨","📚","🏊","🎢","🌙","🪙"];
@@ -1279,7 +1292,8 @@ async function buildKidFile(k){const trophies=[];
   for(const t of (k.trophies||[]))trophies.push({...t,media:await packMedia(t.media),album:t.album?{before:await packMedia(t.album.before),progress:await Promise.all((t.album.progress||[]).map(packMedia))}:null});
   const treats=[];for(const t of (k.treats||[]))treats.push({...t,photo:await packMedia(t.photo)});
   const g=k.goal?{...k.goal,photo:await packMedia(k.goal.photo)}:null;
-  return JSON.stringify({tq:"kid",v:1,id:"x"+uid(),from:S.device,at:Date.now(),
+  return JSON.stringify({tq:"kid",v:2,id:"x"+uid(),from:S.device,at:Date.now(),
+    ledger:k.ledger||[],
     kid:{id:k.id,name:k.name,theme:k.theme,earned:k.earned||0,credits:k.credits||0},face:await packMedia(k.face),goal:g,trophies,treats,
     shop:await Promise.all(S.rewards.map(async r=>({icon:r.icon,name:r.name,cost:r.cost,by:r.by||null,photo:await packMedia(r.photo)})))})}
 async function shareFile(name,text){const b=bridge();
@@ -1290,17 +1304,22 @@ async function shareFile(name,text){const b=bridge();
 async function importKidFile(text){let d;try{d=JSON.parse(text)}catch(e){return toast("That file isn't a Tidy Quest file.")}
   if(!d||d.tq!=="kid"||!d.kid)return toast("That file isn't a Tidy Quest file.");
   if(d.from===S.device)return toast("That file came from this phone. Open it on the other phone.");
-  if(S.usedIn.includes(d.id))return toast("This file has already been added on this phone.");
+  if(!d.ledger&&S.usedIn.includes(d.id))return toast("This file has already been added on this phone.");
   const x=d.kid;let k=findKidFor(x.id,x.name),isNew=false;
   if(!k){k={id:x.id,name:x.name,theme:x.theme,credits:0,earned:0};S.kids.push(k);isNew=true}
   else if(k.id!==x.id){S.jobs.forEach(j=>{if(j.kid===k.id)j.kid=x.id});S.requests.forEach(r=>{if(r.kid===k.id)r.kid=x.id});k.id=x.id}
   const put=async m=>m?await putMedia(b64ToBlob(m.data,m.type)):null;
-  k.theme=x.theme||k.theme;k.earned=Math.max(k.earned||0,x.earned||0);k.credits=(k.credits||0)+(x.credits||0);
+  k.theme=x.theme||k.theme;k.ledger=k.ledger||[];const before={c:k.credits||0,s:k.goal?k.goal.count||0:0};
   if(d.face){if(k.face)delMedia(k.face);k.face=await put(d.face)}
-  if(d.goal){const g=d.goal;if(k.goal&&k.goal.name===g.name){k.goal.count=Math.min(k.goal.target,(k.goal.count||0)+(g.count||0))}
-    else{if(k.goal&&k.goal.photo)delMedia(k.goal.photo);k.goal={name:g.name,target:g.target,count:g.count||0,done:!!g.done,photo:null,backers:[]}}
-    {const ids=new Set((k.goal.backers||[]).map(b=>b.id));k.goal.backers=(k.goal.backers||[]).concat((g.backers||[]).filter(b=>!ids.has(b.id)))}
-    if(g.photo&&!k.goal.photo)k.goal.photo=await put(g.photo);if(k.goal.count>=k.goal.target&&!k.goal.done){k.goal.done=true;k.goalHit=true}}
+  if(d.goal){const g={...d.goal};g.id=g.id||("g:"+String(g.name||"").trim().toLowerCase());
+    const mine=k.goal;const newer=!mine||(g.id!==mine.id&&(g.setAt||0)>(mine.setAt||0));
+    if(newer){if(mine&&mine.photo)delMedia(mine.photo);k.goal={id:g.id,name:g.name,target:g.target,count:0,done:false,photo:null,backers:g.backers||[],setAt:g.setAt||0,editAt:g.editAt||0};if(g.photo)k.goal.photo=await put(g.photo)}
+    else if(mine.id===g.id){if((g.editAt||0)>(mine.editAt||0)){mine.name=g.name;mine.target=g.target}
+      const ids=new Set((mine.backers||[]).map(b=>b.id));mine.backers=(mine.backers||[]).concat((g.backers||[]).filter(b=>!ids.has(b.id)));
+      if(g.photo&&!mine.photo)mine.photo=await put(g.photo)}}
+  if(d.ledger){const ids=new Set(k.ledger.map(e=>e.id));for(const e of d.ledger)if(!ids.has(e.id))k.ledger.push(e)}
+  else{const gid=k.goal&&k.goal.id;k.ledger.push({id:"f"+d.id,t:d.at||Date.now(),d:x.credits||0,e:Math.max(0,(x.earned||0)-(k.earned||0)),s:d.goal?(d.goal.count||0):0,g:gid,why:"old file"})}
+  k.ledger.sort((p,q)=>(p.t||0)-(q.t||0));recalc(k);
   k.trophies=k.trophies||[];const have=new Set(k.trophies.map(t=>t.id));let added=0;
   for(const t of (d.trophies||[])){if(have.has(t.id))continue;const al=t.album?{before:await put(t.album.before),progress:(await Promise.all((t.album.progress||[]).map(put))).filter(Boolean)}:null;
     k.trophies.push({...t,media:await put(t.media),album:al});added++}
@@ -1313,7 +1332,7 @@ async function importKidFile(text){let d;try{d=JSON.parse(text)}catch(e){return 
   k.trophies.sort((a,b)=>(b.at||0)-(a.at||0));
   S.usedIn.push(d.id);save();render();
   overlay(`<div class="stack" style="text-align:center;align-items:center">${avatarSVG(k,null,"avatar big")||mentorSVG(k.theme)}<h2 class="display">${esc(k.name)} ${isNew?"has arrived":"is up to date"}</h2>
-    <p style="margin:0">${x.credits?`+${x.credits} points. `:""}${d.goal&&d.goal.count?`${d.goal.count} goal stars. `:""}${added} trophy${added===1?"":"s"} added.${shopAdded?` ${shopAdded} shop reward${shopAdded===1?"":"s"} added.`:""}</p><button class="btn" data-close>Done</button></div>`)}
+    <p style="margin:0">${k.credits} points${k.goal?`, ${Math.min(k.goal.count,k.goal.target)}/${k.goal.target} stars towards ${esc(k.goal.name)}`:""}. ${added} trophy${added===1?"":"s"} added.${shopAdded?` ${shopAdded} shop reward${shopAdded===1?"":"s"} added.`:""}</p><button class="btn" data-close>Done</button></div>`)}
 /* A file opened from WhatsApp or Files arrives here; it waits until the app is set up, then asks for the PIN. */
 window.__checkImport=()=>{const b=bridge();if(!b||!b.hasPendingImport||!b.hasPendingImport())return;
   if(!S.pin){toast("Set up Tidy Quest first, then the file will load.");return}
@@ -1376,7 +1395,7 @@ function sendCredits(d){const k=findKidFor(d.kid,d.name);
     <p class="muted" style="margin:0;text-align:center">${k.credits} available</p>
     <div class="row"><button class="btn" id="sendc">Send</button><button class="btn ghost" data-close>Cancel</button></div></div>`);
   el.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{amt=Math.max(1,Math.min(k.credits,amt+ +b.dataset.d));el.querySelector("#amt").textContent=amt});
-  el.querySelector("#sendc").onclick=()=>{if(amt<1||amt>k.credits)return;k.credits-=amt;
+  el.querySelector("#sendc").onclick=()=>{if(amt<1||amt>k.credits)return;post(k,{d:-amt,why:"moved"});
     const rec={n:d.n,to:d.from,kid:d.kid,name:k.name,amt,at:Date.now()};S.sent.push(rec);if(S.sent.length>50)S.sent.shift();save();overlayClose();render();showGive(rec)}}
 function showGive(rec){showQR(packQR({t:"give",from:S.device,to:rec.to,n:rec.n,kid:rec.kid,name:rec.name,amt:rec.amt}),`${rec.amt} credits for ${rec.name}`,"Now scan this on the tablet that asked for them.")}
 function acceptCredits(d){
@@ -1384,19 +1403,18 @@ function acceptCredits(d){
   if(S.usedIn.includes(d.n)){toast("This transfer has already been added.");return}
   const p=S.pendingIn[d.n];if(!p){toast("This tablet didn't ask for that transfer.");return}
   const k=kid(p.kid);if(!k){toast("That child isn't on this tablet any more.");return}
-  k.credits+=d.amt;delete S.pendingIn[d.n];S.usedIn.push(d.n);if(S.usedIn.length>200)S.usedIn.shift();save();overlayClose();render();sfxFanfare(k);confetti(k);
+  post(k,{d:d.amt,why:"moved in"});delete S.pendingIn[d.n];S.usedIn.push(d.n);if(S.usedIn.length>200)S.usedIn.shift();save();overlayClose();render();sfxFanfare(k);confetti(k);
   overlay(`<div class="stack" style="text-align:center;align-items:center"><h2 class="display">+${d.amt} for ${esc(k.name)}</h2><p style="margin:0">${esc(k.name)} now has ${k.credits} credits on this tablet.</p><button class="btn" data-close>Done</button></div>`)}
 Object.assign(ACT,{
   sendKid(b){const k=kid(b.dataset.id);const stars=k.goal?Math.min(k.goal.count||0,k.goal.target):0;
     const el=overlay(`<div class="stack"><h2 class="display">Send ${esc(k.name)}</h2>
       <p style="margin:0">This makes one file with ${esc(k.name)}'s picture, rank, goal and ${(k.trophies||[]).length} trophies.</p>
-      <p style="margin:0"><b>${k.credits} points${stars?` and ${stars} goal stars`:""} go with the file</b> and are cleared on this phone, so nothing gets counted twice. Everything else stays here too.</p>
+      <p style="margin:0">Both phones keep everything. When the other phone opens it, it catches up with ${esc(k.name)}'s points, stars and trophies without counting anything twice. Send one back the other way any time.</p>
       <div class="row"><button class="btn" id="dosend">Make the file and send</button><button class="btn ghost" data-close>Cancel</button></div></div>`);
     el.querySelector("#dosend").onclick=async()=>{const btn=el.querySelector("#dosend");btn.disabled=true;btn.textContent="Packing…";
       try{const text=await buildKidFile(k);const name=`TidyQuest-${k.name.replace(/[^A-Za-z0-9]+/g,"")}-${today()}.tqkid.json`;
         const ok=await shareFile(name,text);if(!ok){btn.disabled=false;btn.textContent="Make the file and send";toast("Couldn't make the file. Try again.");return}
-        S.lastSend={kid:k.id,name:k.name,credits:k.credits,stars:k.goal&&!k.goal.done?(k.goal.count||0):0,at:Date.now(),file:name};
-        k.credits=0;if(k.goal&&!k.goal.done)k.goal.count=0;save();overlayClose();render();toast(`${k.name}'s points and stars are in the file`)}
+        overlayClose();toast(`${k.name}'s file is ready to send`)}
       catch(e){btn.disabled=false;btn.textContent="Make the file and send";toast("Couldn't make the file. Try again.")}}},
   addWish(b){wishSheet(kid(b.dataset.id))},
   wishYes(b){const w=S.wishes.find(x=>x.id===b.dataset.id);if(!w)return;const name=($("#wn-"+w.id).value||"").trim()||w.name||"New reward";const cost=Math.max(1,Math.min(999,parseInt($("#wc-"+w.id).value)||10));
