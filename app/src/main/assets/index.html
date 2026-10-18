@@ -1017,7 +1017,7 @@ const PARENT={
       <div class="row">${S.kids.map(k=>`<button class="btn ghost small" data-act="receiveCredits" data-id="${k.id}">Receive for ${esc(k.name)}</button>`).join("")}</div></div>
     ${S.sent.length?`<div class="panel stack"><span class="label">Sent from this tablet</span>${S.sent.slice(-5).reverse().map(x=>`<div class="spread"><span>${x.amt} credits for ${esc(x.name)}</span><span class="muted">${new Date(x.at).toLocaleDateString("en-GB")}</span></div>`).join("")}</div>`:""}`},
   settings(){return `<div class="panel stack"><b>Grown-up PIN</b><p class="muted" style="margin:0">Keeps children out of this area.</p><button class="btn ghost" data-act="changePin">Change PIN</button></div>
-    <div class="panel stack"><b>Trial notes</b><p class="muted" style="margin:0">Everything is saved on this device. With live sync on, points, stars, the shop and history are also kept online for your family; photos, videos and voice notes stay only on the phone that took them. Uninstalling deletes what is on this phone.</p></div>
+    <div class="panel stack"><b>Trial notes</b><p class="muted" style="margin:0">Everything is saved on this device. With live sync on, points, stars, the shop and history are also kept online for your family; photos, videos and voice notes are copied to the other linked phones too. Uninstalling deletes what is on this phone.</p></div>
     <div class="panel stack"><b>Start again</b><p class="muted" style="margin:0">Deletes all children, jobs, photos and credits.</p><button class="btn bad" data-act="resetAll">Delete everything</button></div>`}
 };
 
@@ -1522,20 +1522,31 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
   async function shrink(b){if(!/^image\//.test(b.type)||b.size<450000)return b;try{const bm=await createImageBitmap(b);const sc=Math.min(1,1400/Math.max(bm.width,bm.height));
       const c=document.createElement("canvas");c.width=Math.round(bm.width*sc);c.height=Math.round(bm.height*sc);c.getContext("2d").drawImage(bm,0,0,c.width,c.height);
       const out=await new Promise(r=>c.toBlob(r,"image/jpeg",.78));return out&&out.size<b.size?out:b}catch(e){return b}}
-  const CH=900000;
-  async function upload(id,blob){if(S.up.includes(id))return true;if(S.noUp.includes(id))return false;const b=await shrink(blob);if(b.size>8*1024*1024){S.noUp.push(id);return false}
+  const CH=900000,MAX=25*1024*1024;
+  async function upload(id,blob){if(S.up.includes(id))return true;if(S.noUp.includes(id))return false;let b=await shrink(blob);
+    if(b.size>MAX){S.noUp.push(id);return false}
     const data=await blobToB64(b);const n=Math.ceil(data.length/CH);for(let i=0;i<n;i++)await part(id,i).set({d:data.slice(i*CH,(i+1)*CH)});
     await part(id).set({t:b.type||"application/octet-stream",n,at:Date.now()});S.up.push(id);return true}
   async function download(id){if(await DB.get(id))return true;if(tried.has(id))return false;tried.add(id);
     const m=await part(id).get();if(!m.exists)return false;const {t,n}=m.data();let data="";
     for(let i=0;i<n;i++){const c=await part(id,i).get();if(!c.exists)return false;data+=c.data().d}
     await DB.put(id,b64ToBlob(data,t));if(!S.up.includes(id))S.up.push(id);return true}
+  const mst={sent:0,recv:0,wait:0,big:0,fail:0,now:"",err:""};
+  function showM(){const el=document.getElementById("mstat");if(el)el.innerHTML=mline()}
+  function mline(){const m=mst;const bits=[`${m.sent} sent`,`${m.recv} received`];if(m.wait)bits.push(`${m.wait} still to go`);if(m.big)bits.push(`${m.big} too long to send`);if(m.fail)bits.push(`${m.fail} didn't work`);
+    return `<b>Photos &amp; videos:</b> ${bits.join(" · ")}${m.now?`<br><span class="muted">${esc(m.now)}</span>`:""}${m.err?`<br><span class="muted" style="font-size:13px">${esc(m.err).slice(0,120)}</span>`:""}`}
   async function media(){if(!ref||!first)return;if(mBusy){mAgain=true;return}mBusy=true;let got=false;
-    try{for(const sl of slots()){const L=sl.get(),cur=lastData[sl.key];
-        const hasL=L?!!(await DB.get(L)):false;
-        if(cur&&cur.id&&cur.id!==L&&(!hasL||(cur.at||0)>born(L))){if(await download(cur.id)){sl.set(cur.id);got=true}continue}
-        if(hasL&&(!cur||(cur.id!==L&&born(L)>(cur.at||0)))){const blob=await DB.get(L);if(await upload(L,blob)){const v={id:L,at:born(L)};lastData[sl.key]=v;await ref.set({[sl.key]:v},{merge:true})}}}
-    }catch(e){console.log("media",e)}
+    const list=[];for(const sl of slots()){const L=sl.get(),cur=lastData[sl.key];const hasL=L?!!(await DB.get(L).catch(()=>null)):false;
+      if(cur&&cur.id&&cur.id!==L&&(!hasL||(cur.at||0)>born(L)))list.push({sl,dir:"down",cur});
+      else if(hasL&&(!cur||(cur.id!==L&&born(L)>(cur.at||0))))list.push({sl,dir:"up",L,size:(await DB.get(L)).size||0})}
+    list.sort((a,b)=>(a.dir==="down"?0:1)-(b.dir==="down"?0:1)||(a.size||0)-(b.size||0));
+    const counted=new Set();mst.wait=list.length;mst.fail=0;mst.err="";mst.big=S.noUp.length;
+    let i=0;for(const it of list){i++;mst.now=(it.dir==="up"?"Sending ":"Getting ")+i+" of "+list.length+"…";showM();
+      try{if(it.dir==="down"){if(await download(it.cur.id)){it.sl.set(it.cur.id);got=true;mst.recv++}else mst.fail++}
+        else{const blob=await DB.get(it.L);if(await upload(it.L,blob)){const v={id:it.L,at:born(it.L)};lastData[it.sl.key]=v;await ref.set({[it.sl.key]:v},{merge:true});if(!counted.has(it.L)){counted.add(it.L);mst.sent++}}else mst.big=S.noUp.length}}
+      catch(e){mst.fail++;mst.err=e&&e.message||String(e);console.log("media",e)}
+      mst.wait=list.length-i;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+    mst.now=list.length?(mst.fail?"Some didn't send. Tap Sync photos now to try again.":"All done."):"";showM();
     mBusy=false;if(got){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}liveRender()}else{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}if(mAgain){mAgain=false;media()}}
   function push(){if(!ref||!first)return;clearTimeout(mT);mT=setTimeout(media,400);const up={};
     for(const k of S.kids){const txt=lite(k);if(last[k.id]!==txt){up["k_"+k.id]=txt;last[k.id]=txt}}
@@ -1563,13 +1574,15 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
       :st.state==="connecting"?`<span class="muted">● Connecting…</span>`:st.state==="nosdk"?`<span style="color:#b3261e;font-weight:900">● Live sync needs the latest update of the app</span>`
       :`<span style="color:#b3261e;font-weight:900">● Offline</span> <span class="muted">· changes are saved here and catch up when there's internet${st.err?` (${esc(st.err).slice(0,80)})`:""}</span>`;
     return `<div class="panel stack" id="syncpanel"><b>Live sync between phones</b>
-      ${on?`<div>${line}</div><p class="muted" style="margin:0">Points, stars, the big goal, the shop, wishes, things bought and the history update on every linked phone and tablet within seconds. Photos, videos and voice notes stay on the phone that took them.</p>
-        <div class="row" style="gap:8px"><button class="btn small" data-act="famCode">Show family code</button><button class="btn ghost small" data-act="famLeave">Stop syncing here</button></div>`
+      ${on?`<div>${line}</div><p class="muted" style="margin:0">Points, stars, the big goal, the shop, wishes, things bought and the history update on every linked phone and tablet within seconds. Photos, videos (up to 25 MB each) and voice notes follow in the background. Keep the app open on Wi-Fi while they send.</p>
+        <div id="mstat" style="font-size:15px">${mline()}</div>
+        <div class="row" style="gap:8px"><button class="btn small" data-act="famPics">Sync photos now</button><button class="btn ghost small" data-act="famCode">Show family code</button><button class="btn ghost small" data-act="famLeave">Stop syncing here</button></div>`
       :`<p class="muted" style="margin:0">Link phones over the internet so points, stars, the shop and the history stay the same everywhere. Start the family on one phone, then join on the others.</p>
         <div class="row" style="gap:8px"><button class="btn small" data-act="famNew">Start a family</button><button class="btn ghost small" data-act="famJoin">Join a family</button></div>`}</div>`}
-  return {start,soon,push,forget,panel,joinPrompt,create,showCode,joinMenu,leave,status:st}})();
+  function retryMedia(){tried.clear();mst.sent=0;mst.recv=0;mst.now="Checking…";showM();media()}
+  return {start,soon,push,forget,panel,joinPrompt,create,showCode,joinMenu,leave,status:st,retryMedia,mline}})();
 window.Sync=Sync;
-Object.assign(ACT,{famNew(){Sync.create()},famJoin(){Sync.joinMenu()},famCode(){Sync.showCode()},famLeave(){Sync.leave()}});
+Object.assign(ACT,{famNew(){Sync.create()},famJoin(){Sync.joinMenu()},famCode(){Sync.showCode()},famLeave(){Sync.leave()},famPics(){Sync.retryMedia()}});
 /* ---------- Updates: the app checks for a newer trial build and installs it from inside the app ---------- */
 const Upd=(()=>{let bar=null,info=null;
   function el(html){if(!bar){bar=document.createElement("div");bar.className="updbar";document.body.appendChild(bar)}bar.innerHTML=html;return bar}
