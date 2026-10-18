@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Tidy Quest</title>
+<style>
+/* Fonts are fetched into assets/fonts by the GitHub build; every face has a fallback. */
+@font-face{font-family:"Nunito";src:url(fonts/nunito-400.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Nunito";src:url(fonts/nunito-800.woff2) format("woff2");font-weight:800;font-display:swap}
+@font-face{font-family:"BlackOps";src:url(fonts/black-ops-one.woff2) format("woff2");font-display:swap}
+@font-face{font-family:"Kaushan";src:url(fonts/kaushan-script.woff2) format("woff2");font-display:swap}
+@font-face{font-family:"Bangers";src:url(fonts/bangers.woff2) format("woff2");font-display:swap}
+@font-face{font-family:"Monoton";src:url(fonts/monoton.woff2) format("woff2");font-display:swap}
+@font-face{font-family:"Orbitron";src:url(fonts/orbitron.woff2) format("woff2");font-display:swap}
+@font-face{font-family:"Graduate";src:url(fonts/graduate.woff2) format("woff2");font-display:swap}
+
+/* Layout: one column, big touch targets; each child theme swaps the tokens below. */
+:root{
+  --bg:#f3f1ec; --panel:#ffffff; --ink:#22211f; --muted:#6c6862; --line:#e1ddd4;
+  --accent:#2f6f5e; --accent-ink:#ffffff; --good:#2e8a4f; --warn:#c9771a; --bad:#c23a32;
+  --display:"Nunito",system-ui,sans-serif; --body:"Nunito",system-ui,sans-serif;
+  --radius:18px;
+}
+body[data-theme="army"]{--bg:#2f3a24;--panel:#45543a;--ink:#f1ecd6;--muted:#c3c1a4;--line:#5d6c4c;--accent:#e0b23c;--accent-ink:#1f2618;--display:"BlackOps","Impact",sans-serif}
+body[data-theme="karate"]{--bg:#f4ede1;--panel:#fffaf2;--ink:#1d1a17;--muted:#7a6f62;--line:#e2d6c3;--accent:#c0262d;--accent-ink:#ffffff;--display:"Kaushan","Brush Script MT",cursive}
+body[data-theme="hero"]{--bg:#16245c;--panel:#22357f;--ink:#ffffff;--muted:#b3bfee;--line:#3550a8;--accent:#ffcf1f;--accent-ink:#16245c;--display:"Bangers","Impact",sans-serif}
+body[data-theme="pop"]{--bg:#1a0f2e;--panel:#2b1a4a;--ink:#ffffff;--muted:#cbb4ec;--line:#4a2f78;--accent:#ff4fb4;--accent-ink:#1a0f2e;--display:"Monoton","Impact",sans-serif}
+body[data-theme="space"]{--bg:#0b1026;--panel:#18204a;--ink:#eef2ff;--muted:#a3aedd;--line:#2a3570;--accent:#5fe0ff;--accent-ink:#0b1026;--display:"Orbitron","Trebuchet MS",sans-serif}
+body[data-theme="football"]{--bg:#0f5a32;--panel:#167a45;--ink:#ffffff;--muted:#c4e6d1;--line:#2a8f58;--accent:#f6e05e;--accent-ink:#0f3a22;--display:"Graduate","Rockwell",serif}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 17px/1.45 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  transition:background .3s}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+input,select{font:inherit;color:var(--ink);background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:12px 14px;width:100%}
+img{max-width:100%;display:block}
+[hidden]{display:none!important}
+#app{max-width:760px;margin:0 auto;padding-block:16px 40px;display:flex;flex-direction:column;gap:16px}
+
+h1,h2,h3{margin:0;text-wrap:balance}
+.display{font-family:var(--display);font-weight:400;letter-spacing:.02em;line-height:1.1}
+h1.display{font-size:clamp(28px,7vw,44px)}
+h2.display{font-size:clamp(22px,5vw,30px)}
+.label{font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.spread{display:flex;gap:12px;align-items:center;justify-content:space-between}
+.stack{display:flex;flex-direction:column;gap:12px}
+.panel{background:var(--panel);border-radius:var(--radius);padding:16px;border:2px solid var(--line)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:0 22px;border-radius:999px;
+  background:var(--accent);color:var(--accent-ink);font-weight:800;font-size:18px}
+.btn.big{min-height:68px;font-size:22px;width:100%}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line)}
+.btn.small{min-height:40px;padding:0 14px;font-size:15px}
+.btn.good{background:var(--good);color:#fff}
+.btn.bad{background:transparent;color:var(--bad);border:2px solid var(--bad)}
+.btn:disabled{opacity:.4}
+.btn:active{transform:scale(.97)}
+.iconbtn{width:48px;height:48px;border-radius:50%;display:inline-grid;place-items:center;border:2px solid var(--line);background:var(--panel)}
+.iconbtn svg{width:24px;height:24px}
+
+.topbar{display:flex;align-items:center;gap:12px}
+.topbar .grow{flex:1;min-width:0}
+
+/* Kid HQ */
+.hq-head{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center}
+.badge{width:84px;height:84px}
+.meter{height:14px;border-radius:999px;background:var(--line);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .6s}
+.wallet{display:flex;align-items:baseline;gap:8px}
+.wallet b{font-size:44px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+
+.jobcard{display:grid;grid-template-columns:96px 1fr auto;gap:14px;align-items:center;text-align:left;width:100%;
+  background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);padding:10px}
+.thumb{width:96px;height:96px;border-radius:12px;object-fit:cover;background:var(--line)}
+.jobcard .t{font-weight:800;font-size:19px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:13px;font-weight:800;background:var(--line);color:var(--ink)}
+.chip.wait{background:var(--warn);color:#fff}
+.chip.prize{background:var(--accent);color:var(--accent-ink)}
+
+/* Job screen */
+.hero-photo{width:100%;max-height:46vh;object-fit:cover;border-radius:var(--radius);background:var(--line)}
+.step{display:grid;grid-template-columns:64px 1fr 64px;gap:12px;align-items:center;background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);padding:10px}
+.step.done{opacity:.55}
+.step.done .stext{text-decoration:line-through}
+.play{width:64px;height:64px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center}
+.play svg{width:30px;height:30px}
+.tick{width:64px;height:64px;border-radius:50%;border:4px solid var(--line);display:grid;place-items:center}
+.tick svg{width:34px;height:34px;opacity:0}
+.step.done .tick{background:var(--good);border-color:var(--good);color:#fff}
+.step.done .tick svg{opacity:1}
+.stext{font-size:19px;font-weight:800;min-width:0}
+.clock{font-size:40px;font-weight:800;font-variant-numeric:tabular-nums;text-align:center}
+
+/* Shop */
+.shopgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.reward{background:var(--panel);border:2px solid var(--line);border-radius:var(--radius);padding:14px;display:flex;flex-direction:column;gap:8px;align-items:center;text-align:center}
+.reward .ico{font-size:44px;line-height:1}
+.reward .n{font-weight:800}
+
+/* Style picker */
+.styles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.style{border-radius:var(--radius);padding:18px 14px;min-height:120px;display:flex;flex-direction:column;justify-content:space-between;text-align:left;border:3px solid transparent}
+.style.on{border-color:var(--accent);outline:3px solid var(--ink)}
+.style .nm{font-size:26px;line-height:1}
+
+/* Parent */
+body.parent{--bg:#f3f1ec;--panel:#fff;--ink:#22211f;--muted:#6c6862;--line:#e1ddd4;--accent:#2f6f5e;--accent-ink:#fff;--display:"Nunito",system-ui,sans-serif}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.tab{padding:10px 16px;border-radius:999px;font-weight:800;white-space:nowrap;border:2px solid var(--line)}
+.tab.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tab .n{display:inline-block;min-width:22px;padding:0 6px;margin-left:6px;border-radius:999px;background:var(--warn);color:#fff;font-size:13px}
+.photo-slot{width:100%;aspect-ratio:4/3;max-width:100%;border-radius:var(--radius);border:3px dashed var(--line);display:grid;place-items:center;overflow:hidden;background:var(--panel)}
+.photo-slot img{width:100%;height:100%;object-fit:cover}
+.pstep{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px;border-radius:14px;background:var(--bg)}
+.rec{width:88px;height:88px;border-radius:50%;background:var(--bad);color:#fff;display:grid;place-items:center;margin:0 auto}
+.rec svg{width:38px;height:38px}
+.rec.on{animation:pulse 1s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 14px rgba(194,58,50,.25)}}
+.seg{display:flex;flex-wrap:wrap;gap:8px}
+.seg button{padding:10px 14px;border-radius:12px;border:2px solid var(--line);font-weight:800}
+.seg button.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pair img{aspect-ratio:1;object-fit:cover;border-radius:12px;width:100%}
+
+/* PIN */
+.pin-dots{display:flex;gap:14px;justify-content:center}
+.pin-dots i{width:18px;height:18px;border-radius:50%;border:3px solid var(--ink)}
+.pin-dots i.on{background:var(--ink)}
+.pinpad{display:grid;grid-template-columns:repeat(3,76px);gap:12px;justify-content:center}
+.pinpad button{height:76px;border-radius:50%;background:var(--panel);border:2px solid var(--line);font-size:28px;font-weight:800}
+
+/* Overlays */
+.overlay{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.72);display:grid;place-items:center;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.sheet{background:var(--panel);color:var(--ink);border-radius:24px;padding:22px;width:min(520px,100%);max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:14px}
+.camwrap video{width:100%;border-radius:16px;background:#000;max-height:60vh;object-fit:cover}
+.celebrate{text-align:center}
+.celebrate .big{font-size:clamp(30px,8vw,48px)}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:60}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:70;background:var(--ink);color:var(--bg);padding:12px 20px;border-radius:999px;font-weight:800;max-width:90vw}
+.kidpick{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.kidpick button{border-radius:var(--radius);padding:20px;min-height:140px;text-align:left;display:flex;flex-direction:column;justify-content:space-between}
+.empty{text-align:center;padding:28px 16px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main id="app" aria-live="polite"></main>
+<canvas id="confetti" hidden></canvas>
+<input type="file" id="filepick" accept="image/*" hidden>
+<script>
+"use strict";
+/* ---------- Themes ---------- */
+const THEMES={
+  army:{label:"Army",job:"Mission",jobs:"Missions",cur:"Medals",start:"Start mission",done:"Mission complete!",
+    empty:"No missions today. At ease, soldier!",shop:"Supply Store",hello:"Reporting for duty",
+    ranks:["Recruit","Private","Corporal","Sergeant","Lieutenant","Captain","General"],
+    cheers:["Outstanding work, soldier!","Mission accomplished!","The General is proud!"],wave:"square",notes:[392,523,659,784],swatch:["#2f3a24","#e0b23c"]},
+  karate:{label:"Karate",job:"Challenge",jobs:"Challenges",cur:"Points",start:"Bow and begin",done:"Osu! Challenge complete!",
+    empty:"No challenges. Rest in the dojo.",shop:"Dojo Shop",hello:"Welcome to the dojo",
+    ranks:["White Belt","Yellow Belt","Orange Belt","Green Belt","Blue Belt","Brown Belt","Black Belt"],
+    belts:["#f4f4f4","#f2d22e","#f08a24","#3a9a4a","#2d62c4","#7a4a26","#151515"],
+    cheers:["Strong focus!","Sensei is impressed!","Osu!"],wave:"triangle",notes:[330,440,554,659],swatch:["#f4ede1","#c0262d"]},
+  hero:{label:"Superhero",job:"Rescue",jobs:"Rescues",cur:"Power",start:"Suit up",done:"You saved the day!",
+    empty:"The city is safe. For now.",shop:"Hero Vault",hello:"Hero HQ",
+    ranks:["Sidekick","Rookie Hero","Hero","Super Hero","Captain Hero","Mega Hero","Legend"],
+    cheers:["Kapow! Brilliant!","Hero of the house!","Super speed tidy!"],wave:"sawtooth",notes:[262,392,523,784],swatch:["#16245c","#ffcf1f"]},
+  pop:{label:"Pop Star",job:"Gig",jobs:"Gigs",cur:"Fans",start:"Hit the stage",done:"Encore! Encore!",
+    empty:"No gigs booked. Practise your moves!",shop:"Merch Stand",hello:"Backstage",
+    ranks:["Busker","Open Mic","Opening Act","Chart Climber","Headliner","Superstar","Megastar"],
+    cheers:["The crowd goes wild!","Number one hit!","What a performance!"],wave:"sine",notes:[523,659,784,1047],swatch:["#1a0f2e","#ff4fb4"]},
+  space:{label:"Space",job:"Mission",jobs:"Missions",cur:"Stardust",start:"Blast off",done:"Touchdown! Mission complete!",
+    empty:"No missions. Enjoy the view from orbit.",shop:"Space Station Shop",hello:"Mission Control",
+    ranks:["Cadet","Pilot","Navigator","Commander","Captain","Admiral","Star Legend"],
+    cheers:["Out of this world!","Houston, we have a tidy room!","Stellar work!"],wave:"sine",notes:[220,330,440,880],swatch:["#0b1026","#5fe0ff"]},
+  football:{label:"Football",job:"Drill",jobs:"Drills",cur:"Goals",start:"Kick off",done:"GOAL! Drill complete!",
+    empty:"No drills today. Rest those legs.",shop:"Club Shop",hello:"The changing room",
+    ranks:["Ball Kid","Sub","Starter","Vice Captain","Captain","Golden Boot","Legend"],
+    cheers:["What a finish!","Man of the match!","Top bins!"],wave:"square",notes:[294,370,440,587],swatch:["#0f5a32","#f6e05e"]}
+};
+const RANK_AT=[0,10,25,50,90,150,250];
+const DEFAULT_REWARDS=[
+  {icon:"🍮",name:"Pudding after tea",cost:5},
+  {icon:"📺",name:"20 minutes extra screen time",cost:8},
+  {icon:"🎬",name:"Pick the family film",cost:10},
+  {icon:"🌙",name:"Stay up 15 minutes later",cost:12},
+  {icon:"🛝",name:"Trip to the park",cost:15},
+  {icon:"🪙",name:"£1 pocket money",cost:10}
+];
+
+/* ---------- Storage ---------- */
+const KEY="tq_state_v1";
+let S;
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function load(){
+  try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}
+  if(!S){S={pin:null,kids:[],jobs:[],rewards:DEFAULT_REWARDS.map(r=>({...r,id:uid()})),requests:[]}}
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast("Couldn't save. The tablet may be low on space.")}}
+
+const DB=(()=>{let p;function open(){return p||(p=new Promise((res,rej)=>{const r=indexedDB.open("tq_media",1);
+  r.onupgradeneeded=()=>r.result.createObjectStore("b");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}))}
+  function tx(mode,fn){return open().then(db=>new Promise((res,rej)=>{const t=db.transaction("b",mode);const q=fn(t.objectStore("b"));
+    t.oncomplete=()=>res(q&&q.result);t.onerror=()=>rej(t.error)}))}
+  return{put:(id,blob)=>tx("readwrite",s=>s.put(blob,id)),get:id=>tx("readonly",s=>s.get(id)),del:id=>tx("readwrite",s=>s.delete(id))}})();
+const urlCache={};
+async function mediaURL(id){if(!id)return null;if(urlCache[id])return urlCache[id];const b=await DB.get(id);if(!b)return null;return urlCache[id]=URL.createObjectURL(b)}
+async function putMedia(blob){const id="m"+uid();await DB.put(id,blob);urlCache[id]=URL.createObjectURL(blob);return id}
+function delMedia(id){if(id){DB.del(id).catch(()=>{});if(urlCache[id]){URL.revokeObjectURL(urlCache[id]);delete urlCache[id]}}}
+async function hydrate(root){for(const el of root.querySelectorAll("[data-media]")){const u=await mediaURL(el.dataset.media);if(u)el.src=u}}
+
+/* ---------- Helpers ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+const tomorrow=()=>{const d=new Date();d.setDate(d.getDate()+1);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+const kid=id=>S.kids.find(k=>k.id===id);
+const T=k=>THEMES[(k&&k.theme)||"army"];
+function rankOf(earned){let i=0;RANK_AT.forEach((v,j)=>{if(earned>=v)i=j});return i}
+function toast(msg){const t=document.createElement("div");t.className="toast";t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2600)}
+const IC={
+  play:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
+  tick:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>',
+  mic:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-6a3.5 3.5 0 0 0-7 0v6A3.5 3.5 0 0 0 12 15zm6-3.5a6 6 0 0 1-12 0H4.5a7.5 7.5 0 0 0 6.75 7.46V21h1.5v-2.04a7.5 7.5 0 0 0 6.75-7.46z"/></svg>',
+  stop:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>',
+  back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
+  lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg>',
+  cam:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z"/><circle cx="12" cy="13.5" r="3.5"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13"/></svg>'
+};
+function badgeSVG(k){
+  const th=T(k), r=rankOf(k.earned||0);
+  if(k.theme==="karate"){const c=th.belts[r];
+    return `<svg class="badge" viewBox="0 0 100 100" aria-label="${esc(th.ranks[r])}"><circle cx="50" cy="50" r="48" fill="var(--panel)" stroke="var(--line)" stroke-width="3"/>
+    <rect x="10" y="40" width="80" height="18" rx="4" fill="${c}" stroke="#00000033" stroke-width="2"/><path d="M44 58l-10 26 9-3 5 7 4-30z" fill="${c}" stroke="#00000033" stroke-width="2"/><path d="M56 58l10 26-9-3-5 7-4-30z" fill="${c}" stroke="#00000033" stroke-width="2"/><rect x="42" y="37" width="16" height="24" rx="3" fill="${c}" stroke="#00000055" stroke-width="2"/></svg>`}
+  let stars="";const n=r;for(let i=0;i<n;i++){const a=(-90+(i-(n-1)/2)*26)*Math.PI/180;const x=50+30*Math.cos(a),y=58+30*Math.sin(a);
+    stars+=`<path transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(.55)" d="M0-10l2.9 6 6.6.9-4.8 4.6 1.2 6.5L0 4.9-5.9 8l1.2-6.5-4.8-4.6 6.6-.9z" fill="var(--accent-ink)"/>`}
+  return `<svg class="badge" viewBox="0 0 100 100" aria-label="${esc(th.ranks[r])}"><path d="M50 4l40 14v28c0 26-18 42-40 50C28 88 10 72 10 46V18z" fill="var(--accent)"/>
+  <text x="50" y="66" text-anchor="middle" font-size="34" font-weight="800" fill="var(--accent-ink)" font-family="Nunito,sans-serif">${r+1}</text>${stars}</svg>`;
+}
+
+/* ---------- Speech + sound ---------- */
+function speak(text){if(!text)return;
+  if(window.AndroidTTS){try{AndroidTTS.speak(text);return}catch(e){}}
+  if("speechSynthesis" in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang="en-GB";u.rate=.95;speechSynthesis.speak(u)}}
+let actx;let curAudio;
+function tone(freq,dur,type,when=0,vol=.18){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+  const o=actx.createOscillator(),g=actx.createGain();o.type=type;o.frequency.value=freq;const t=actx.currentTime+when;
+  g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);o.connect(g).connect(actx.destination);o.start(t);o.stop(t+dur)}catch(e){}}
+function sfxTick(k){tone(T(k).notes[2],.12,T(k).wave)}
+function sfxFanfare(k){const th=T(k);th.notes.forEach((f,i)=>tone(f,.28,th.wave,i*.13));tone(th.notes[3],.7,th.wave,.55)}
+async function playClip(id){if(curAudio){curAudio.pause()}const u=await mediaURL(id);if(!u)return;curAudio=new Audio(u);curAudio.play().catch(()=>{})}
+
+/* ---------- Confetti ---------- */
+function confetti(k){if(matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+  const c=$("#confetti"),x=c.getContext("2d");c.hidden=false;c.width=innerWidth;c.height=innerHeight;
+  const cs=getComputedStyle(document.body);const cols=[cs.getPropertyValue("--accent"),"#ffffff",cs.getPropertyValue("--good"),"#ff5f6d","#5fb4ff"];
+  const P=Array.from({length:140},()=>({x:Math.random()*c.width,y:-20-Math.random()*c.height*.5,vx:(Math.random()-.5)*4,vy:2+Math.random()*4,r:Math.random()*6.28,s:6+Math.random()*8,c:cols[Math.floor(Math.random()*cols.length)]}));
+  let f=0;(function step(){x.clearRect(0,0,c.width,c.height);P.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.06;p.r+=.15;x.save();x.translate(p.x,p.y);x.rotate(p.r);x.fillStyle=p.c;x.fillRect(-p.s/2,-p.s/4,p.s,p.s/2);x.restore()});
+    if(++f<170)requestAnimationFrame(step);else{c.hidden=true}})()}
+
+/* ---------- Navigation ---------- */
+let stack=[];let view=null;
+function go(name,args={},replace=false){if(view&&!replace)stack.push(view);view={name,args};render()}
+function back(){if(overlayClose()){return true}if(!stack.length)return false;view=stack.pop();render();return true}
+window.appBack=()=>back()?"handled":"exit";
+function home(){stack=[];const kids=S.kids;
+  if(!S.pin){view={name:"welcome",args:{}}}
+  else if(kids.length===1){view={name:"hq",args:{kid:kids[0].id}}}
+  else{view={name:"pick",args:{}}}
+  render()}
+
+function setBodyTheme(k,parent){document.body.classList.toggle("parent",!!parent);document.body.dataset.theme=parent?"":(k?k.theme:"")}
+
+const VIEWS={};
+async function render(){stopTimer();const v=VIEWS[view.name];const app=$("#app");app.innerHTML=await v(view.args);await hydrate(app);window.scrollTo(0,0);if(v.after)v.after(view.args)}
+
+/* ---------- Overlays ---------- */
+let overlayEl=null,overlayOnClose=null;
+function overlay(html,onClose){overlayClose();overlayEl=document.createElement("div");overlayEl.className="overlay";overlayEl.innerHTML=`<div class="sheet">${html}</div>`;
+  document.body.appendChild(overlayEl);overlayOnClose=onClose;hydrate(overlayEl);return overlayEl}
+function overlayClose(){if(!overlayEl)return false;overlayEl.remove();overlayEl=null;const f=overlayOnClose;overlayOnClose=null;if(f)f();return true}
+
+/* ---------- Welcome / setup ---------- */
+VIEWS.welcome=()=>{setBodyTheme(null,true);return `
+  <div class="stack" style="padding-top:8vh">
+    <span class="label">Set up</span>
+    <h1 class="display" style="font-size:44px">Tidy Quest</h1>
+    <p>You photograph the mess and record exactly where things go. Your child works through it as a game on this tablet and earns family credits to spend on treats you choose.</p>
+    <div class="panel stack">
+      <label class="label" for="kidname">Child's name</label>
+      <input id="kidname" autocomplete="off" placeholder="e.g. Alfie" maxlength="20">
+      <p class="muted" style="margin:0">You can add more children later.</p>
+    </div>
+    <button class="btn big" data-act="setupPin">Next: set a grown-up PIN</button>
+  </div>`};
+
+function pinPad(title,sub,onDone){let val="";
+  const draw=()=>{$("#pd").innerHTML=[0,1,2,3].map(i=>`<i class="${i<val.length?"on":""}"></i>`).join("")};
+  const el=overlay(`<div class="stack" style="align-items:center;text-align:center"><h2 class="display">${esc(title)}</h2><p class="muted" style="margin:0">${esc(sub)}</p>
+    <div class="pin-dots" id="pd"></div><div class="pinpad">${[1,2,3,4,5,6,7,8,9,"",0,"⌫"].map(n=>n===""?"<span></span>":`<button data-k="${n}" aria-label="${n==="⌫"?"Delete":n}">${n}</button>`).join("")}</div>
+    <button class="btn ghost small" data-k="x">Cancel</button></div>`);
+  draw();
+  el.addEventListener("click",e=>{const b=e.target.closest("[data-k]");if(!b)return;const k=b.dataset.k;
+    if(k==="x"){overlayClose();return}
+    if(k==="⌫"){val=val.slice(0,-1)}else if(val.length<4){val+=k}
+    draw();if(val.length===4){const v=val;setTimeout(()=>{if(onDone(v)===false){val="";draw();el.querySelector(".pin-dots").animate([{transform:"translateX(-8px)"},{transform:"translateX(8px)"},{transform:"none"}],{duration:250})}},120)}})}
+
+/* ---------- Kid pick ---------- */
+VIEWS.pick=()=>{setBodyTheme(null,true);return `
+  <div class="spread"><h1 class="display">Who's playing?</h1><button class="iconbtn" data-act="parent" aria-label="Grown-ups">${IC.lock}</button></div>
+  <div class="kidpick">${S.kids.map(k=>{const th=T(k);return `<button data-act="openKid" data-id="${k.id}" style="background:${th.swatch[0]};color:#fff;border:3px solid ${th.swatch[1]}">
+    <span style="font-size:28px;font-weight:800">${esc(k.name)}</span><span style="color:${th.swatch[1]};font-weight:800">${esc(th.ranks[rankOf(k.earned||0)])} · ${k.credits} ${esc(th.cur)}</span></button>`}).join("")}</div>
+  ${S.kids.length?"":`<div class="panel empty">No children set up yet. Tap the lock to add one.</div>`}`};
+
+/* ---------- Kid HQ ---------- */
+function kidJobs(k){const d=today();return S.jobs.filter(j=>j.kid===k.id&&(j.status==="pending"||(j.status==="todo"&&(!j.from||j.from<=d))))}
+VIEWS.hq=({kid:id})=>{const k=kid(id);if(!k){home();return""}setBodyTheme(k);const th=T(k);
+  const r=rankOf(k.earned||0),next=RANK_AT[r+1];const pct=next?Math.round(((k.earned-RANK_AT[r])/(next-RANK_AT[r]))*100):100;
+  const jobs=kidJobs(k);
+  return `
+  <div class="spread">
+    ${S.kids.length>1?`<button class="iconbtn" data-act="back" aria-label="Back">${IC.back}</button>`:"<span></span>"}
+    <div class="row"><button class="btn ghost small" data-act="style" data-id="${k.id}">Change style</button>
+    <button class="iconbtn" data-act="parent" aria-label="Grown-ups">${IC.lock}</button></div>
+  </div>
+  <div class="hq-head">${badgeSVG(k)}
+    <div class="stack" style="gap:6px;min-width:0"><span class="label">${esc(th.hello)}</span><h1 class="display">${esc(k.name)}</h1>
+      <div><b>${esc(th.ranks[r])}</b>${next?` <span class="muted">· ${next-k.earned} ${esc(th.cur.toLowerCase())} to ${esc(th.ranks[r+1])}</span>`:` <span class="muted">· top rank!</span>`}</div>
+      <div class="meter" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div></div></div>
+  <div class="panel spread"><div class="wallet"><b>${k.credits}</b><span class="label">${esc(th.cur)}</span></div>
+    <button class="btn" data-act="shop" data-id="${k.id}">${esc(th.shop)}</button></div>
+  <h2 class="display">${esc(th.jobs)}</h2>
+  <div class="stack">${jobs.length?jobs.map(j=>`<button class="jobcard" data-act="job" data-id="${j.id}">
+      ${j.photo?`<img class="thumb" data-media="${j.photo}" alt="">`:`<span class="thumb"></span>`}
+      <span class="stack" style="gap:6px;min-width:0"><span class="t">${esc(j.title||th.job)}</span>
+        <span class="row" style="gap:6px">${j.status==="pending"?`<span class="chip wait">Waiting for a grown-up</span>`:`<span class="chip">${j.steps.length} step${j.steps.length===1?"":"s"}</span>`}${j.timer?`<span class="chip">Beat the clock</span>`:""}</span></span>
+      <span class="chip prize">+${j.credits}</span></button>`).join(""):`<div class="panel empty display" style="font-size:22px">${esc(th.empty)}</div>`}</div>`};
+VIEWS.hq.after=({kid:id})=>{const k=kid(id);if(k&&k.rankUp){const th=T(k);const name=th.ranks[rankOf(k.earned)];delete k.rankUp;save();
+  setTimeout(()=>{sfxFanfare(k);confetti(k);overlay(`<div class="celebrate stack" style="align-items:center">${badgeSVG(k)}<span class="label">Promotion</span><div class="display big">${esc(name)}</div><p>You've earned a new rank, ${esc(k.name)}!</p><button class="btn big" data-close>Brilliant</button></div>`);speak(`Promotion! You are now ${name}`)},300)}};
+
+/* ---------- Style picker ---------- */
+VIEWS.style=({kid:id})=>{const k=kid(id);setBodyTheme(k);return `
+  <div class="topbar"><button class="iconbtn" data-act="back" aria-label="Back">${IC.back}</button><h1 class="display grow">Pick your style</h1></div>
+  <div class="styles">${Object.entries(THEMES).map(([key,th])=>`<button class="style ${k.theme===key?"on":""}" data-act="setStyle" data-id="${k.id}" data-theme="${key}" style="background:${th.swatch[0]};color:#fff">
+    <span class="nm" style="font-family:${themeFont(key)};color:${th.swatch[1]}">${esc(th.label)}</span><span style="font-weight:800">${esc(th.ranks[0])} → ${esc(th.ranks[6])}</span></button>`).join("")}</div>`};
+function themeFont(key){return {army:'"BlackOps",Impact',karate:'"Kaushan",cursive',hero:'"Bangers",Impact',pop:'"Monoton",Impact',space:'"Orbitron",sans-serif',football:'"Graduate",serif'}[key]}
+
+/* ---------- Doing a job ---------- */
+let timerInt=null;
+function stopTimer(){if(timerInt){clearInterval(timerInt);timerInt=null}}
+VIEWS.job=({id})=>{const j=S.jobs.find(x=>x.id===id);const k=kid(j.kid);setBodyTheme(k);const th=T(k);
+  const started=!!j.run;const allDone=j.steps.length===0||j.steps.every(s=>j.run&&j.run.done.includes(s.id));
+  if(j.status==="pending")return `<div class="topbar"><button class="iconbtn" data-act="back" aria-label="Back">${IC.back}</button><h1 class="display grow">${esc(j.title||th.job)}</h1></div>
+    <div class="panel empty stack" style="align-items:center"><h2 class="display">Report sent!</h2><p>A grown-up will check it and give you your ${esc(th.cur.toLowerCase())}.</p></div>`;
+  return `
+  <div class="topbar"><button class="iconbtn" data-act="back" aria-label="Back">${IC.back}</button><div class="grow"><span class="label">${esc(th.job)} · +${j.credits} ${esc(th.cur)}</span><h1 class="display">${esc(j.title||th.job)}</h1></div></div>
+  ${j.photo?`<img class="hero-photo" data-media="${j.photo}" alt="The mess to tidy">`:""}
+  ${j.timer?`<div class="panel"><div class="clock" id="clock">${fmt(j.timer*60)}</div><p class="muted" style="text-align:center;margin:0">Finish in time for +${bonus(j)} bonus ${esc(th.cur.toLowerCase())}</p></div>`:""}
+  ${!started?`<button class="btn big" data-act="startJob" data-id="${j.id}">${esc(th.start)}</button>`:""}
+  <div class="stack">${j.steps.map((s,i)=>{const d=started&&j.run.done.includes(s.id);return `<div class="step ${d?"done":""}">
+      <button class="play" data-act="playStep" data-job="${j.id}" data-step="${s.id}" aria-label="Listen to step ${i+1}">${IC.play}</button>
+      <div class="stext">${esc(s.text||("Step "+(i+1)))}</div>
+      <button class="tick" data-act="tickStep" data-job="${j.id}" data-step="${s.id}" aria-label="Step ${i+1} done" ${started?"":"disabled"}>${IC.tick}</button></div>`}).join("")}</div>
+  ${started?`<button class="btn big" data-act="finishJob" data-id="${j.id}" ${allDone?"":"disabled"}>${esc(th.done.replace(/!.*$/,"!"))}</button>`:""}`};
+VIEWS.job.after=({id})=>{const j=S.jobs.find(x=>x.id===id);if(j&&j.run&&j.timer)runClock(j)};
+function fmt(sec){sec=Math.max(0,Math.round(sec));return Math.floor(sec/60)+":"+String(sec%60).padStart(2,"0")}
+function bonus(j){return Math.max(1,Math.ceil(j.credits/2))}
+function runClock(j){const end=j.run.start+j.timer*60000;const c=$("#clock");const tick=()=>{const left=(end-Date.now())/1000;if(c){c.textContent=left>0?fmt(left):"Time's up!"}};tick();timerInt=setInterval(tick,500)}
+async function playStep(j,s){if(s.audio)await playClip(s.audio);else speak(s.text)}
+
+/* ---------- Shop ---------- */
+VIEWS.shop=({kid:id})=>{const k=kid(id);setBodyTheme(k);const th=T(k);
+  const mine=S.requests.filter(r=>r.kid===k.id&&r.status==="asked");
+  return `
+  <div class="topbar"><button class="iconbtn" data-act="back" aria-label="Back">${IC.back}</button><h1 class="display grow">${esc(th.shop)}</h1></div>
+  <div class="panel wallet"><b>${k.credits}</b><span class="label">${esc(th.cur)} to spend</span></div>
+  ${mine.length?`<div class="panel stack"><span class="label">On its way</span>${mine.map(r=>`<div class="spread"><span>${esc(r.icon)} ${esc(r.name)}</span><span class="chip wait">Ask a grown-up</span></div>`).join("")}</div>`:""}
+  <div class="shopgrid">${S.rewards.map(r=>`<div class="reward"><span class="ico">${esc(r.icon)}</span><span class="n">${esc(r.name)}</span>
+    <button class="btn small" data-act="buy" data-kid="${k.id}" data-id="${r.id}" ${k.credits<r.cost?"disabled":""}>${r.cost} ${esc(th.cur)}</button></div>`).join("")}</div>`};
+
+/* ---------- Parent area ---------- */
+const PTABS=[["jobs","Jobs"],["check","To check"],["rewards","Rewards"],["kids","Children"],["settings","Settings"]];
+function pendingCount(){return S.jobs.filter(j=>j.status==="pending").length+S.requests.filter(r=>r.status==="asked").length}
+VIEWS.parent=({tab="jobs"})=>{setBodyTheme(null,true);const pc=pendingCount();
+  const head=`<div class="spread"><h1 class="display">Grown-ups</h1><button class="btn ghost small" data-act="exitParent">Back to kids</button></div>
+  <div class="tabs" role="tablist">${PTABS.map(([k,l])=>`<button class="tab ${tab===k?"on":""}" role="tab" data-act="ptab" data-tab="${k}">${l}${k==="check"&&pc?`<span class="n">${pc}</span>`:""}</button>`).join("")}</div>`;
+  return head+PARENT[tab]()};
+const PARENT={
+  jobs(){const list=[...S.jobs].sort((a,b)=>(b.created||0)-(a.created||0));return `
+    <button class="btn big" data-act="newJob" ${S.kids.length?"":"disabled"}>${IC.cam} New job</button>
+    ${list.length?`<div class="stack">${list.map(j=>{const k=kid(j.kid);return `<button class="jobcard" data-act="editJob" data-id="${j.id}">
+      ${j.photo?`<img class="thumb" data-media="${j.photo}" alt="">`:`<span class="thumb"></span>`}
+      <span class="stack" style="gap:4px;min-width:0"><span class="t">${esc(j.title||"Untitled job")}</span><span class="muted">${esc(k?k.name:"?")} · ${j.steps.length} steps${j.repeat?" · daily":""}</span>
+      <span>${j.status==="pending"?`<span class="chip wait">To check</span>`:j.status==="todo"&&j.from&&j.from>today()?`<span class="chip">Back tomorrow</span>`:`<span class="chip">Live</span>`}</span></span>
+      <span class="chip prize">+${j.credits}</span></button>`}).join("")}</div>`:`<div class="panel empty"><b>No jobs yet.</b><p class="muted">Tap New job, photograph the mess, then record one voice note per step: "Lego in the red box", "pants in the washing basket". Clear steps get better results.</p></div>`}`},
+  check(){const jobs=S.jobs.filter(j=>j.status==="pending");const reqs=S.requests.filter(r=>r.status==="asked");
+    if(!jobs.length&&!reqs.length)return `<div class="panel empty muted">Nothing waiting. Finished jobs and reward requests appear here.</div>`;
+    return `<div class="stack">${jobs.map(j=>{const k=kid(j.kid);const th=T(k);const earned=j.credits+(j.beat?bonus(j):0);return `<div class="panel stack">
+      <div class="spread"><b>${esc(k.name)}: ${esc(j.title||"Job")}</b>${j.beat?`<span class="chip prize">Beat the clock</span>`:""}</div>
+      <div class="pair">${j.photo?`<figure style="margin:0"><img data-media="${j.photo}" alt="Before"><figcaption class="label">Before</figcaption></figure>`:""}${j.after?`<figure style="margin:0"><img data-media="${j.after}" alt="After"><figcaption class="label">After</figcaption></figure>`:""}</div>
+      <div class="row"><button class="btn good" data-act="approve" data-id="${j.id}">Approve +${earned} ${esc(th.cur)}</button><button class="btn bad" data-act="sendBack" data-id="${j.id}">Not done yet</button></div></div>`}).join("")}
+      ${reqs.map(r=>{const k=kid(r.kid);return `<div class="panel spread"><span><b>${esc(k?k.name:"?")}</b> bought ${esc(r.icon)} ${esc(r.name)}</span>
+      <span class="row"><button class="btn good small" data-act="given" data-id="${r.id}">Given</button><button class="btn bad small" data-act="refund" data-id="${r.id}">Refund</button></span></div>`}).join("")}</div>`},
+  rewards(){return `<p class="muted" style="margin:0">Family credits can buy anything you decide: treats, time, privileges or pocket money.</p>
+    <div class="stack">${S.rewards.map(r=>`<div class="panel row" style="gap:8px">
+      <input aria-label="Icon" value="${esc(r.icon)}" data-rw="icon" data-id="${r.id}" style="width:64px;text-align:center;font-size:24px" maxlength="4">
+      <input aria-label="Reward" value="${esc(r.name)}" data-rw="name" data-id="${r.id}" style="flex:1;min-width:150px">
+      <input aria-label="Cost" type="number" min="1" max="999" value="${r.cost}" data-rw="cost" data-id="${r.id}" style="width:90px">
+      <button class="iconbtn" data-act="delReward" data-id="${r.id}" aria-label="Remove reward">${IC.trash}</button></div>`).join("")}</div>
+    <button class="btn ghost" data-act="addReward">Add reward</button>`},
+  kids(){return `<div class="stack">${S.kids.map(k=>{const th=T(k);return `<div class="panel stack">
+      <div class="spread"><input aria-label="Name" value="${esc(k.name)}" data-kn="${k.id}" style="flex:1"><span class="chip">${esc(th.label)}</span></div>
+      <div class="spread"><span><b>${k.credits}</b> ${esc(th.cur)} · ${esc(th.ranks[rankOf(k.earned||0)])} (${k.earned||0} earned)</span>
+      <span class="row"><button class="btn ghost small" data-act="adj" data-id="${k.id}" data-d="-1">−1</button><button class="btn ghost small" data-act="adj" data-id="${k.id}" data-d="1">+1</button></span></div>
+      <button class="btn bad small" data-act="delKid" data-id="${k.id}" style="align-self:flex-start">Remove ${esc(k.name)}</button></div>`}).join("")}</div>
+    <div class="panel row"><input id="newkid" placeholder="Add a child's name" maxlength="20" style="flex:1;min-width:160px"><button class="btn" data-act="addKid">Add</button></div>`},
+  settings(){return `<div class="panel stack"><b>Grown-up PIN</b><p class="muted" style="margin:0">Keeps children out of this area.</p><button class="btn ghost" data-act="changePin">Change PIN</button></div>
+    <div class="panel stack"><b>Trial notes</b><p class="muted" style="margin:0">Everything is saved on this device only. Uninstalling the app deletes it.</p></div>
+    <div class="panel stack"><b>Start again</b><p class="muted" style="margin:0">Deletes all children, jobs, photos and credits.</p><button class="btn bad" data-act="resetAll">Delete everything</button></div>`}
+};
+
+/* ---------- Job editor ---------- */
+let draft=null;
+VIEWS.edit=()=>{setBodyTheme(null,true);const d=draft;return `
+  <div class="topbar"><button class="iconbtn" data-act="cancelEdit" aria-label="Back">${IC.back}</button><h1 class="display grow">${d.isNew?"New job":"Edit job"}</h1></div>
+  <div class="stack">
+    <span class="label">Who's it for</span>
+    <div class="seg">${S.kids.map(k=>`<button class="${d.kid===k.id?"on":""}" data-act="dKid" data-id="${k.id}">${esc(k.name)}</button>`).join("")}</div>
+    <span class="label">1 · Photo of the mess</span>
+    <button class="photo-slot" data-act="snap" aria-label="Take photo">${d.photo?`<img data-media="${d.photo}" alt="Job photo">`:`<span class="stack" style="align-items:center">${IC.cam.replace("<svg",'<svg style="width:48px;height:48px"')}<b>Take photo</b></span>`}</button>
+    <label class="label" for="dtitle">Job name (optional)</label>
+    <input id="dtitle" value="${esc(d.title)}" placeholder="e.g. Tidy the lounge" maxlength="40">
+    <span class="label">2 · Steps, one voice note each</span>
+    <div class="stack">${d.steps.map((s,i)=>`<div class="pstep"><button class="play" style="width:48px;height:48px" data-act="pPlay" data-i="${i}" aria-label="Play step">${IC.play}</button>
+      <span style="min-width:0"><b>Step ${i+1}</b> ${s.audio?'<span class="chip">voice</span>':""}<br><span class="muted">${esc(s.text||"No words added")}</span></span>
+      <button class="iconbtn" data-act="pDel" data-i="${i}" aria-label="Remove step">${IC.trash}</button></div>`).join("")}</div>
+    <button class="btn ghost" data-act="addStep">${IC.mic} Add a step</button>
+    <span class="label">3 · Reward</span>
+    <div class="panel stack">
+      <div class="spread"><span>Credits for finishing</span><span class="row"><button class="btn ghost small" data-act="dCred" data-d="-1">−</button><b style="font-size:24px;min-width:2ch;text-align:center">${d.credits}</b><button class="btn ghost small" data-act="dCred" data-d="1">+</button></span></div>
+      <div class="stack" style="gap:6px"><span>Beat the clock</span><div class="seg">${[0,5,10,15,20].map(m=>`<button class="${d.timer===m?"on":""}" data-act="dTimer" data-m="${m}">${m?m+" min":"Off"}</button>`).join("")}</div></div>
+      <div class="spread"><span>Ask for an "after" photo</span><div class="seg"><button class="${d.afterReq?"on":""}" data-act="dAfter" data-v="1">Yes</button><button class="${!d.afterReq?"on":""}" data-act="dAfter" data-v="0">No</button></div></div>
+      <div class="spread"><span>Repeat every day</span><div class="seg"><button class="${d.repeat?"on":""}" data-act="dRepeat" data-v="1">Yes</button><button class="${!d.repeat?"on":""}" data-act="dRepeat" data-v="0">No</button></div></div>
+    </div>
+    <button class="btn big" data-act="saveJob">Save job</button>
+    ${d.isNew?"":`<button class="btn bad" data-act="delJob">Delete job</button>`}
+  </div>`};
+
+/* ---------- Camera ---------- */
+let camStream=null;
+function stopCam(){if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null}}
+function takePhoto(cb,title="Take a photo"){
+  const pickFile=()=>{const f=$("#filepick");f.value="";f.onchange=async()=>{if(f.files[0]){cb(await putMedia(await shrink(f.files[0])))}};f.click()};
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){pickFile();return}
+  const el=overlay(`<div class="stack camwrap"><b>${esc(title)}</b><video id="cv" playsinline autoplay muted></video>
+    <button class="btn big" id="snapbtn">${IC.cam} Snap</button><div class="row"><button class="btn ghost small" id="galbtn">Choose from photos</button><button class="btn ghost small" data-close>Cancel</button></div></div>`,stopCam);
+  el.querySelector("#galbtn").onclick=()=>{overlayClose();pickFile()};
+  navigator.mediaDevices.getUserMedia({video:{facingMode:"environment",width:{ideal:1600}},audio:false}).then(s=>{camStream=s;el.querySelector("#cv").srcObject=s})
+    .catch(()=>{overlayClose();pickFile()});
+  el.querySelector("#snapbtn").onclick=()=>{const v=el.querySelector("#cv");if(!v.videoWidth)return;const c=document.createElement("canvas");const sc=Math.min(1,1280/Math.max(v.videoWidth,v.videoHeight));
+    c.width=v.videoWidth*sc;c.height=v.videoHeight*sc;c.getContext("2d").drawImage(v,0,0,c.width,c.height);
+    c.toBlob(async b=>{overlayClose();cb(await putMedia(b))},"image/jpeg",.82)}}
+function shrink(file){return new Promise(res=>{const img=new Image();img.onload=()=>{const sc=Math.min(1,1280/Math.max(img.width,img.height));const c=document.createElement("canvas");
+  c.width=img.width*sc;c.height=img.height*sc;c.getContext("2d").drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(img.src);c.toBlob(b=>res(b||file),"image/jpeg",.82)};
+  img.onerror=()=>res(file);img.src=URL.createObjectURL(file)})}
+
+/* ---------- Voice recorder ---------- */
+function stepComposer(){let rec=null,chunks=[],blob=null,stream=null,t0=0,tick=null;
+  const el=overlay(`<div class="stack"><h2 class="display">Add a step</h2>
+    <p class="muted" style="margin:0">Say exactly what goes where, e.g. "Put all the Lego in the red box under the window."</p>
+    <button class="rec" id="recbtn" aria-label="Record">${IC.mic}</button><div id="rect" class="muted" style="text-align:center">Tap to record</div>
+    <button class="btn ghost small" id="replay" hidden>${IC.play} Play back</button>
+    <label class="label" for="steptext">Words on screen (optional, read aloud if there's no recording)</label>
+    <input id="steptext" maxlength="80" placeholder="Lego in the red box">
+    <div class="row"><button class="btn" id="stepsave">Add step</button><button class="btn ghost" data-close>Cancel</button></div></div>`,()=>{if(stream)stream.getTracks().forEach(t=>t.stop());clearInterval(tick)});
+  const btn=el.querySelector("#recbtn"),lab=el.querySelector("#rect"),rp=el.querySelector("#replay");
+  btn.onclick=async()=>{
+    if(rec&&rec.state==="recording"){rec.stop();return}
+    try{stream=stream||await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){lab.textContent="Microphone not available. Type the words instead.";return}
+    chunks=[];rec=new MediaRecorder(stream);rec.ondataavailable=e=>chunks.push(e.data);
+    rec.onstop=()=>{blob=new Blob(chunks,{type:rec.mimeType||"audio/webm"});btn.classList.remove("on");btn.innerHTML=IC.mic;clearInterval(tick);lab.textContent="Recorded. Tap the mic to redo it.";rp.hidden=false};
+    rec.start();t0=Date.now();btn.classList.add("on");btn.innerHTML=IC.stop;rp.hidden=true;
+    tick=setInterval(()=>{const s=(Date.now()-t0)/1000;lab.textContent="Recording "+fmt(s)+" · tap to stop";if(s>45)rec.stop()},250)};
+  rp.onclick=()=>{if(blob){if(curAudio)curAudio.pause();curAudio=new Audio(URL.createObjectURL(blob));curAudio.play()}};
+  el.querySelector("#stepsave").onclick=async()=>{if(rec&&rec.state==="recording"){toast("Stop recording first");return}
+    const text=el.querySelector("#steptext").value.trim();if(!blob&&!text){toast("Record a voice note or type some words");return}
+    const step={id:uid(),text,audio:blob?await putMedia(blob):null};draft.steps.push(step);draft._new.push(step.audio);overlayClose();render()}}
+
+/* ---------- Actions ---------- */
+const ACT={
+  back(){back()},
+  setupPin(){const n=$("#kidname").value.trim();if(!n){toast("Add your child's name");$("#kidname").focus();return}
+    pinPad("Choose a 4-digit PIN","Only grown-ups should know it",p1=>{overlayClose();setTimeout(()=>pinPad("Type it again","To make sure",p2=>{if(p1!==p2){toast("PINs didn't match. Try again.");overlayClose();return}
+      S.pin=p2;const k={id:uid(),name:n,theme:"army",credits:0,earned:0};S.kids.push(k);save();overlayClose();stack=[];view={name:"style",args:{kid:k.id,first:true}};render()}),200)})},
+  openKid(b){go("hq",{kid:b.dataset.id})},
+  style(b){go("style",{kid:b.dataset.id})},
+  setStyle(b){const k=kid(b.dataset.id);k.theme=b.dataset.theme;save();sfxFanfare(k);
+    if(view.args.first){stack=[];view={name:"parent",args:{tab:"jobs"}};render();toast("Now add the first job");return}back()},
+  shop(b){go("shop",{kid:b.dataset.id})},
+  job(b){go("job",{id:b.dataset.id})},
+  startJob(b){const j=S.jobs.find(x=>x.id===b.dataset.id);j.run={start:Date.now(),done:[]};save();const k=kid(j.kid);sfxTick(k);render().then(()=>{if(j.steps[0])playStep(j,j.steps[0])})},
+  playStep(b){const j=S.jobs.find(x=>x.id===b.dataset.job);const s=j.steps.find(x=>x.id===b.dataset.step);playStep(j,s)},
+  tickStep(b){const j=S.jobs.find(x=>x.id===b.dataset.job);if(!j.run)return;const sid=b.dataset.step;const k=kid(j.kid);
+    if(j.run.done.includes(sid)){j.run.done=j.run.done.filter(x=>x!==sid)}else{j.run.done.push(sid);sfxTick(k);
+      const nextStep=j.steps.find(s=>!j.run.done.includes(s.id));if(nextStep)setTimeout(()=>playStep(j,nextStep),450);else speak(T(k).cheers[0])}
+    save();const y=scrollY;render().then(()=>scrollTo(0,y))},
+  finishJob(b){const j=S.jobs.find(x=>x.id===b.dataset.id);const k=kid(j.kid);const th=T(k);
+    const done=after=>{j.beat=!!(j.timer&&Date.now()<=j.run.start+j.timer*60000);j.after=after||null;j.status="pending";save();sfxFanfare(k);confetti(k);
+      const cheer=th.cheers[Math.floor(Math.random()*th.cheers.length)];speak(cheer);
+      overlay(`<div class="celebrate stack" style="align-items:center"><div class="display big">${esc(th.done)}</div><p style="font-size:20px">${esc(cheer)}</p>
+        ${j.beat?`<span class="chip prize">Beat the clock! +${bonus(j)} bonus</span>`:""}<p class="muted">Ask a grown-up to check it. Then you get your ${esc(th.cur.toLowerCase())}.</p><button class="btn big" data-close>Back to base</button></div>`,()=>{back()})};
+    if(j.afterReq)takePhoto(id=>done(id),"Show your tidy room!");else done()},
+  buy(b){const k=kid(b.dataset.kid);const r=S.rewards.find(x=>x.id===b.dataset.id);const th=T(k);if(k.credits<r.cost)return;
+    overlay(`<div class="stack" style="text-align:center;align-items:center"><span style="font-size:64px">${esc(r.icon)}</span><h2 class="display">${esc(r.name)}</h2><p>Spend ${r.cost} ${esc(th.cur.toLowerCase())}?</p>
+      <div class="row"><button class="btn" id="yesbuy">Yes please</button><button class="btn ghost" data-close>Not yet</button></div></div>`).querySelector("#yesbuy").onclick=()=>{
+      k.credits-=r.cost;S.requests.push({id:uid(),kid:k.id,name:r.name,icon:r.icon,cost:r.cost,status:"asked",at:Date.now()});save();overlayClose();sfxFanfare(k);confetti(k);render();toast("Ask a grown-up for your "+r.name)}},
+  parent(){pinPad("Grown-ups only","Enter your PIN",p=>{if(p!==S.pin)return false;overlayClose();go("parent",{tab:pendingCount()?"check":"jobs"})})},
+  exitParent(){home()},
+  ptab(b){view.args.tab=b.dataset.tab;render()},
+  newJob(){draft={isNew:true,id:uid(),kid:S.kids[0].id,title:"",photo:null,steps:[],credits:3,timer:0,afterReq:false,repeat:false,_new:[]};go("edit")},
+  editJob(b){const j=S.jobs.find(x=>x.id===b.dataset.id);draft={...JSON.parse(JSON.stringify(j)),isNew:false,_new:[],_old:j.photo};go("edit")},
+  cancelEdit(){draft._new.forEach(delMedia);if(draft.photo&&draft.photo!==draft._old)delMedia(draft.photo);draft=null;back()},
+  dKid(b){draft.kid=b.dataset.id;keepTitle();render()},
+  snap(){keepTitle();takePhoto(id=>{if(draft.photo&&draft.photo!==draft._old)delMedia(draft.photo);draft.photo=id;render()},"Photograph the mess")},
+  addStep(){keepTitle();stepComposer()},
+  pPlay(b){const s=draft.steps[+b.dataset.i];if(s.audio)playClip(s.audio);else speak(s.text)},
+  pDel(b){keepTitle();draft.steps.splice(+b.dataset.i,1);render()},
+  dCred(b){keepTitle();draft.credits=Math.min(50,Math.max(1,draft.credits+ +b.dataset.d));render()},
+  dTimer(b){keepTitle();draft.timer=+b.dataset.m;render()},
+  dAfter(b){keepTitle();draft.afterReq=b.dataset.v==="1";render()},
+  dRepeat(b){keepTitle();draft.repeat=b.dataset.v==="1";render()},
+  saveJob(){keepTitle();if(!draft.photo&&!draft.steps.length){toast("Add a photo or at least one step");return}
+    const {isNew,_new,_old,...j}=draft;if(isNew){j.status="todo";j.created=Date.now();S.jobs.push(j)}
+    else{const i=S.jobs.findIndex(x=>x.id===j.id);const old=S.jobs[i];old.steps.forEach(s=>{if(!j.steps.find(x=>x.id===s.id))delMedia(s.audio)});if(_old&&_old!==j.photo)delMedia(_old);S.jobs[i]=j}
+    save();draft=null;toast("Job saved");back()},
+  delJob(){confirmSheet("Delete this job?","Its photo and voice notes go too.",()=>{const j=S.jobs.find(x=>x.id===draft.id);if(j){delMedia(j.photo);delMedia(j.after);j.steps.forEach(s=>delMedia(s.audio));S.jobs=S.jobs.filter(x=>x!==j);save()}draft=null;back()})},
+  approve(b){const j=S.jobs.find(x=>x.id===b.dataset.id);const k=kid(j.kid);const before=rankOf(k.earned||0);const amt=j.credits+(j.beat?bonus(j):0);
+    k.credits+=amt;k.earned=(k.earned||0)+amt;if(rankOf(k.earned)>before)k.rankUp=true;
+    delMedia(j.after);j.after=null;j.run=null;j.beat=false;
+    if(j.repeat){j.status="todo";j.from=tomorrow()}else{delMedia(j.photo);j.steps.forEach(s=>delMedia(s.audio));S.jobs=S.jobs.filter(x=>x!==j)}
+    save();toast(`${k.name} got +${amt}`);render()},
+  sendBack(b){const j=S.jobs.find(x=>x.id===b.dataset.id);delMedia(j.after);j.after=null;j.run=null;j.beat=false;j.status="todo";save();toast("Sent back to have another go");render()},
+  given(b){const r=S.requests.find(x=>x.id===b.dataset.id);r.status="given";S.requests=S.requests.filter(x=>x.status==="asked");save();render()},
+  refund(b){const r=S.requests.find(x=>x.id===b.dataset.id);const k=kid(r.kid);if(k)k.credits+=r.cost;S.requests=S.requests.filter(x=>x!==r);save();toast("Credits returned");render()},
+  addReward(){S.rewards.push({id:uid(),icon:"⭐",name:"New reward",cost:5});save();render()},
+  delReward(b){S.rewards=S.rewards.filter(r=>r.id!==b.dataset.id);save();render()},
+  addKid(){const n=$("#newkid").value.trim();if(!n)return;const k={id:uid(),name:n,theme:"hero",credits:0,earned:0};S.kids.push(k);save();render()},
+  delKid(b){const k=kid(b.dataset.id);confirmSheet(`Remove ${k.name}?`,"Their jobs and credits are deleted.",()=>{S.jobs.filter(j=>j.kid===k.id).forEach(j=>{delMedia(j.photo);delMedia(j.after);j.steps.forEach(s=>delMedia(s.audio))});
+    S.jobs=S.jobs.filter(j=>j.kid!==k.id);S.requests=S.requests.filter(r=>r.kid!==k.id);S.kids=S.kids.filter(x=>x!==k);save();render()})},
+  adj(b){const k=kid(b.dataset.id);k.credits=Math.max(0,k.credits+ +b.dataset.d);save();render()},
+  changePin(){pinPad("New PIN","Choose 4 digits",p=>{S.pin=p;save();overlayClose();toast("PIN changed")})},
+  resetAll(){confirmSheet("Delete everything?","This can't be undone.",()=>{try{localStorage.removeItem(KEY)}catch(e){}indexedDB.deleteDatabase("tq_media");load();home()})}
+};
+function keepTitle(){const t=$("#dtitle");if(t&&draft)draft.title=t.value.trim()}
+function confirmSheet(title,sub,yes){overlay(`<div class="stack"><h2 class="display">${esc(title)}</h2><p class="muted" style="margin:0">${esc(sub)}</p>
+  <div class="row"><button class="btn bad" id="cyes">Yes, delete</button><button class="btn ghost" data-close>Keep it</button></div></div>`).querySelector("#cyes").onclick=()=>{overlayClose();yes()}}
+
+document.addEventListener("click",e=>{
+  if(e.target.closest("[data-close]")){overlayClose();return}
+  const b=e.target.closest("[data-act]");if(!b||b.disabled)return;const f=ACT[b.dataset.act];if(f)f(b)});
+document.addEventListener("change",e=>{const t=e.target;
+  if(t.dataset.rw){const r=S.rewards.find(x=>x.id===t.dataset.id);if(!r)return;r[t.dataset.rw]=t.dataset.rw==="cost"?Math.max(1,parseInt(t.value)||1):t.value.trim()||r[t.dataset.rw];save()}
+  if(t.dataset.kn){const k=kid(t.dataset.kn);if(k&&t.value.trim()){k.name=t.value.trim();save()}}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")back()});
+window.addEventListener("popstate",()=>{});
+
+load();home();
+</script>
+</body>
+</html>

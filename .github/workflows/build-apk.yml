@@ -1,0 +1,66 @@
+name: Build Tidy Quest APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Bundle theme fonts so the app works offline
+        run: |
+          mkdir -p /tmp/fonts && cd /tmp/fonts
+          for p in nunito black-ops-one kaushan-script bangers monoton orbitron graduate; do
+            npm pack "@fontsource/$p" --silent
+            mkdir -p "$p" && tar xzf fontsource-$p-*.tgz -C "$p" --strip-components=1
+          done
+          out="$GITHUB_WORKSPACE/app/src/main/assets/fonts"
+          mkdir -p "$out"
+          cp nunito/files/nunito-latin-400-normal.woff2 "$out/nunito-400.woff2"
+          cp nunito/files/nunito-latin-800-normal.woff2 "$out/nunito-800.woff2"
+          for p in black-ops-one kaushan-script bangers monoton orbitron graduate; do
+            cp "$p/files/$p-latin-400-normal.woff2" "$out/$p.woff2"
+          done
+          ls -l "$out"
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Build APK
+        run: gradle :app:assembleRelease --no-daemon
+
+      - name: Name the APK
+        run: cp app/build/outputs/apk/release/app-release.apk TidyQuest-trial.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TidyQuest-trial
+          path: TidyQuest-trial.apk
+
+      - name: Publish download link
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete trial --yes --cleanup-tag || true
+          gh release create trial TidyQuest-trial.apk \
+            --title "Tidy Quest trial build" \
+            --notes "Build ${{ github.run_number }}. Download TidyQuest-trial.apk on the Android tablet and open it to install."
