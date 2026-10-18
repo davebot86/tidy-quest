@@ -162,6 +162,8 @@ body[data-theme="karate"] .meter i{border-radius:2px;background:var(--belt,#f4f4
 .tile .num{font-size:44px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums}
 .tile .what{font-weight:700;color:var(--muted)}
 .tile .go{margin-top:auto;font-weight:900;color:var(--accent)}
+.nudge{display:flex;flex-direction:column;gap:5px;margin-top:2px}.nudge .nl{font-size:14px;font-weight:700;color:var(--muted);line-height:1.25}.nudge .nl b{color:var(--ink)}.nbar{display:block;height:8px;border-radius:999px;background:rgba(127,127,127,.22);overflow:hidden}.nbar i{display:block;height:100%;background:var(--accent2);border-radius:999px}
+.weekstrip{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:2px 12px 0;font-size:14px;font-weight:800}.weekstrip .wl{opacity:.7;font-weight:700}.weekstrip span:not(.wl){background:rgba(0,0,0,.22);color:#fff;border-radius:999px;padding:3px 10px;backdrop-filter:blur(4px)}
 .stars{display:flex;flex-wrap:wrap;gap:3px}
 .stars i{font-style:normal;font-size:18px;line-height:1;color:rgba(127,127,127,.35)}
 .stars i.on{color:var(--accent2)}
@@ -230,11 +232,13 @@ body[data-theme="karate"] .stamp{border-radius:6px}
 .kidpick .avatar{width:84px;height:93px}
 
 /* Parent area: calm and neutral */
-body.parent{--world:#EEF1F4;--bg:#EEF1F4;--panel:#fff;--ink:#17202A;--muted:#5B6673;--line:#D8DEE5;--accent:#0F6E68;--accent-ink:#fff;--accent2:#C98A1B;
+body.parent{--world:#F4EEE2;--bg:#F4EEE2;--panel:#FFFDF8;--ink:#221A13;--muted:#6F6253;--line:#E4D9C4;--accent:#B3261E;--accent-ink:#fff;--accent2:#C98A1B;
   --display:"Nunito",system-ui,sans-serif;--dweight:900;--dspace:0;--card-radius:16px;--card-border:1px solid #D8DEE5;--card-shadow:0 1px 0 rgba(23,32,42,.04)}
 .tabs{display:flex;flex-wrap:wrap;gap:6px;padding-bottom:4px}
 .tab{padding:9px 16px;border-radius:999px;font-weight:700;white-space:nowrap;border:1.5px solid var(--line);background:var(--panel)}
-.tab.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.tab.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.brandrow{display:flex;align-items:center;gap:8px;font-weight:900;font-size:14px;color:var(--muted)}.brandrow i{width:12px;height:12px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--panel),0 0 0 3.5px var(--ink)}
+.today{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center}.today .av{width:56px;height:62px}.today .badge.av{width:56px;height:56px}.today .nm{font-weight:900;font-size:19px;line-height:1.1}.today .facts{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}.today .facts span{background:rgba(179,38,30,.08);border-radius:999px;padding:3px 10px;font-size:13px;font-weight:800}.today .facts span.hot{background:var(--warn);color:#fff}
 .tab .n{display:inline-block;min-width:22px;padding:0 6px;margin-left:6px;border-radius:999px;background:var(--warn);color:#fff;font-size:13px}
 .jobcard{display:grid;grid-template-columns:72px 1fr auto;gap:14px;align-items:center;text-align:left;width:100%;background:var(--panel);border:var(--card-border);border-radius:var(--card-radius);padding:10px}
 .thumb{width:72px;height:72px;border-radius:12px;object-fit:cover;background:rgba(127,127,127,.15)}
@@ -339,7 +343,7 @@ body[data-theme="pop"]{--panel:#FFF5FB;--ink:#2A0F45;--muted:#7A5A8E;--line:#EBD
   --world:radial-gradient(50% 35% at 10% 0%,rgba(255,46,147,.45),transparent 70%),radial-gradient(50% 35% at 90% 5%,rgba(49,215,242,.35),transparent 70%),#2A0F45}
 body[data-theme="space"]{--panel:#16224F;--ink:#EAF1FF;--muted:#9DB0E0;--line:#2B3C7A;--card-edge:#0A1238;--accent:#FF8A3D;--accent-edge:#A9501A;--accent-ink:#1A0C02;--accent2:#5FE0FF;--on-bg:#EAF1FF;--fig:#5FE0FF}
 body[data-theme="football"]{--panel:#FFFFFF;--ink:#13261A;--muted:#4E6A57;--line:#D3E4D7;--card-edge:#14592C;--accent:#D62828;--accent-edge:#8E1414;--accent-ink:#FFFFFF;--accent2:#F2C14E;--on-bg:#FFFFFF;--fig:#13261A}
-body.parent{--card-edge:#D8DEE5;--accent-edge:#0A4F4A;--on-bg:#17202A}
+body.parent{--card-edge:#E4D9C4;--accent-edge:#7E1A14;--on-bg:#221A13}
 
 .on-world{color:var(--on-bg)}
 .section-title.on-world h2,.topbar .on-world h1,h1.on-world{text-shadow:0 2px 0 rgba(0,0,0,.25)}
@@ -839,8 +843,11 @@ VIEWS.hq=({kid:id})=>{const k=kid(id);if(!k){home();return""}setBodyTheme(k);con
       <div class="rankline">${k.face?badgeSVG(k).replace('class="badge"','class="badge sm"'):""}${esc(th.ranks[r])}</div>
       <div class="meter" role="progressbar" aria-label="Progress to next rank" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" style="--belt:${th.belts?th.belts[Math.min(r+1,6)]:""}"><i style="width:${pct}%"></i></div>
       <span style="font-weight:700;font-size:15px;opacity:.85">${next?`${next-k.earned} ${esc(th.cur.toLowerCase())} to ${esc(th.ranks[r+1])}`:"Top rank reached"}</span></div></div>
+  ${(()=>{const w=weekOf(k);if(!w.wins&&!w.stars&&!w.treats)return "";return `<div class="weekstrip on-world"><span class="wl">This week</span>${w.wins?`<span>✅ ${w.wins} win${w.wins===1?"":"s"}</span>`:""}${w.stars?`<span>★ ${w.stars} star${w.stars===1?"":"s"}</span>`:""}${w.treats?`<span>🛍️ ${w.treats} treat${w.treats===1?"":"s"}</span>`:""}</div>`})()}
   <div class="tiles">
-    <button class="panel tile" data-act="shop" data-id="${k.id}"><span class="what">${esc(th.cur)}</span><span class="num">${coinSVG()}<span data-count="${k.credits}">${k.credits}</span></span><span class="go">${esc(th.shop)}</span></button>
+    <button class="panel tile" data-act="shop" data-id="${k.id}"><span class="what">${esc(th.cur)}</span><span class="num">${coinSVG()}<span data-count="${k.credits}">${k.credits}</span></span>
+      ${(()=>{const n=nextTreat(k);if(!n)return "";const pct=Math.min(100,Math.round(k.credits/n.r.cost*100));return `<span class="nudge"><span class="nl">${n.have?`You can get <b>${esc(n.r.name)}</b>! ${esc(n.r.icon||"")}`:`<b>${n.need}</b> more for ${esc(n.r.name)} ${esc(n.r.icon||"")}`}</span><span class="nbar"><i style="width:${pct}%"></i></span></span>`})()}
+      <span class="go">${esc(th.shop)} →</span></button>
     ${g?`<div class="panel tile"><span class="what">Big goal · ${gn}/${g.target}</span><b style="font-size:19px;line-height:1.2">${esc(g.name)}</b>
       <div class="stars" aria-label="${gn} of ${g.target} stars">${Array.from({length:g.target},(_,i)=>`<i class="${i<gn?"on":""}">★</i>`).join("")}</div>
       ${(g.backers||[]).length?`<span class="backers">Backed by ${g.backers.map(x=>`<b>${esc(x.name)}</b>${x.gift?` (${esc(x.gift)})`:""}`).join(", ")}</span>`:""}</div>`
@@ -951,13 +958,16 @@ VIEWS.shop=({kid:id})=>{const k=kid(id);setBodyTheme(k);const th=T(k);
 const PTABS=[["jobs","Jobs"],["check","To check"],["rewards","Rewards"],["kids","Children"],["link","Link & sync"],["settings","Settings"]];
 function pendingCount(){return S.jobs.filter(j=>j.status==="pending").length+S.requests.filter(r=>r.status==="asked").length+(S.wishes||[]).length}
 VIEWS.parent=({tab="jobs"})=>{setBodyTheme(null,true);const pc=pendingCount();
-  const head=`<div class="spread"><h1 class="display">Grown-ups</h1><button class="btn ghost small" data-act="exitParent">Back to kids</button></div>
+  const head=`<div class="spread"><div class="stack" style="gap:2px"><span class="brandrow"><i></i>Tidy Quest</span><h1 class="display" style="font-size:34px">Grown-ups</h1></div><button class="btn ghost small" data-act="exitParent">Back to kids</button></div>
   <div class="tabs" role="tablist">${PTABS.map(([k,l])=>`<button class="tab ${tab===k?"on":""}" role="tab" data-act="ptab" data-tab="${k}">${l}${k==="check"&&pc?`<span class="n">${pc}</span>`:""}</button>`).join("")}</div>`;
   return head+PARENT[tab]()};
 const PARENT={
   jobs(){const list=[...S.jobs].sort((a,b)=>(b.created||0)-(a.created||0));return `
-    <div class="row"><button class="btn big" style="flex:1;min-width:220px" data-act="quickLog" ${S.kids.length?"":"disabled"}>★ They just did something!</button>
-    <button class="btn ghost big" style="flex:1;min-width:220px" data-act="newJob" ${S.kids.length?"":"disabled"}>${IC.cam} New job</button></div>
+    ${S.kids.map(k=>{const w=weekOf(k),th=T(k),live=S.jobs.filter(j=>j.kid===k.id&&j.status==="todo").length,chk=S.jobs.filter(j=>j.kid===k.id&&j.status==="pending").length+S.requests.filter(r=>r.kid===k.id).length;
+      return `<div class="panel today">${avatarSVG(k,null,"avatar av")||badgeSVG(k).replace('class="badge"','class="badge av"')}<div><div class="nm">${esc(k.name)} <span class="muted" style="font-weight:700;font-size:14px">· ${esc(th.ranks[rankOf(k.earned||0)])}</span></div>
+        <div class="facts"><span>${coinSVG()} ${k.credits} ${esc(th.cur.toLowerCase())}</span>${k.goal?`<span>★ ${Math.min(k.goal.count||0,k.goal.target)}/${k.goal.target} ${esc(k.goal.name)}</span>`:""}<span>${live} job${live===1?"":"s"} live</span>${chk?`<span class="hot">${chk} to check</span>`:""}${w.wins?`<span>${w.wins} win${w.wins===1?"":"s"} this week</span>`:""}</div></div></div>`}).join("")}
+    <div class="row"><button class="btn big" style="flex:1;min-width:220px" data-act="newJob" ${S.kids.length?"":"disabled"}>${IC.cam} New job</button>
+    <button class="btn ghost big" style="flex:1;min-width:220px" data-act="quickLog" ${S.kids.length?"":"disabled"}>★ They just did something!</button></div>
     ${list.length?`<div class="stack">${list.map(j=>{const k=kid(j.kid);return `<button class="jobcard" data-act="editJob" data-id="${j.id}">
       ${j.photo?`<img class="thumb" data-media="${j.photo}" alt="">`:`<span class="thumb"></span>`}
       <span class="stack" style="gap:4px;min-width:0"><span class="t">${esc(j.title||"Untitled job")}</span><span class="muted">${esc(k?k.name:"?")} · ${j.steps.length} steps${j.repeat?" · daily":""}</span>
@@ -1238,6 +1248,10 @@ function fixTrophies(k){k.trophies=k.trophies||[];k.tGone=k.tGone||[];const gone
     const id="L"+e.id,title=w.slice(job?4:5).trim()||(job?T(k).job:"A star");if(gone.has(id)||k.trophies.some(t=>t.id===id||near(t,title,e.t)))continue;
     k.trophies.push({id,title,type:job?"tidy":null,media:null,kind:null,at:e.t||0,amt:e.d||0,star:star})}
   k.trophies.sort((a,b)=>(b.at||0)-(a.at||0))}
+/* what happened in the last 7 days, and the treat within reach */
+function weekOf(k){const since=Date.now()-7*86400000;let wins=0,stars=0,treats=0;for(const e of (k.ledger||[])){if((e.t||0)<since)continue;const w=String(e.why||"");if(w.startsWith("job "))wins++;if(w.startsWith("star "))stars+=e.s||0;if(w.startsWith("buy "))treats++}return {wins,stars,treats}}
+function nextTreat(k){const rs=S.rewards.filter(r=>r.cost>0);if(!rs.length)return null;const can=rs.filter(r=>r.cost<=k.credits).sort((a,b)=>b.cost-a.cost)[0];
+  if(can)return {r:can,have:true};const nx=rs.filter(r=>r.cost>k.credits).sort((a,b)=>a.cost-b.cost)[0];return nx?{r:nx,have:false,need:nx.cost-k.credits}:null}
 /* ---------- Big goal: challenges add stars towards one big reward ---------- */
 function addStar(k,title,id){if(!k.goal)return;post(k,{s:1,why:"star "+(title||""),id:id||null})}
 function goalCard(k,th){const g=k.goal;if(!g)return"";const n=Math.min(g.count||0,g.target),pct=Math.round(n/g.target*100);
@@ -1487,13 +1501,17 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
   /* jobs: every change stamps the job, the newest version wins on every phone; photos and voice notes travel as pictures (slots) */
   function jlite(j){const {_h,at,photo,after,steps,run,...rest}=j;return {...rest,photo:null,after:null,steps:(steps||[]).map(x=>({id:x.id,text:x.text,audio:null})),run:run?{...run,progress:[]}:null}}
   function stamp(){for(const j of S.jobs){const sig=canon(jlite(j));if(j._h!==sig){j._h=sig;j.at=Date.now()}}}
-  function lite(k){stamp();const tpls=[...S.library,...S.jobs.filter(j=>j.kid===k.id).map(j=>({...j,id:"t"+j.id,at:j.created||0}))].filter((t,i,arr)=>arr.findIndex(y=>tplKey(y)===tplKey(t))===i)
+  function lite(k){const o=liteObj(k);return canon(o)}
+  function liteObj(k){stamp();const tpls=[...S.library,...S.jobs.filter(j=>j.kid===k.id).map(j=>({...j,id:"t"+j.id,at:j.created||0}))].filter((t,i,arr)=>arr.findIndex(y=>tplKey(y)===tplKey(t))===i)
       .map(t=>({id:t.id,title:t.title,type:t.type,credits:t.credits,timer:t.timer,proof:t.proof,repeat:!!t.repeat,at:t.at||0,photo:u(t.photo),steps:(t.steps||[]).map(x=>({text:x.text,audio:u(x.audio)}))}));
     const g=k.goal?{id:k.goal.id,name:k.goal.name,target:k.goal.target,backers:srt(k.goal.backers),setAt:k.goal.setAt||0,editAt:k.goal.editAt||0,photo:u(k.goal.photo)}:null;
-    return JSON.stringify({tq:"kid",v:2,live:1,kid:{id:k.id,name:k.name,theme:k.theme},face:u(k.face),ledger:srt(k.ledger),goal:g,
+    return ({tq:"kid",v:2,live:1,kid:{id:k.id,name:k.name,theme:k.theme},face:u(k.face),ledger:srt(k.ledger),goal:g,
       trophies:srt(k.trophies).map(t=>({...t,media:u(t.media),album:ua(t.album)})),tGone:[...(k.tGone||[])].sort(),treats:srt(k.treats).map(t=>({...t,photo:u(t.photo)})),
       library:srt(tpls,tplKey),shopGone:srt(S.shopGone),shop:srt(S.rewards).map(r=>({id:r.id,at:r.at||0,icon:r.icon,name:r.name,cost:r.cost,by:r.by||null,photo:u(r.photo)})),
       requests:srt(S.requests.filter(r=>r.kid===k.id)),reqDone:[...S.reqDone].sort(),wishes:srt(S.wishes.filter(w=>w.kid===k.id)).map(w=>({...w,photo:u(w.photo)})),wishDone:[...S.wishDone].sort(),jobs:srt(S.jobs.filter(j=>j.kid===k.id)).map(j=>({...jlite(j),at:j.at||0})),jobGone:[...S.jobGone].sort()})}
+  let lastSig="";
+  function viewSig(){return JSON.stringify([S.kids.map(k=>[k.id,k.name,k.theme,k.credits,k.earned,k.goal&&[k.goal.id,k.goal.count,k.goal.name,k.goal.target,k.goal.photo,(k.goal.backers||[]).length],k.face,(k.trophies||[]).map(t=>t.id+":"+(t.media||"")+":"+(t.album?1:0)),(k.treats||[]).map(t=>t.id+":"+(t.photo||""))]),
+    S.jobs.map(j=>[j.id,j.status,j.photo,j.after,j.title,j.credits,(j.steps||[]).map(x=>x.text+":"+(x.audio||"")),j.from]),S.rewards.map(r=>[r.id,r.name,r.cost,r.icon,r.photo]),S.requests.map(r=>r.id),S.wishes.map(w=>w.id+":"+(w.photo||"")),S.library.map(t=>t.id+":"+(t.photo||"")+":"+(t.at||0))])}
   function setState(s,err){st.state=s;st.err=err||"";if(s==="on")st.at=Date.now();if(view&&view.name==="parent"&&view.args&&view.args.tab==="link"){const a=document.activeElement;if(a&&a.id==="devname")return;const el=$("#syncpanel");if(el)el.outerHTML=panel()}}
   async function start(){if(!S.family)return;if(!has()){setState("nosdk");return}clearTimeout(retry);setState("connecting");
     try{if(!firebase.apps.length){firebase.initializeApp(FB_CFG);try{firebase.firestore().settings({experimentalAutoDetectLongPolling:true})}catch(e){}}
@@ -1508,7 +1526,7 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
       const r=await mergeKid(d,true);last[r.k.id]=txt;changed=true;r.news.forEach(e=>news.push({k:r.k,e}));(r.jobNews||[]).forEach(t=>news.push({k:r.k,e:{why:"done "+t}}))}
     setState("on");
     if(changed){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}if(view&&view.name==="welcome"&&S.kids.length){overlayClose();home();toast("You're in! Welcome to the family.")}else{liveRender();alerts(news)}}
-    first=true;push();media();if(!repAt)report(true)}
+    first=true;if(!lastSig)lastSig=viewSig();push();media();if(!repAt)report(true)}
   function alerts(news){if(!news.length)return;const say=({k,e})=>{const w=String(e.why||"");
       if(w.startsWith("buy "))return `🛍️ ${k.name} just bought ${w.slice(4)}!`;
       if(w.startsWith("done "))return `✅ ${k.name} finished "${w.slice(5)}". Check it in Grown-ups → To check`;
@@ -1520,7 +1538,7 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
     banner(lines[lines.length-1]+(lines.length>1?` (and ${lines.length-1} more)`:""))}
   function banner(msg){const t=document.createElement("div");t.className="toast";t.style.cssText="top:calc(14px + env(safe-area-inset-top));bottom:auto;font-size:17px;max-width:92vw";t.textContent=msg;document.body.appendChild(t);
     try{if(typeof sfxPop==="function")sfxPop()}catch(e){}setTimeout(()=>t.remove(),6000)}
-  async function liveRender(){if(!view||["job","edit","style","welcome"].includes(view.name)||overlayEl)return;const a=document.activeElement;if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))return;
+  async function liveRender(){const sig=viewSig();if(sig===lastSig)return;lastSig=sig;if(!view||["job","edit","style","welcome"].includes(view.name)||overlayEl)return;const a=document.activeElement;if(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))return;
     const y=window.scrollY;await render();window.scrollTo(0,y)}
   function soon(){if(!ref||!first)return;clearTimeout(timer);timer=setTimeout(push,1200)}
   /* ---- photos, pictures and voice notes: each stored once online (big ones in parts), fetched by the other phones ---- */
