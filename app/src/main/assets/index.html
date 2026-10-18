@@ -505,7 +505,7 @@ function load(){
   if(!S){S={pin:null,kids:[],jobs:[],rewards:DEFAULT_REWARDS.map(r=>({...r,id:uid()})),requests:[]}}
   S.device=S.device||("d"+uid());S.wishes=S.wishes||[];S.library=S.library||[];S.shopGone=S.shopGone||[];S.rewards.forEach(r=>{if(r.at==null)r.at=0});delete S.lastSend;
   S.kids.forEach(k=>{if(k.goal&&!k.goal.id)k.goal.id="g:"+String(k.goal.name||"").trim().toLowerCase();
-    if(!k.ledger){k.ledger=[{id:"o"+uid(),t:Date.now(),d:k.credits||0,e:k.earned||0,s:k.goal?(k.goal.count||0):0,g:k.goal?k.goal.id:null,why:"start"}]}recalc(k,true);try{fixTrophies(k)}catch(e){}});S.pendingIn=S.pendingIn||{};S.reqDone=S.reqDone||[];S.up=S.up||[];S.noUp=S.noUp||[];S.wishDone=S.wishDone||[];S.kidGone=S.kidGone||[];S.usedIn=S.usedIn||[];S.sent=S.sent||[];
+    if(!k.ledger){k.ledger=[{id:"o"+uid(),t:Date.now(),d:k.credits||0,e:k.earned||0,s:k.goal?(k.goal.count||0):0,g:k.goal?k.goal.id:null,why:"start"}]}recalc(k,true);try{fixTrophies(k)}catch(e){}});S.pendingIn=S.pendingIn||{};S.reqDone=S.reqDone||[];S.jobGone=S.jobGone||[];S.up=S.up||[];S.noUp=S.noUp||[];S.wishDone=S.wishDone||[];S.kidGone=S.kidGone||[];S.usedIn=S.usedIn||[];S.sent=S.sent||[];
   S.jobs.forEach(j=>{if(!j.type)j.type="tidy";if(!j.proof)j.proof=j.afterReq?"photo":"none"});
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast("Couldn't save. The tablet may be low on space.")}if(window.Sync)Sync.soon()}
@@ -1153,7 +1153,7 @@ const ACT={
       if(nextStep)setTimeout(()=>playStep(j,nextStep),1300+cheer.length*45);else setTimeout(()=>speak(say(k,"finish")),1300+cheer.length*45)}
     save();const y=scrollY;render().then(()=>scrollTo(0,y))},
   finishJob(b){const j=S.jobs.find(x=>x.id===b.dataset.id);const k=kid(j.kid);const th=T(k);
-    const done=(after,kind)=>{j.beat=!!(j.timer&&Date.now()<=j.run.start+j.timer*60000);j.after=after||null;j.afterKind=kind||null;j.status="pending";save();sfxFanfare(k);confetti(k);
+    const done=(after,kind)=>{j.beat=!!(j.timer&&Date.now()<=j.run.start+j.timer*60000);j.after=after||null;j.afterKind=kind||null;j.status="pending";j.doneAt=Date.now();save();sfxFanfare(k);confetti(k);
       const cheer=th.cheers[Math.floor(Math.random()*th.cheers.length)];speak(cheer);
       overlay(`<div class="celebrate stack" style="align-items:center">${mentorSVG(k.theme)}<div class="display big">${esc(th.done)}</div><p style="font-size:20px;margin:0">${esc(cheer)}</p>
         ${j.beat?`<span class="chip prize">Beat the clock! +${bonus(j)} bonus</span>`:""}<p class="muted">Ask a grown-up to check it. Then you get your ${isChallenge(j)?"star":esc(th.cur.toLowerCase())}.</p><button class="btn big" data-close>Back to base</button></div>`,()=>{back()})};
@@ -1187,17 +1187,17 @@ const ACT={
     save();draft=null;toast("Job saved");back();saveTemplate(j).then(()=>save())},
   useAgain(b){const t=S.library.find(x=>x.id===b.dataset.id);if(!t)return;useTemplate(t)},
   delTemplate(b){const t=S.library.find(x=>x.id===b.dataset.id);if(!t)return;confirmSheet(`Remove "${t.title||"this job"}" from the library?`,"Jobs already set up are not affected.",()=>{delMedia(t.photo);t.steps.forEach(x=>delMedia(x.audio));S.library=S.library.filter(x=>x!==t);save();render()},"Remove","Keep it")},
-  delJob(){confirmSheet("Delete this job?","Its photo and voice notes go too.",()=>{const j=S.jobs.find(x=>x.id===draft.id);if(j){delMedia(j.photo);delMedia(j.after);j.steps.forEach(s=>delMedia(s.audio));S.jobs=S.jobs.filter(x=>x!==j);save()}draft=null;back()})},
-  async approve(b){const j=S.jobs.find(x=>x.id===b.dataset.id);const k=kid(j.kid);const before=rankOf(k.earned||0);
+  delJob(){confirmSheet("Delete this job?","Its photo and voice notes go too.",()=>{const j=S.jobs.find(x=>x.id===draft.id);if(j){delMedia(j.photo);delMedia(j.after);j.steps.forEach(s=>delMedia(s.audio));S.jobs=S.jobs.filter(x=>x!==j);S.jobGone.push(j.id);save()}draft=null;back()})},
+  async approve(b){const j=S.jobs.find(x=>x.id===b.dataset.id);if(!j)return;const k=kid(j.kid);const before=rankOf(k.earned||0);const aid="a"+j.id+"_"+(j.doneAt||0);
     const prog=(j.run&&j.run.progress)||[];const album=(prog.length||(j.photo&&j.after))?{before:j.photo?await copyMedia(j.photo):null,progress:prog.slice()}:null;
-    if(isChallenge(j)){logAchievement(k,{type:j.type,title:j.title,media:j.after,kind:j.afterKind,album});j.after=null;j.run=null;j.beat=false;
-      if(j.repeat){j.status="todo";j.from=tomorrow()}else{delMedia(j.photo);j.steps.forEach(s=>delMedia(s.audio));S.jobs=S.jobs.filter(x=>x!==j)}
+    if(isChallenge(j)){logAchievement(k,{type:j.type,title:j.title,media:j.after,kind:j.afterKind,album,id:aid});j.after=null;j.run=null;j.beat=false;
+      if(j.repeat){j.status="todo";j.from=tomorrow();j.doneAt=null}else{delMedia(j.photo);j.steps.forEach(s=>delMedia(s.audio));S.jobs=S.jobs.filter(x=>x!==j);S.jobGone.push(j.id)}
       save();toast(`★ for ${k.name}`);render();return}
     const amt=j.credits+(j.beat?bonus(j):0);
-    post(k,{d:amt,e:amt,why:"job "+(j.title||"")});if(rankOf(k.earned)>before)k.rankUp=true;
-    {k.trophies=k.trophies||[];k.trophies.unshift({id:uid(),title:j.title||T(k).job,type:j.type||"tidy",media:j.after||null,kind:j.after?(j.afterKind||"photo"):null,at:Date.now(),amt,album});if(j.after||album)k.newTrophy=true}
+    post(k,{d:amt,e:amt,why:"job "+(j.title||""),id:aid});if(rankOf(k.earned)>before)k.rankUp=true;
+    if(!(k.trophies||[]).some(t=>t.id===aid)){k.trophies=k.trophies||[];k.trophies.unshift({id:aid,title:j.title||T(k).job,type:j.type||"tidy",media:j.after||null,kind:j.after?(j.afterKind||"photo"):null,at:Date.now(),amt,album});if(j.after||album)k.newTrophy=true}
     j.after=null;j.run=null;j.beat=false;
-    if(j.repeat){j.status="todo";j.from=tomorrow()}else{delMedia(j.photo);j.steps.forEach(s=>delMedia(s.audio));S.jobs=S.jobs.filter(x=>x!==j)}
+    if(j.repeat){j.status="todo";j.from=tomorrow();j.doneAt=null}else{delMedia(j.photo);j.steps.forEach(s=>delMedia(s.audio));S.jobs=S.jobs.filter(x=>x!==j);S.jobGone.push(j.id)}
     save();toast(`${k.name} got +${amt}`);render()},
   progressShot(b){const j=S.jobs.find(x=>x.id===b.dataset.id);const k=kid(j.kid);
     capture({mode:"photo",title:"Progress shot"},id=>{j.run.progress=(j.run.progress||[]).concat(id);save();sfxTick(k);speak(say(k,"step"));const y=scrollY;render().then(()=>scrollTo(0,y))})},
@@ -1227,7 +1227,7 @@ function recalc(k,quiet){const L=k.ledger||[];let d=0,e=0,st=0;const gid=k.goal&
   let openE=0;for(const x of L){d+=x.d||0;if(x.why==="start")openE=Math.max(openE,x.e||0);else e+=x.e||0;if(gid&&x.g===gid)st+=x.s||0}
   k.credits=d;k.earned=Math.max(0,openE+e);
   if(k.goal){k.goal.count=Math.max(0,st);const hit=k.goal.count>=k.goal.target;if(hit&&!k.goal.done){k.goal.done=true;if(!quiet)k.goalHit=true}else if(!hit)k.goal.done=false}}
-function post(k,{d=0,e=0,s=0,why=""}){k.ledger=k.ledger||[];k.ledger.push({id:"e"+uid(),t:Date.now(),d,e,s,g:s&&k.goal?k.goal.id:null,why,by:S.device});recalc(k)}
+function post(k,{d=0,e=0,s=0,why="",id=null}){k.ledger=k.ledger||[];if(id&&k.ledger.some(x=>x.id===id))return;k.ledger.push({id:id||"e"+uid(),t:Date.now(),d,e,s,g:s&&k.goal?k.goal.id:null,why,by:S.device});recalc(k)}
 /* Wall of Fame wins rebuilt from the history (ids come from the history entry, so every phone makes the same ones and nothing doubles) */
 function fixTrophies(k){k.trophies=k.trophies||[];k.tGone=k.tGone||[];const gone=new Set(k.tGone);
   const near=(t,title,at)=>t.title===title&&Math.abs((t.at||0)-(at||0))<15*60000;
@@ -1239,7 +1239,7 @@ function fixTrophies(k){k.trophies=k.trophies||[];k.tGone=k.tGone||[];const gone
     k.trophies.push({id,title,type:job?"tidy":null,media:null,kind:null,at:e.t||0,amt:e.d||0,star:star})}
   k.trophies.sort((a,b)=>(b.at||0)-(a.at||0))}
 /* ---------- Big goal: challenges add stars towards one big reward ---------- */
-function addStar(k,title){if(!k.goal)return;post(k,{s:1,why:"star "+(title||"")})}
+function addStar(k,title,id){if(!k.goal)return;post(k,{s:1,why:"star "+(title||""),id:id||null})}
 function goalCard(k,th){const g=k.goal;if(!g)return"";const n=Math.min(g.count||0,g.target),pct=Math.round(n/g.target*100);
   return `<div class="panel goal stack" style="gap:10px"><div class="spread"><span><span class="label">Big goal</span><br><b style="font-size:20px">${esc(g.name)}</b></span>
     ${g.photo?`<img class="tthumb" style="width:64px;height:64px" data-media="${g.photo}" alt="">`:""}</div>
@@ -1250,8 +1250,8 @@ function albumDel(a){if(!a)return;delMedia(a.before);(a.progress||[]).forEach(de
 function albumHTML(t){const a=t.album;if(!a)return"";const items=[];if(a.before)items.push([a.before,"Before"]);(a.progress||[]).forEach((id,i)=>items.push([id,"Progress "+(i+1)]));
   if(t.media&&t.kind!=="video")items.push([t.media,"After"]);if(items.length<2)return"";
   return `<div class="stack" style="gap:6px"><b>The story</b><div class="pstrip story">${items.map(([id,l])=>`<figure><img data-media="${id}" alt="${l}"><figcaption>${l}</figcaption></figure>`).join("")}</div></div>`}
-function logAchievement(k,{type,title,media,kind,album}){k.trophies=k.trophies||[];
-  k.trophies.unshift({id:uid(),title:title||TYPES[type].label,type,media:media||null,kind:media?kind:null,at:Date.now(),amt:0,star:true,album:album||null});k.newTrophy=true;addStar(k,title||TYPES[type].label)}
+function logAchievement(k,{type,title,media,kind,album,id}){k.trophies=k.trophies||[];if(id&&k.trophies.some(t=>t.id===id))return;
+  k.trophies.unshift({id:id||uid(),title:title||TYPES[type].label,type,media:media||null,kind:media?kind:null,at:Date.now(),amt:0,star:true,album:album||null});k.newTrophy=true;addStar(k,title||TYPES[type].label,id?id+"s":null)}
 function quickLog(preKid,state){const st=state||{kid:preKid||(S.kids[0]&&S.kids[0].id),type:"brave",title:"",media:null,kind:null};
   overlay("");const el=overlayEl;
   const draw=()=>{el.querySelector(".sheet").innerHTML=`<div class="stack">
@@ -1390,6 +1390,8 @@ async function importKidFile(text){let d;try{d=JSON.parse(text)}catch(e){return 
   S.usedIn.push(d.id);if(S.usedIn.length>300)S.usedIn.shift();save();render();
   overlay(`<div class="stack" style="text-align:center;align-items:center">${avatarSVG(k,null,"avatar big")||mentorSVG(k.theme)}<h2 class="display">${esc(k.name)} ${isNew?"has arrived":"is up to date"}</h2>
     <p style="margin:0">${k.credits} points${k.goal?`, ${Math.min(k.goal.count,k.goal.target)}/${k.goal.target} stars towards ${esc(k.goal.name)}`:""}. ${added} trophy${added===1?"":"s"} added.${shopAdded?" Shop updated to match.":""}${libAdded?` ${libAdded} job${libAdded===1?"":"s"} added to Use again.`:""}</p><button class="btn" data-close>Done</button></div>`)}
+/* key-order-proof JSON, so two phones describe the same job identically */
+function canon(o){return JSON.stringify(o,(k,v)=>v&&typeof v==="object"&&!Array.isArray(v)?Object.keys(v).sort().reduce((a,x)=>(a[x]=v[x],a),{}):v)}
 /* Merges one child's data (from a file or from live sync) into this phone. Everything is added, never taken away, so it is safe to repeat. */
 async function mergeKid(d,live){const x=d.kid;const seenL=new Set();let k=findKidFor(x.id,x.name),isNew=false;
   if(!k){k={id:x.id,name:x.name,theme:x.theme,credits:0,earned:0};S.kids.push(k);isNew=true}
@@ -1403,11 +1405,11 @@ async function mergeKid(d,live){const x=d.kid;const seenL=new Set();let k=findKi
     else if(mine.id===g.id){if((g.editAt||0)>(mine.editAt||0)){mine.name=g.name;mine.target=g.target}
       const ids=new Set((mine.backers||[]).map(b=>b.id));mine.backers=(mine.backers||[]).concat((g.backers||[]).filter(b=>!ids.has(b.id)));
       if(g.photo&&!mine.photo)mine.photo=await put(g.photo)}}
-  if(d.ledger){const ids=new Set(k.ledger.map(e=>e.id));ids.forEach(i=>seenL.add(i));for(const e of d.ledger)if(!ids.has(e.id))k.ledger.push(e)}
+  if(d.ledger){const ids=new Set(k.ledger.map(e=>e.id));ids.forEach(i=>seenL.add(i));for(const e of d.ledger){if(!ids.has(e.id)){k.ledger.push(e);continue}const i=k.ledger.findIndex(x=>x.id===e.id);if(canon(e)<canon(k.ledger[i]))k.ledger[i]=e}}
   else{const gid=k.goal&&k.goal.id;k.ledger.push({id:"f"+d.id,t:d.at||Date.now(),d:x.credits||0,e:Math.max(0,(x.earned||0)-(k.earned||0)),s:d.goal?(d.goal.count||0):0,g:gid,why:"old file"})}
   k.ledger.sort((p,q)=>(p.t||0)-(q.t||0));recalc(k);
   k.trophies=k.trophies||[];const have=new Set(k.trophies.map(t=>t.id));let added=0;
-  for(const t of (d.trophies||[])){if(have.has(t.id)){const m=k.trophies.find(y=>y.id===t.id);if(m&&!m.media&&t.media)m.media=await put(t.media);if(m&&!m.album&&t.album)m.album={before:await put(t.album.before),progress:(await Promise.all((t.album.progress||[]).map(put))).filter(Boolean)};continue}const al=t.album?{before:await put(t.album.before),progress:(await Promise.all((t.album.progress||[]).map(put))).filter(Boolean)}:null;
+  for(const t of (d.trophies||[])){if(have.has(t.id)){const m=k.trophies.find(y=>y.id===t.id);if(m){const strip=o=>canon({...o,media:null,album:null});if(strip(t)<strip(m)){const keepM=m.media,keepA=m.album;Object.assign(m,t,{media:keepM,album:keepA})}}if(m&&!m.media&&t.media)m.media=await put(t.media);if(m&&!m.album&&t.album)m.album={before:await put(t.album.before),progress:(await Promise.all((t.album.progress||[]).map(put))).filter(Boolean)};continue}const al=t.album?{before:await put(t.album.before),progress:(await Promise.all((t.album.progress||[]).map(put))).filter(Boolean)}:null;
     k.trophies.push({...t,media:await put(t.media),album:al});added++}
   k.tGone=k.tGone||[];for(const id of (d.tGone||[]))if(!k.tGone.includes(id))k.tGone.push(id);fixTrophies(k);
   k.treats=k.treats||[];const haveT=new Set(k.treats.map(t=>t.id));for(const t of (d.treats||[])){if(haveT.has(t.id)){const m=k.treats.find(y=>y.id===t.id);if(m&&!m.photo&&t.photo)m.photo=await put(t.photo);continue}k.treats.push({...t,photo:await put(t.photo)})}
@@ -1434,8 +1436,19 @@ async function mergeKid(d,live){const x=d.kid;const seenL=new Set();let k=findKi
   S.requests=S.requests.filter(r=>!S.reqDone.includes(r.id));S.wishes=S.wishes.filter(w=>!S.wishDone.includes(w.id));
   for(const r of (d.requests||[]))if(!S.reqDone.includes(r.id)&&!S.requests.some(y=>y.id===r.id))S.requests.push({...r,kid:k.id});
   for(const w of (d.wishes||[]))if(!S.wishDone.includes(w.id)&&!S.wishes.some(y=>y.id===w.id))S.wishes.push({...w,kid:k.id,photo:w.photo?await put(w.photo):null});
+  const jobNews=[];
+  if(d.jobs){for(const id of (d.jobGone||[]))if(!S.jobGone.includes(id))S.jobGone.push(id);capT(S.jobGone);
+    S.jobs=S.jobs.filter(j=>!S.jobGone.includes(j.id));
+    for(const r of d.jobs){if(S.jobGone.includes(r.id))continue;let l=S.jobs.find(j=>j.id===r.id);const sig=canon((({at,...x})=>x)({...r,kid:k.id}));
+      if(!l){l={...r,kid:k.id,steps:(r.steps||[]).map(x=>({...x})),run:r.run?{...r.run,progress:[]}:null};delete l.at;S.jobs.push(l);l._h=sig;l.at=r.at||0;if(r.status==="pending"&&live)jobNews.push(r.title);continue}
+      if((r.at||0)<=(l.at||0))continue;
+      const was=l.status,oldDone=l.doneAt;const keepPhoto=l.photo,keepAfter=l.after,keepKind=l.afterKind,audio=new Map((l.steps||[]).map(x=>[x.id,x.audio])),prog=l.run&&l.run.progress;
+      Object.keys(l).forEach(key=>{if(!(key in r))delete l[key]});Object.assign(l,r,{kid:k.id});
+      l.photo=keepPhoto;l.steps=(r.steps||[]).map(x=>({...x,audio:audio.get(x.id)||null}));
+      if(r.status==="pending"&&r.doneAt===oldDone){l.after=keepAfter;l.afterKind=keepKind||r.afterKind;if(l.run)l.run.progress=prog||[]}else{l.after=null;if(l.run)l.run.progress=[]}
+      l._h=sig;l.at=r.at||0;if(r.status==="pending"&&was!=="pending"&&live)jobNews.push(r.title)}}
   const news=(d.ledger||[]).filter(e=>!seenL.has(e.id)&&e.by&&e.by!==S.device&&(e.t||0)>Date.now()-20*60000);
-  return {k,isNew,added,shopAdded,libAdded,news}}
+  return {k,isNew,added,shopAdded,libAdded,news,jobNews}}
 /* A file opened from WhatsApp or Files arrives here; it waits until the app is set up, then asks for the PIN. */
 window.__checkImport=()=>{const b=bridge();if(!b||!b.hasPendingImport||!b.hasPendingImport())return;
   if(!S.pin){toast("Set up Tidy Quest first, then the file will load.");return}
@@ -1471,14 +1484,17 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
   const has=()=>typeof firebase!=="undefined"&&firebase.firestore&&firebase.auth;
   const srt=(a,f=x=>x.id)=>[...(a||[])].sort((p,r)=>{const A=String(f(p)),B=String(f(r));return A<B?-1:A>B?1:0});
   const u=()=>null,ua=()=>null;
-  function lite(k){const tpls=[...S.library,...S.jobs.filter(j=>j.kid===k.id).map(j=>({...j,id:"t"+j.id,at:j.created||0}))].filter((t,i,arr)=>arr.findIndex(y=>tplKey(y)===tplKey(t))===i)
+  /* jobs: every change stamps the job, the newest version wins on every phone; photos and voice notes travel as pictures (slots) */
+  function jlite(j){const {_h,at,photo,after,steps,run,...rest}=j;return {...rest,photo:null,after:null,steps:(steps||[]).map(x=>({id:x.id,text:x.text,audio:null})),run:run?{...run,progress:[]}:null}}
+  function stamp(){for(const j of S.jobs){const sig=canon(jlite(j));if(j._h!==sig){j._h=sig;j.at=Date.now()}}}
+  function lite(k){stamp();const tpls=[...S.library,...S.jobs.filter(j=>j.kid===k.id).map(j=>({...j,id:"t"+j.id,at:j.created||0}))].filter((t,i,arr)=>arr.findIndex(y=>tplKey(y)===tplKey(t))===i)
       .map(t=>({id:t.id,title:t.title,type:t.type,credits:t.credits,timer:t.timer,proof:t.proof,repeat:!!t.repeat,at:t.at||0,photo:u(t.photo),steps:(t.steps||[]).map(x=>({text:x.text,audio:u(x.audio)}))}));
     const g=k.goal?{id:k.goal.id,name:k.goal.name,target:k.goal.target,backers:srt(k.goal.backers),setAt:k.goal.setAt||0,editAt:k.goal.editAt||0,photo:u(k.goal.photo)}:null;
     return JSON.stringify({tq:"kid",v:2,live:1,kid:{id:k.id,name:k.name,theme:k.theme},face:u(k.face),ledger:srt(k.ledger),goal:g,
       trophies:srt(k.trophies).map(t=>({...t,media:u(t.media),album:ua(t.album)})),tGone:[...(k.tGone||[])].sort(),treats:srt(k.treats).map(t=>({...t,photo:u(t.photo)})),
       library:srt(tpls,tplKey),shopGone:srt(S.shopGone),shop:srt(S.rewards).map(r=>({id:r.id,at:r.at||0,icon:r.icon,name:r.name,cost:r.cost,by:r.by||null,photo:u(r.photo)})),
-      requests:srt(S.requests.filter(r=>r.kid===k.id)),reqDone:[...S.reqDone].sort(),wishes:srt(S.wishes.filter(w=>w.kid===k.id)).map(w=>({...w,photo:u(w.photo)})),wishDone:[...S.wishDone].sort()})}
-  function setState(s,err){st.state=s;st.err=err||"";if(s==="on")st.at=Date.now();if(view&&view.name==="parent"&&view.args&&view.args.tab==="link"){const el=$("#syncpanel");if(el)el.outerHTML=panel()}}
+      requests:srt(S.requests.filter(r=>r.kid===k.id)),reqDone:[...S.reqDone].sort(),wishes:srt(S.wishes.filter(w=>w.kid===k.id)).map(w=>({...w,photo:u(w.photo)})),wishDone:[...S.wishDone].sort(),jobs:srt(S.jobs.filter(j=>j.kid===k.id)).map(j=>({...jlite(j),at:j.at||0})),jobGone:[...S.jobGone].sort()})}
+  function setState(s,err){st.state=s;st.err=err||"";if(s==="on")st.at=Date.now();if(view&&view.name==="parent"&&view.args&&view.args.tab==="link"){const a=document.activeElement;if(a&&a.id==="devname")return;const el=$("#syncpanel");if(el)el.outerHTML=panel()}}
   async function start(){if(!S.family)return;if(!has()){setState("nosdk");return}clearTimeout(retry);setState("connecting");
     try{if(!firebase.apps.length){firebase.initializeApp(FB_CFG);try{firebase.firestore().settings({experimentalAutoDetectLongPolling:true})}catch(e){}}
       const auth=firebase.auth();if(!auth.currentUser)await auth.signInAnonymously();
@@ -1489,12 +1505,13 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
     for(const id of (data.gone||[]))if(!S.kidGone.includes(id)){S.kidGone.push(id);const k=kid(id);if(k){S.kids=S.kids.filter(x=>x!==k);changed=true}}
     for(const key of Object.keys(data)){if(key.slice(0,2)!=="k_")continue;const id=key.slice(2),txt=data[key];
       if(S.kidGone.includes(id)||last[id]===txt)continue;let d;try{d=JSON.parse(txt)}catch(e){continue}
-      const r=await mergeKid(d,true);last[r.k.id]=txt;changed=true;r.news.forEach(e=>news.push({k:r.k,e}))}
+      const r=await mergeKid(d,true);last[r.k.id]=txt;changed=true;r.news.forEach(e=>news.push({k:r.k,e}));(r.jobNews||[]).forEach(t=>news.push({k:r.k,e:{why:"done "+t}}))}
     setState("on");
     if(changed){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}if(view&&view.name==="welcome"&&S.kids.length){overlayClose();home();toast("You're in! Welcome to the family.")}else{liveRender();alerts(news)}}
-    first=true;push();media()}
+    first=true;push();media();if(!repAt)report(true)}
   function alerts(news){if(!news.length)return;const say=({k,e})=>{const w=String(e.why||"");
       if(w.startsWith("buy "))return `🛍️ ${k.name} just bought ${w.slice(4)}!`;
+      if(w.startsWith("done "))return `✅ ${k.name} finished "${w.slice(5)}". Check it in Grown-ups → To check`;
       if(w.startsWith("job "))return `${T(k).call||"🥋"} ${k.name} earned ${e.d} ${e.d===1?"point":"points"}: ${w.slice(4)}`;
       if(w.startsWith("star "))return `⭐ ${k.name} earned a star: ${w.slice(5)}`;
       if(w==="refund")return `↩️ ${k.name} got ${e.d} points back`;
@@ -1515,6 +1532,9 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
         add("trb:"+t.id,()=>t.album&&t.album.before,v=>{t.album=t.album||{before:null,progress:[]};t.album.before=v});
         for(let i=0;i<6;i++)add("trp:"+t.id+":"+i,()=>t.album&&(t.album.progress||[])[i],v=>{t.album=t.album||{before:null,progress:[]};t.album.progress=t.album.progress||[];t.album.progress[i]=v})});
       (k.treats||[]).forEach(t=>add("treat:"+t.id,()=>t.photo,v=>t.photo=v))});
+    S.jobs.forEach(j=>{add("job:"+j.id,()=>j.photo,v=>j.photo=v);(j.steps||[]).forEach(x=>add("jobs:"+j.id+":"+x.id,()=>x.audio,v=>x.audio=v));
+      if(j.status==="pending"&&j.doneAt){add("jobafter:"+j.id+":"+j.doneAt,()=>j.after,v=>{j.after=v;if(!j.afterKind)j.afterKind="photo"});
+        if(j.run)for(let i=0;i<6;i++)add("jobp:"+j.id+":"+j.doneAt+":"+i,()=>(j.run.progress||[])[i],v=>{j.run.progress=j.run.progress||[];j.run.progress[i]=v})}});
     S.rewards.forEach(r=>add("rw:"+r.id,()=>r.photo,v=>r.photo=v));S.wishes.forEach(w=>add("wish:"+w.id,()=>w.photo,v=>w.photo=v));
     S.library.forEach(t=>{const tk=tplKey(t);add("lib:"+tk,()=>t.photo,v=>t.photo=v);(t.steps||[]).forEach((x,i)=>add("libs:"+tk+":"+i,()=>x.audio,v=>x.audio=v))});return out}
   const born=id=>{const n=parseInt(String(id||"").slice(1,-5),36);return isFinite(n)&&n>1.5e12&&n<4e12?n:0};
@@ -1532,7 +1552,21 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
     for(let i=0;i<n;i++){const c=await part(id,i).get();if(!c.exists)return false;data+=c.data().d}
     await DB.put(id,b64ToBlob(data,t));if(!S.up.includes(id))S.up.push(id);return true}
   const mst={sent:0,recv:0,wait:0,big:0,fail:0,now:"",err:""};
-  function showM(){const el=document.getElementById("mstat");if(el)el.innerHTML=mline()}
+  function showM(){const el=document.getElementById("mstat");if(el)el.innerHTML=mline();report()}
+  /* each phone posts a small status card to the family record, so everyone can see who is on which version and what is sending */
+  let repT=null,repLast="",repAt=0;
+  function myVer(){try{const b=bridge();return b&&b.appVersion?b.appVersion():0}catch(e){return 0}}
+  function report(force){if(!ref)return;clearTimeout(repT);repT=setTimeout(()=>{const m=mst;
+      const card={name:S.devName||"",ver:myVer(),sent:m.sent,recv:m.recv,wait:m.wait,big:m.big,fail:m.fail,err:(m.err||"").slice(0,120),now:(m.now||"").slice(0,60)};
+      const sig=JSON.stringify(card);if(!force&&sig===repLast&&Date.now()-repAt<10*60000)return;repLast=sig;repAt=Date.now();card.at=Date.now();
+      ref.set({["dev_"+S.device]:card},{merge:true}).catch(()=>{})},force?50:4000)}
+  function famList(){const devs=Object.entries(lastData).filter(([k])=>k.startsWith("dev_")).map(([k,v])=>({id:k.slice(4),...v})).sort((a,b)=>(b.at||0)-(a.at||0));
+    if(!devs.length)return"";const newest=Math.max(...devs.map(d=>d.ver||0));
+    return `<div class="stack" style="gap:8px;border-top:2px solid var(--line);padding-top:10px"><b>Family phones &amp; tablets</b>${devs.map(d=>{const me=d.id===S.device,age=Date.now()-(d.at||0);
+      const seen=age<3*60000?"open now":age<86400000?"last open "+new Date(d.at).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}):"last open "+new Date(d.at).toLocaleDateString("en-GB",{day:"numeric",month:"short"});
+      const old=(d.ver||0)<newest;const bits=[`${d.sent||0} sent`,`${d.recv||0} received`];if(d.wait)bits.push(`${d.wait} to go`);if(d.fail)bits.push(`${d.fail} didn't work`);if(d.big)bits.push(`${d.big} too long`);
+      return `<div style="font-size:15px;line-height:1.35"><b>${esc(d.name||"Unnamed phone")}</b>${me?" (this one)":""} <span class="muted">· ${d.ver?"v0."+(d.ver-1000):"old version"} · ${seen}</span>${old?` <span style="color:#b3261e;font-weight:900">needs update</span>`:""}
+        <br><span class="muted">Photos &amp; videos: ${bits.join(" · ")}${d.now?" · "+esc(d.now):""}</span>${d.err?`<br><span class="muted" style="font-size:13px">${esc(d.err)}</span>`:""}</div>`}).join("")}</div>`}
   function mline(){const m=mst;const bits=[`${m.sent} sent`,`${m.recv} received`];if(m.wait)bits.push(`${m.wait} still to go`);if(m.big)bits.push(`${m.big} too long to send`);if(m.fail)bits.push(`${m.fail} didn't work`);
     return `<b>Photos &amp; videos:</b> ${bits.join(" · ")}${m.now?`<br><span class="muted">${esc(m.now)}</span>`:""}${m.err?`<br><span class="muted" style="font-size:13px">${esc(m.err).slice(0,120)}</span>`:""}`}
   async function media(){if(!ref||!first)return;if(mBusy){mAgain=true;return}mBusy=true;let got=false;
@@ -1576,11 +1610,14 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
     return `<div class="panel stack" id="syncpanel"><b>Live sync between phones</b>
       ${on?`<div>${line}</div><p class="muted" style="margin:0">Points, stars, the big goal, the shop, wishes, things bought and the history update on every linked phone and tablet within seconds. Photos, videos (up to 25 MB each) and voice notes follow in the background. Keep the app open on Wi-Fi while they send.</p>
         <div id="mstat" style="font-size:15px">${mline()}</div>
+        <label class="row" style="gap:8px;align-items:center"><span class="muted" style="white-space:nowrap">This phone is</span><input id="devname" value="${esc(S.devName||"")}" placeholder="e.g. Dave's phone" maxlength="24" style="flex:1;min-width:120px"></label>
+        ${famList()}
         <div class="row" style="gap:8px"><button class="btn small" data-act="famPics">Sync photos now</button><button class="btn ghost small" data-act="famCode">Show family code</button><button class="btn ghost small" data-act="famLeave">Stop syncing here</button></div>`
       :`<p class="muted" style="margin:0">Link phones over the internet so points, stars, the shop and the history stay the same everywhere. Start the family on one phone, then join on the others.</p>
         <div class="row" style="gap:8px"><button class="btn small" data-act="famNew">Start a family</button><button class="btn ghost small" data-act="famJoin">Join a family</button></div>`}</div>`}
+  function setName(n){S.devName=n;save();report(true)}
   function retryMedia(){tried.clear();mst.sent=0;mst.recv=0;mst.now="Checking…";showM();media()}
-  return {start,soon,push,forget,panel,joinPrompt,create,showCode,joinMenu,leave,status:st,retryMedia,mline}})();
+  return {start,soon,push,forget,panel,joinPrompt,create,showCode,joinMenu,leave,status:st,retryMedia,mline,setName}})();
 window.Sync=Sync;
 Object.assign(ACT,{famNew(){Sync.create()},famJoin(){Sync.joinMenu()},famCode(){Sync.showCode()},famLeave(){Sync.leave()},famPics(){Sync.retryMedia()}});
 /* ---------- Updates: the app checks for a newer trial build and installs it from inside the app ---------- */
@@ -1681,6 +1718,7 @@ document.addEventListener("click",e=>{
   const b=e.target.closest("[data-act]");if(!b||b.disabled)return;const f=ACT[b.dataset.act];if(f)f(b)});
 document.addEventListener("change",e=>{const t=e.target;
   if(t.dataset.rw){const r=S.rewards.find(x=>x.id===t.dataset.id);if(!r)return;r[t.dataset.rw]=t.dataset.rw==="cost"?Math.max(1,parseInt(t.value)||1):t.value.trim()||r[t.dataset.rw];r.at=Date.now();S.shopAt=Date.now();save()}
+  if(t.id==="devname"){Sync.setName(t.value.trim())}
   if(t.dataset.kn){const k=kid(t.dataset.kn);if(k&&t.value.trim()){k.name=t.value.trim();save()}}});
 document.addEventListener("keydown",e=>{if(e.key==="Escape")back()});
 window.addEventListener("popstate",()=>{});
