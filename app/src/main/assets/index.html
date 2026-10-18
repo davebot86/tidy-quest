@@ -733,7 +733,8 @@ function poseSVG(name){const P=POSES[name]||POSES.grab;const L=(a,b)=>`M${a[0]} 
   const d=[L(P.n,P.p),L(P.n,P.a1[0]),L(P.a1[0],P.a1[1]),L(P.n,P.a2[0]),L(P.a2[0],P.a2[1]),L(P.p,P.l1[0]),L(P.l1[0],P.l1[1]),L(P.p,P.l2[0]),L(P.l2[0],P.l2[1])].join(" ");
   return `<svg viewBox="0 0 100 120" aria-hidden="true"><ellipse cx="50" cy="114" rx="34" ry="4" fill="currentColor" opacity=".12"/>
     <path d="${d}" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${P.h[0]}" cy="${P.h[1]}" r="9.5" fill="currentColor"/></svg>`}
-function moveFor(k,i){const mv=T(k).moves;return mv[i%mv.length]}
+/* each job starts on its own move, so one-step jobs aren't all Tiger Claw */
+function moveFor(k,i,j){const mv=T(k).moves;let h=0;const id=String((j&&j.id)||"");for(let c=0;c<id.length;c++)h=(h*31+id.charCodeAt(c))>>>0;return mv[(i+h)%mv.length]}
 function say(k,key,vars={}){const m=T(k).m;let t=m[key];if(Array.isArray(t))t=t[Math.floor(Math.random()*t.length)];
   return String(t||"").replace(/\{(\w+)\}/g,(_,v)=>vars[v]!=null?vars[v]:(v==="name"?k.name:""))}
 /* what the master says on the home screen: a grown-up's message for today if there is one, otherwise that world's line for the day */
@@ -868,7 +869,7 @@ VIEWS.pick=()=>{setBodyTheme(null,true);return `
 /* ---------- Kid HQ ---------- */
 function kidJobs(k){const d=today();return S.jobs.filter(j=>j.kid===k.id&&(j.status==="pending"||(j.status==="todo"&&(!j.from||j.from<=d))))}
 function questThumb(k,j){if(j.photo)return `<img class="thumb" data-media="${j.photo}" alt="">`;
-  return `<span class="thumb" style="color:var(--fig)">${isChallenge(j)?`<span style="font-size:40px">${TYPES[j.type].icon}</span>`:poseSVG(moveFor(k,0)[1])}</span>`}
+  return `<span class="thumb" style="color:var(--fig)">${isChallenge(j)?`<span style="font-size:40px">${TYPES[j.type].icon}</span>`:poseSVG(moveFor(k,0,j)[1])}</span>`}
 VIEWS.hq=({kid:id})=>{const k=kid(id);if(!k){home();return""}setBodyTheme(k);const th=T(k);
   const r=rankOf(k.earned||0),next=RANK_AT[r+1];const pct=next?Math.round(((k.earned-RANK_AT[r])/(next-RANK_AT[r]))*100):100;
   const jobs=kidJobs(k),todo=jobs.filter(j=>j.status==="todo");
@@ -944,7 +945,7 @@ VIEWS.job=({id})=>{const j=S.jobs.find(x=>x.id===id);const k=kid(j.kid);setBodyT
   ${j.photo?`<img class="hero-photo" data-media="${j.photo}" alt="What to tidy">`:""}
   ${j.timer?`<div class="panel"><div class="clock" id="clock">${fmt(j.timer*60)}</div><p class="muted" style="text-align:center;margin:0">Finish in time for +${bonus(j)} bonus ${esc(th.cur.toLowerCase())}</p></div>`:""}
   ${!started?`<button class="btn big" data-act="startJob" data-id="${j.id}">${esc(th.start)}</button>`:""}
-  ${j.steps.length?`<div class="moves">${j.steps.map((s,i)=>{const mv=moveFor(k,i),d=done(s.id);return `<div class="move ${d?"done":""} ${i===cur?"now":""}">
+  ${j.steps.length?`<div class="moves">${j.steps.map((s,i)=>{const mv=moveFor(k,i,j),d=done(s.id);return `<div class="move ${d?"done":""} ${i===cur?"now":""}">
       <span class="fig">${poseSVG(mv[1])}</span>
       <span class="n">${esc(th.stepWord)} ${i+1}</span>
       <span class="name">${esc(mv[0])}</span>
@@ -960,7 +961,7 @@ function bonus(j){return Math.max(1,Math.ceil(j.credits/2))}
 function runClock(j){const end=j.run.start+j.timer*60000;const c=$("#clock");const tick=()=>{const left=(end-Date.now())/1000;if(c){c.textContent=left>0?fmt(left):"Time's up!"}};tick();timerInt=setInterval(tick,500)}
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 async function playStep(j,s,call=true){const k=kid(j.kid);const i=j.steps.indexOf(s);
-  if(call&&!isChallenge(j)&&i>=0){const mv=moveFor(k,i);speak(mv[0]+"!");await wait(900+mv[0].length*55)}
+  if(call&&!isChallenge(j)&&i>=0){const mv=moveFor(k,i,j);speak(mv[0]+"!");await wait(900+mv[0].length*55)}
   if(s.audio)await playClip(s.audio);else speak(s.text)}
 
 /* ---------- Shop ---------- */
