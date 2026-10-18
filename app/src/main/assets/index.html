@@ -301,6 +301,9 @@ body.parent{--world:#EEF1F4;--bg:#EEF1F4;--panel:#fff;--ink:#17202A;--muted:#5B6
 .wicons{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
 .wicons button{font-size:26px;height:48px;border-radius:12px;border:2px solid var(--line);background:var(--bg)}
 .wicons button.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.hday{font-weight:900;font-size:14px;color:var(--muted);margin-top:8px}
+.hrow{display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.hic{width:28px;text-align:center;flex:none}
 .pstrip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
 .pstrip img{width:96px;height:96px;object-fit:cover;border-radius:10px;flex:none}
 .pstrip.story figure{margin:0;flex:none;display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:700;color:var(--muted)}
@@ -887,8 +890,19 @@ VIEWS.trophies=({kid:id})=>{const k=kid(id);setBodyTheme(k);const th=T(k);const 
     <span class="t">${esc(t.title)}</span><span class="muted" style="font-size:14px;font-weight:700">${new Date(t.at).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}${t.star?" · ★":""}</span></button>`).join("")}</div>`
   :`<div class="panel empty">Finish something with photo or video proof and it appears here.</div>`}
   ${(k.treats||[]).length?`<div class="section-title on-world"><h2 class="display">Rewards I've earned</h2><span class="count">${k.treats.length}</span></div>
-  <div class="tgrid">${k.treats.map(t=>`<div class="tcard"><span class="tmedia">${t.photo?`<img data-media="${t.photo}" alt="${esc(t.name)}">`:`<span class="ticon">${esc(t.icon)}</span>`}</span>
-    <span class="t">${esc(t.name)}</span><span class="muted" style="font-size:14px;font-weight:700">${new Date(t.at).toLocaleDateString("en-GB",{day:"numeric",month:"short"})} · ${t.cost} ${esc(th.cur.toLowerCase())}</span></div>`).join("")}</div>`:""}`};
+  <div class="tgrid">${k.treats.map(t=>`<div class="tcard" data-treat="${t.id}"><span class="tmedia">${t.photo?`<img data-media="${t.photo}" alt="${esc(t.name)}">`:`<span class="ticon">${esc(t.icon)}</span>`}</span>
+    <span class="t">${esc(t.name)}</span><span class="muted" style="font-size:14px;font-weight:700">${new Date(t.at).toLocaleDateString("en-GB",{day:"numeric",month:"short"})} · ${t.cost} ${esc(th.cur.toLowerCase())}</span></div>`).join("")}</div>`:""}
+  ${historyHTML(k)}`};
+function historyHTML(k){const th=T(k);const L=(k.ledger||[]).filter(e=>e.why!=="start").slice().sort((a,b)=>(b.t||0)-(a.t||0));
+  const start=(k.ledger||[]).filter(e=>e.why==="start");
+  if(!L.length&&!start.length)return"";
+  const label=e=>{const w=e.why||"";if(w.startsWith("job "))return["✅",w.slice(4)||th.job];if(w.startsWith("star"))return["★",w.slice(5)||"A star"];if(w.startsWith("buy "))return["🛍️","Bought "+w.slice(4)];
+    if(w==="refund")return["↩️","Points returned"];if(w.includes("set stars"))return["★","Stars set by a grown-up"];if(w==="grown-up")return["🎁","From a grown-up"];if(w.startsWith("moved"))return["🔁","Moved between phones"];if(w==="old file")return["🔁","From the other phone"];return["•",w]};
+  let lastDay="";const rows=L.map(e=>{const day=new Date(e.t).toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});const head=day!==lastDay?`<div class="hday">${day}</div>`:"";lastDay=day;
+    const [ic,txt]=label(e);const amt=[e.d?`${e.d>0?"+":""}${e.d}`:"",e.s?`${e.s>0?"+":""}${e.s}★`:""].filter(Boolean).join(" ");
+    return head+`<div class="hrow"><span class="hic">${ic}</span><span class="grow">${esc(txt)}</span><b>${amt}</b></div>`}).join("");
+  return `<div class="section-title on-world"><h2 class="display">Everything ${esc(k.name)}'s done</h2></div>
+  <div class="panel stack" style="gap:6px">${rows||""}${start.length?`<div class="hrow muted"><span class="hic">🏁</span><span class="grow">Before history started: ${Math.max(...start.map(e=>e.e||0))} ${esc(th.cur.toLowerCase())} earned</span></div>`:""}</div>`}
 VIEWS.shop=({kid:id})=>{const k=kid(id);setBodyTheme(k);const th=T(k);
   const mine=S.requests.filter(r=>r.kid===k.id&&r.status==="asked");
   return `
@@ -1143,8 +1157,7 @@ const ACT={
       save();toast(`★ for ${k.name}`);render();return}
     const amt=j.credits+(j.beat?bonus(j):0);
     post(k,{d:amt,e:amt,why:"job "+(j.title||"")});if(rankOf(k.earned)>before)k.rankUp=true;
-    if(j.after||album){k.trophies=k.trophies||[];k.trophies.unshift({id:uid(),title:j.title||T(k).job,type:j.type||"tidy",media:j.after||null,kind:j.after?(j.afterKind||"photo"):null,at:Date.now(),amt,album});k.newTrophy=true}
-    else if(album)albumDel(album);
+    {k.trophies=k.trophies||[];k.trophies.unshift({id:uid(),title:j.title||T(k).job,type:j.type||"tidy",media:j.after||null,kind:j.after?(j.afterKind||"photo"):null,at:Date.now(),amt,album});if(j.after||album)k.newTrophy=true}
     j.after=null;j.run=null;j.beat=false;
     if(j.repeat){j.status="todo";j.from=tomorrow()}else{delMedia(j.photo);j.steps.forEach(s=>delMedia(s.audio));S.jobs=S.jobs.filter(x=>x!==j)}
     save();toast(`${k.name} got +${amt}`);render()},
@@ -1178,7 +1191,7 @@ function recalc(k,quiet){const L=k.ledger||[];let d=0,e=0,st=0;const gid=k.goal&
   if(k.goal){k.goal.count=Math.max(0,st);const hit=k.goal.count>=k.goal.target;if(hit&&!k.goal.done){k.goal.done=true;if(!quiet)k.goalHit=true}else if(!hit)k.goal.done=false}}
 function post(k,{d=0,e=0,s=0,why=""}){k.ledger=k.ledger||[];k.ledger.push({id:"e"+uid(),t:Date.now(),d,e,s,g:s&&k.goal?k.goal.id:null,why,by:S.device});recalc(k)}
 /* ---------- Big goal: challenges add stars towards one big reward ---------- */
-function addStar(k){if(!k.goal)return;post(k,{s:1,why:"star"})}
+function addStar(k,title){if(!k.goal)return;post(k,{s:1,why:"star "+(title||"")})}
 function goalCard(k,th){const g=k.goal;if(!g)return"";const n=Math.min(g.count||0,g.target),pct=Math.round(n/g.target*100);
   return `<div class="panel goal stack" style="gap:10px"><div class="spread"><span><span class="label">Big goal</span><br><b style="font-size:20px">${esc(g.name)}</b></span>
     ${g.photo?`<img class="tthumb" style="width:64px;height:64px" data-media="${g.photo}" alt="">`:""}</div>
@@ -1190,7 +1203,7 @@ function albumHTML(t){const a=t.album;if(!a)return"";const items=[];if(a.before)
   if(t.media&&t.kind!=="video")items.push([t.media,"After"]);if(items.length<2)return"";
   return `<div class="stack" style="gap:6px"><b>The story</b><div class="pstrip story">${items.map(([id,l])=>`<figure><img data-media="${id}" alt="${l}"><figcaption>${l}</figcaption></figure>`).join("")}</div></div>`}
 function logAchievement(k,{type,title,media,kind,album}){k.trophies=k.trophies||[];
-  k.trophies.unshift({id:uid(),title:title||TYPES[type].label,type,media:media||null,kind:media?kind:null,at:Date.now(),amt:0,star:true,album:album||null});k.newTrophy=true;addStar(k)}
+  k.trophies.unshift({id:uid(),title:title||TYPES[type].label,type,media:media||null,kind:media?kind:null,at:Date.now(),amt:0,star:true,album:album||null});k.newTrophy=true;addStar(k,title||TYPES[type].label)}
 function quickLog(preKid,state){const st=state||{kid:preKid||(S.kids[0]&&S.kids[0].id),type:"brave",title:"",media:null,kind:null};
   overlay("");const el=overlayEl;
   const draw=()=>{el.querySelector(".sheet").innerHTML=`<div class="stack">
