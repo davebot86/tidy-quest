@@ -648,9 +648,9 @@ function faceEditor(k,mediaId){const img=new Image();let zoom=1,ox=0,oy=0,drag=n
 
 /* ---------- Scenes: an illustrated place for each master to stand in ---------- */
 function sceneSVG(theme){const S={
-  karate:`<defs><linearGradient id="skK" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#12322F"/><stop offset=".55" stop-color="#D9873A"/><stop offset="1" stop-color="#F2C14E"/></linearGradient></defs>
+  karate:`<defs><linearGradient id="skK" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#12322F"/><stop offset=".6" stop-color="#2E6B62"/><stop offset="1" stop-color="#E8C46A"/></linearGradient></defs>
     <rect width="400" height="220" fill="url(#skK)"/><circle cx="292" cy="104" r="50" fill="#FFE1A0" opacity=".92"/>
-    <path d="M0 150 L60 112 L110 140 L170 98 L240 146 L300 118 L400 150 V220 H0Z" fill="#24564F" opacity=".85"/>
+    <path d="M0 150 L60 112 L110 140 L170 98 L240 146 L300 118 L400 150 V220 H0Z" fill="#0E2A27" opacity=".9"/>
     <g fill="#0E2A27"><rect x="330" y="96" width="6" height="64"/><path d="M312 104 h42 l-8 -10 h-26z M316 120 h34 l-7 -9 h-20z M320 136 h26 l-6 -8 h-14z"/></g>
     <path d="M0 0 C40 30 70 26 110 40" stroke="#0E2A27" stroke-width="4" fill="none"/><g fill="#E8B04B">${[[18,14],[40,26],[62,30],[86,34],[104,42],[30,6],[74,20]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="5"/>`).join("")}</g>
     <rect y="168" width="400" height="52" fill="#C9A86A"/><path d="M0 168 H400 M100 168 V220 M200 168 V220 M300 168 V220" stroke="#A88850" stroke-width="2"/><rect y="164" width="400" height="6" fill="#6B3A22"/>`,
