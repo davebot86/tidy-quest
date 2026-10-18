@@ -295,7 +295,7 @@ body.parent{--world:#EEF1F4;--bg:#EEF1F4;--panel:#fff;--ink:#17202A;--muted:#5B6
 .tmedia{position:relative;display:block;width:100%;aspect-ratio:4/3;max-width:100%;border-radius:calc(var(--card-radius) - 2px);overflow:hidden;background:#000}
 .tmedia video,.tmedia img{width:100%;height:100%;object-fit:cover}
 .tplay{position:absolute;inset:0;display:grid;place-items:center;color:#fff}
-.tplay svg{width:44px;height:44px;filter:drop-shadow(0 2px 6px #0008)}
+.tplay svg{width:26px;height:26px;padding:13px 11px 13px 15px;box-sizing:content-box;border-radius:50%;background:rgba(0,0,0,.55);box-shadow:0 0 0 2px rgba(255,255,255,.85)}
 .wishbtn{display:flex;gap:14px;align-items:center;text-align:left;width:100%}
 .wplus{width:52px;height:52px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:32px;font-weight:900;background:var(--accent);color:var(--accent-ink);box-shadow:0 4px 0 var(--accent-edge)}
 .wicons{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
@@ -519,8 +519,23 @@ const urlCache={};
 async function mediaURL(id){if(!id)return null;if(urlCache[id])return urlCache[id];const b=await DB.get(id);if(!b)return null;return urlCache[id]=URL.createObjectURL(b)}
 async function putMedia(blob){const id="m"+uid();await DB.put(id,blob);urlCache[id]=URL.createObjectURL(blob);return id}
 function delMedia(id){if(id){DB.del(id).catch(()=>{});if(urlCache[id]){URL.revokeObjectURL(urlCache[id]);delete urlCache[id]}}}
-async function hydrate(root){for(const el of root.querySelectorAll("[data-media]")){const u=await mediaURL(el.dataset.media);if(!u)continue;
-  if(el.tagName.toLowerCase()==="image")el.setAttribute("href",u);else el.src=u}}
+/* Video tiles show a still from the video itself (made once, kept on this phone) instead of Android's grey play sign */
+const BLANK="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+const thumbCache={};
+async function thumbURL(id){if(thumbCache[id])return thumbCache[id];const tid="th_"+id;
+  const have=await DB.get(tid).catch(()=>null);if(have)return thumbCache[id]=URL.createObjectURL(have);
+  const u=await mediaURL(id);if(!u)return null;
+  const blob=await new Promise(res=>{const v=document.createElement("video");v.muted=true;v.playsInline=true;v.preload="auto";let done=false;
+    const fin=b=>{if(done)return;done=true;v.removeAttribute("src");v.load();res(b)};setTimeout(()=>fin(null),8000);
+    v.onloadeddata=()=>{const d=isFinite(v.duration)?v.duration:1;v.currentTime=Math.min(0.6,d/3)};
+    v.onseeked=()=>{try{const w=480,h=Math.round(w*(v.videoHeight||360)/(v.videoWidth||480));const c=document.createElement("canvas");c.width=w;c.height=h;
+      c.getContext("2d").drawImage(v,0,0,w,h);c.toBlob(b=>fin(b),"image/jpeg",.8)}catch(e){fin(null)}};
+    v.onerror=()=>fin(null);v.src=u});
+  if(!blob)return null;DB.put(tid,blob).catch(()=>{});return thumbCache[id]=URL.createObjectURL(blob)}
+async function hydrate(root){for(const el of root.querySelectorAll("[data-media]")){const tag=el.tagName.toLowerCase();
+  if(tag==="video"&&!el.hasAttribute("controls")){el.poster=BLANK;const id=el.dataset.media;thumbURL(id).then(t=>{if(t)el.poster=t});continue}
+  const u=await mediaURL(el.dataset.media);if(!u)continue;
+  if(tag==="image")el.setAttribute("href",u);else el.src=u}}
 
 /* ---------- Helpers ---------- */
 const $=s=>document.querySelector(s);
