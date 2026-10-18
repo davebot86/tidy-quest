@@ -304,6 +304,10 @@ body.parent{--world:#EEF1F4;--bg:#EEF1F4;--panel:#fff;--ink:#17202A;--muted:#5B6
 .hday{font-weight:900;font-size:14px;color:var(--muted);margin-top:8px}
 .hrow{display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
 .hic{width:28px;text-align:center;flex:none}
+.libgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.libcard{display:flex;align-items:center;gap:8px;padding:8px}
+.libmain{display:flex;align-items:center;gap:12px;flex:1;min-width:0;text-align:left}
+.libmain .thumb{width:56px;height:56px;flex:none}
 .pstrip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
 .pstrip img{width:96px;height:96px;object-fit:cover;border-radius:10px;flex:none}
 .pstrip.story figure{margin:0;flex:none;display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:700;color:var(--muted)}
@@ -494,7 +498,7 @@ function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2
 function load(){
   try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}
   if(!S){S={pin:null,kids:[],jobs:[],rewards:DEFAULT_REWARDS.map(r=>({...r,id:uid()})),requests:[]}}
-  S.device=S.device||("d"+uid());S.wishes=S.wishes||[];S.shopGone=S.shopGone||[];S.rewards.forEach(r=>{if(r.at==null)r.at=0});delete S.lastSend;
+  S.device=S.device||("d"+uid());S.wishes=S.wishes||[];S.library=S.library||[];S.shopGone=S.shopGone||[];S.rewards.forEach(r=>{if(r.at==null)r.at=0});delete S.lastSend;
   S.kids.forEach(k=>{if(k.goal&&!k.goal.id)k.goal.id="g:"+String(k.goal.name||"").trim().toLowerCase();
     if(!k.ledger){k.ledger=[{id:"o"+uid(),t:Date.now(),d:k.credits||0,e:k.earned||0,s:k.goal?(k.goal.count||0):0,g:k.goal?k.goal.id:null,why:"start"}]}recalc(k,true)});S.pendingIn=S.pendingIn||{};S.usedIn=S.usedIn||[];S.sent=S.sent||[];
   S.jobs.forEach(j=>{if(!j.type)j.type="tidy";if(!j.proof)j.proof=j.afterReq?"photo":"none"});
@@ -930,7 +934,8 @@ const PARENT={
       ${j.photo?`<img class="thumb" data-media="${j.photo}" alt="">`:`<span class="thumb"></span>`}
       <span class="stack" style="gap:4px;min-width:0"><span class="t">${esc(j.title||"Untitled job")}</span><span class="muted">${esc(k?k.name:"?")} · ${j.steps.length} steps${j.repeat?" · daily":""}</span>
       <span>${j.status==="pending"?`<span class="chip wait">To check</span>`:j.status==="todo"&&j.from&&j.from>today()?`<span class="chip">Back tomorrow</span>`:`<span class="chip">Live</span>`}</span></span>
-      <span class="chip prize">${isChallenge(j)?"★":"+"+j.credits}</span></button>`}).join("")}</div>`:`<div class="panel empty"><b>No jobs yet.</b><p class="muted">Tap New job, photograph the mess, then record one voice note per step: "Lego in the red box", "pants in the washing basket". Clear steps get better results.</p></div>`}`},
+      <span class="chip prize">${isChallenge(j)?"★":"+"+j.credits}</span></button>`}).join("")}</div>`:`<div class="panel empty"><b>No jobs yet.</b><p class="muted">Tap New job, photograph the mess, then record one voice note per step: "Lego in the red box", "pants in the washing basket". Clear steps get better results.</p></div>`}
+    ${libraryHTML()}`},
   check(){const jobs=S.jobs.filter(j=>j.status==="pending");const reqs=S.requests.filter(r=>r.status==="asked");const wishes=S.wishes||[];
     if(!jobs.length&&!reqs.length&&!wishes.length)return `<div class="panel empty muted">Nothing waiting. Finished jobs, reward requests and shop wishes appear here.</div>`;
     return `<div class="stack">${wishes.map(w=>{const k=kid(w.kid);return `<div class="panel stack">
@@ -1148,7 +1153,9 @@ const ACT={
   saveJob(){keepTitle();if(!draft.title&&!draft.photo&&!draft.steps.length){toast("Give it a name, a photo or a step");return}
     const {isNew,_new,_old,...j}=draft;if(isChallenge(j)){j.credits=0;j.timer=0}if(isNew){j.status="todo";j.created=Date.now();S.jobs.push(j)}
     else{const i=S.jobs.findIndex(x=>x.id===j.id);const old=S.jobs[i];old.steps.forEach(s=>{if(!j.steps.find(x=>x.id===s.id))delMedia(s.audio)});if(_old&&_old!==j.photo)delMedia(_old);S.jobs[i]=j}
-    save();draft=null;toast("Job saved");back()},
+    save();draft=null;toast("Job saved");back();saveTemplate(j).then(()=>save())},
+  useAgain(b){const t=S.library.find(x=>x.id===b.dataset.id);if(!t)return;useTemplate(t)},
+  delTemplate(b){const t=S.library.find(x=>x.id===b.dataset.id);if(!t)return;confirmSheet(`Remove "${t.title||"this job"}" from the library?`,"Jobs already set up are not affected.",()=>{delMedia(t.photo);t.steps.forEach(x=>delMedia(x.audio));S.library=S.library.filter(x=>x!==t);save();render()},"Remove","Keep it")},
   delJob(){confirmSheet("Delete this job?","Its photo and voice notes go too.",()=>{const j=S.jobs.find(x=>x.id===draft.id);if(j){delMedia(j.photo);delMedia(j.after);j.steps.forEach(s=>delMedia(s.audio));S.jobs=S.jobs.filter(x=>x!==j);save()}draft=null;back()})},
   async approve(b){const j=S.jobs.find(x=>x.id===b.dataset.id);const k=kid(j.kid);const before=rankOf(k.earned||0);
     const prog=(j.run&&j.run.progress)||[];const album=(prog.length||(j.photo&&j.after))?{before:j.photo?await copyMedia(j.photo):null,progress:prog.slice()}:null;
@@ -1251,6 +1258,24 @@ function goalEditor(k,draftGoal){const g=draftGoal||(k.goal?{...k.goal,backers:(
     recalc(k,true);const diff=g.stars-(k.goal.count||0);if(diff)post(k,{s:diff,why:"grown-up set stars"});
     save();overlayClose();render();toast("Goal saved")}}
 
+/* ---------- Job library: every job is kept as a template to use again ---------- */
+const tplKey=j=>(j.type||"tidy")+"|"+String(j.title||"").trim().toLowerCase();
+async function saveTemplate(j){if(!j.title&&!j.photo)return;const key=tplKey(j);const ex=S.library.find(t=>tplKey(t)===key);
+  const t={id:ex?ex.id:"t"+uid(),title:j.title,type:j.type||"tidy",credits:j.credits||0,timer:j.timer||0,proof:j.proof||"none",repeat:!!j.repeat,at:Date.now(),
+    photo:j.photo?await copyMedia(j.photo):null,steps:await Promise.all((j.steps||[]).map(async x=>({text:x.text,audio:x.audio?await copyMedia(x.audio):null})))};
+  if(ex){delMedia(ex.photo);ex.steps.forEach(x=>delMedia(x.audio));Object.assign(ex,t)}else S.library.unshift(t)}
+async function useTemplate(t){const k=S.kids[0];
+  draft={isNew:true,id:uid(),kid:k?k.id:null,type:t.type,title:t.title,credits:t.credits,timer:t.timer,proof:t.proof,repeat:t.repeat,_new:[],
+    photo:t.photo?await copyMedia(t.photo):null,steps:[]};
+  for(const x of t.steps){const a=x.audio?await copyMedia(x.audio):null;draft.steps.push({id:uid(),text:x.text,audio:a});if(a)draft._new.push(a)}
+  go("edit");toast("Check it, then Save job")}
+function libraryHTML(){const L=S.library||[];if(!L.length)return"";
+  return `<div class="spread" style="margin-top:6px"><h2 class="display" style="font-size:24px">Use a job again</h2><span class="muted">${L.length}</span></div>
+  <div class="libgrid">${L.map(t=>`<div class="panel libcard"><button class="libmain" data-act="useAgain" data-id="${t.id}">
+      ${t.photo?`<img class="thumb" data-media="${t.photo}" alt="">`:`<span class="thumb" style="display:grid;place-items:center;font-size:32px">${TYPES[t.type]?TYPES[t.type].icon:"🧹"}</span>`}
+      <span class="stack" style="gap:2px;min-width:0"><b>${esc(t.title||"Untitled job")}</b><span class="muted" style="font-size:14px">${isChallenge(t)?"★ star":`+${t.credits} points`}${t.steps.length?` · ${t.steps.length} step${t.steps.length===1?"":"s"}`:""}${t.timer?` · ${t.timer} min`:""}</span></span></button>
+    <button class="iconbtn" data-act="delTemplate" data-id="${t.id}" aria-label="Remove from library" style="width:38px;height:38px">${IC.trash}</button></div>`).join("")}</div>`}
+
 /* ---------- Wishes: the child suggests something for the shop ---------- */
 const WISH_ICONS=["🍫","🍭","🍦","🧁","🍕","🎮","📺","🎬","🧸","🚗","⚽","🛴","🎨","📚","🏊","🎢","🌙","🪙"];
 function wishSheet(k,state){const st=state||{icon:"🍫",name:"",photo:null};const th=T(k);
@@ -1308,6 +1333,8 @@ async function buildKidFile(k){const trophies=[];
   return JSON.stringify({tq:"kid",v:2,id:"x"+uid(),from:S.device,at:Date.now(),
     ledger:k.ledger||[],
     kid:{id:k.id,name:k.name,theme:k.theme,earned:k.earned||0,credits:k.credits||0},face:await packMedia(k.face),goal:g,trophies,treats,
+    library:await Promise.all([...S.library,...S.jobs.filter(j=>j.kid===k.id).map(j=>({...j,id:"t"+j.id,at:j.created||0}))].filter((t,i,arr)=>arr.findIndex(x=>tplKey(x)===tplKey(t))===i).map(async t=>({id:t.id,title:t.title,type:t.type,credits:t.credits,timer:t.timer,proof:t.proof,repeat:!!t.repeat,at:t.at||0,
+      photo:await packMedia(t.photo),steps:await Promise.all((t.steps||[]).map(async x=>({text:x.text,audio:await packMedia(x.audio)})))}))),
     shopAt:S.shopAt||0,shopGone:S.shopGone||[],shop:await Promise.all(S.rewards.map(async r=>({id:r.id,at:r.at||0,icon:r.icon,name:r.name,cost:r.cost,by:r.by||null,photo:await packMedia(r.photo)})))})}
 async function shareFile(name,text){const b=bridge();
   if(b&&b.fileBegin){if(!b.fileBegin(name))return false;const CH=256*1024;
@@ -1348,9 +1375,13 @@ async function importKidFile(text){let d;try{d=JSON.parse(text)}catch(e){return 
         else if(!ex.photo&&r.photo){ex.photo=await put(r.photo);changed=true}}
       else{S.rewards.push({id:r.id||uid(),icon:r.icon||"⭐",name:r.name,cost:Math.max(1,parseInt(r.cost)||1),by:r.by||null,at:r.at||0,photo:await put(r.photo)});shopAdded++;changed=true}}
     if(changed&&!shopAdded)shopAdded=-1}
+  let libAdded=0;for(const t of (d.library||[])){const ex=S.library.find(x=>tplKey(x)===tplKey(t));if(ex&&(ex.at||0)>=(t.at||0))continue;
+    const nt={id:ex?ex.id:(t.id||"t"+uid()),title:t.title,type:t.type||"tidy",credits:t.credits||0,timer:t.timer||0,proof:t.proof||"none",repeat:!!t.repeat,at:t.at||0,photo:await put(t.photo),steps:[]};
+    for(const x of (t.steps||[]))nt.steps.push({text:x.text,audio:await put(x.audio)});
+    if(ex){delMedia(ex.photo);ex.steps.forEach(x=>delMedia(x.audio));Object.assign(ex,nt)}else{S.library.push(nt);libAdded++}}
   S.usedIn.push(d.id);save();render();
   overlay(`<div class="stack" style="text-align:center;align-items:center">${avatarSVG(k,null,"avatar big")||mentorSVG(k.theme)}<h2 class="display">${esc(k.name)} ${isNew?"has arrived":"is up to date"}</h2>
-    <p style="margin:0">${k.credits} points${k.goal?`, ${Math.min(k.goal.count,k.goal.target)}/${k.goal.target} stars towards ${esc(k.goal.name)}`:""}. ${added} trophy${added===1?"":"s"} added.${shopAdded?" Shop updated to match.":""}</p><button class="btn" data-close>Done</button></div>`)}
+    <p style="margin:0">${k.credits} points${k.goal?`, ${Math.min(k.goal.count,k.goal.target)}/${k.goal.target} stars towards ${esc(k.goal.name)}`:""}. ${added} trophy${added===1?"":"s"} added.${shopAdded?" Shop updated to match.":""}${libAdded?` ${libAdded} job${libAdded===1?"":"s"} added to Use again.`:""}</p><button class="btn" data-close>Done</button></div>`)}
 /* A file opened from WhatsApp or Files arrives here; it waits until the app is set up, then asks for the PIN. */
 window.__checkImport=()=>{const b=bridge();if(!b||!b.hasPendingImport||!b.hasPendingImport())return;
   if(!S.pin){toast("Set up Tidy Quest first, then the file will load.");return}
