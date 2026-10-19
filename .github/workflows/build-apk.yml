@@ -91,3 +91,36 @@ jobs:
           gh release create trial TidyQuest-trial.apk version.json \
             --title "Tidy Quest trial build" \
             --notes "Build ${{ github.run_number }}. Download TidyQuest-trial.apk on the Android tablet and open it to install."
+
+  web:
+    runs-on: ubuntu-latest
+    needs: build
+    if: ${{ always() }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build the web version (same app, served as a page for iPhone and the browser)
+        run: |
+          set -e
+          rm -rf web && mkdir -p web/vendor web/fonts
+          cp -r app/src/main/assets/. web/
+          mkdir -p /tmp/fb && cd /tmp/fb && npm pack firebase@10.14.1 --silent >/dev/null && tar xzf firebase-10.14.1.tgz
+          for f in firebase-app-compat.js firebase-auth-compat.js firebase-firestore-compat.js; do cp "$(find package -name "$f" | head -1)" "$GITHUB_WORKSPACE/web/vendor/$f"; done
+          cd /tmp && mkdir -p fonts && cd fonts
+          for pair in nunito:400 nunito:700 nunito:900 shippori-mincho-b1:800 saira-stencil-one:400 bangers:400 bungee:400 orbitron:700 bebas-neue:400; do
+            pkg="${pair%%:*}"; w="${pair##*:}"
+            [ -d "$pkg" ] || { npm pack "@fontsource/$pkg" --silent >/dev/null 2>&1 && mkdir -p "$pkg" && tar xzf fontsource-$pkg-*.tgz -C "$pkg" --strip-components=1; }
+            f=$(ls "$pkg"/files/*-latin-$w-normal.woff2 2>/dev/null | grep -v ext | head -1 || true)
+            [ -n "$f" ] && cp "$f" "$GITHUB_WORKSPACE/web/fonts/$pkg-$w.woff2"
+          done
+          ls -la "$GITHUB_WORKSPACE/web" | head -30
+
+      - name: Publish to Firebase Hosting
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          if [ -z "$FIREBASE_TOKEN" ]; then echo "::warning::No FIREBASE_TOKEN secret yet, so the web version was built but not published."; exit 0; fi
+          npx --yes firebase-tools@13 deploy --only hosting --project project-tidy-quest --non-interactive --token "$FIREBASE_TOKEN"

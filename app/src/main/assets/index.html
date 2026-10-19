@@ -3,6 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tidy Quest">
+<meta name="theme-color" content="#1C4B47">
+<link rel="apple-touch-icon" href="icon-180.png">
 <title>Tidy Quest</title>
 <style>
 /* Fonts are bundled into assets/fonts by the GitHub build; every face has a fallback stack. */
@@ -423,6 +429,7 @@ body[data-theme="karate"] .seal,body[data-theme="army"] .seal,body[data-theme="h
 <script src="vendor/firebase-app-compat.js"></script>
 <script src="vendor/firebase-auth-compat.js"></script>
 <script src="vendor/firebase-firestore-compat.js"></script>
+<script src="vendor/qrlite.js"></script>
 <script>
 "use strict";
 /* ---------- Themes ---------- */
@@ -1234,13 +1241,14 @@ const ACT={
   trophies(b){go("trophies",{kid:b.dataset.id})},
   quickLog(){quickLog()},
   editGoal(b){goalEditor(kid(b.dataset.id))},
-  trophy(b){const k=kid(b.dataset.kid);const t=(k.trophies||[]).find(x=>x.id===b.dataset.id);if(!t)return;const canSave=!!(t.media&&bridge()&&bridge().saveMedia);
+  trophy(b){const k=kid(b.dataset.kid);const t=(k.trophies||[]).find(x=>x.id===b.dataset.id);if(!t)return;const canSave=!!t.media;
     const el=overlay(`<div class="stack"><div class="display" style="font-size:26px">${esc(t.title)}</div>
       ${!t.media?`<div class="ticon big">${TYPES[t.type]?TYPES[t.type].icon:"★"}</div>`:t.kind==="video"?`<video class="media-box" controls autoplay playsinline data-media="${t.media}"></video>`:`<img class="media-box" style="object-fit:contain" data-media="${t.media}" alt="">`}
       <span class="muted">${new Date(t.at).toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})} ${t.star?" · ★":" · +"+t.amt}</span>
       ${albumHTML(t)}
       <div class="row">${canSave?`<button class="btn" id="tsave">Save to gallery</button>`:""}<button class="btn ghost" data-close>Close</button><button class="btn bad small" id="tdel">Remove</button></div></div>`);
     const sv=el.querySelector("#tsave");if(sv)sv.onclick=async()=>{const blob=await DB.get(t.media);if(!blob){toast("File not found");return}
+      if(!(bridge()&&bridge().saveMedia)){const ext=t.kind==="video"?(blob.type.includes("mp4")?"mp4":"webm"):"jpg";await webSaveFile(blob,("TidyQuest-"+k.name+"-"+t.title).replace(/[^\w-]+/g,"-").slice(0,60)+"."+ext);return}
       const fr=new FileReader();fr.onload=()=>{const b64=String(fr.result).split(",")[1];const ext=t.kind==="video"?(blob.type.includes("mp4")?"mp4":"webm"):"jpg";
         try{const ok=bridge().saveMedia(b64,blob.type||(t.kind==="video"?"video/webm":"image/jpeg"),("TidyQuest-"+k.name+"-"+t.title).replace(/[^\w-]+/g,"-").slice(0,60)+"."+ext);toast(ok?"Saved to the gallery":"Couldn't save. Allow storage access and try again.")}catch(e){toast("Couldn't save to the gallery")}};fr.readAsDataURL(blob)};
     el.querySelector("#tdel").onclick=()=>{overlayClose();pinPad("Grown-ups only","Enter your PIN to remove it",p=>{if(p!==S.pin)return false;overlayClose();
@@ -1495,8 +1503,11 @@ async function posterSheet(k,off=0){const el=overlay(`<div class="stack"><h2 cla
   if(overlayEl!==el)return;const url=res.canvas.toDataURL("image/jpeg",.92);
   el.querySelector("#pbox").outerHTML=`<img src="${url}" alt="${esc(k.name)}'s poster for ${esc(res.M.R.label)}" style="width:100%;border-radius:12px;box-shadow:0 8px 24px -12px rgba(0,0,0,.5)"><p class="muted" style="margin:0;font-size:14px">A4 size. Print it from the gallery, or send it to family.</p>`;
   el.querySelector("#pact").hidden=false;const name=("TidyQuest-"+k.name+"-"+res.M.R.label).replace(/[^\w-]+/g,"-")+".jpg";
-  el.querySelector("#psave").onclick=()=>{const b=bridge();if(b&&b.saveMedia){try{toast(b.saveMedia(url.split(",")[1],"image/jpeg",name)?"Saved to the gallery":"Couldn't save. Allow storage access and try again.")}catch(e){toast("Couldn't save to the gallery")}}
-    else{const a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove()}}}
+  el.querySelector("#psave").onclick=async()=>{const b=bridge();if(b&&b.saveMedia){try{toast(b.saveMedia(url.split(",")[1],"image/jpeg",name)?"Saved to the gallery":"Couldn't save. Allow storage access and try again.")}catch(e){toast("Couldn't save to the gallery")}}
+    else{await webSaveFile(await (await fetch(url)).blob(),name)}}}
+/* on the web (iPhone, say) the share sheet lets you save to Photos; otherwise it downloads */
+async function webSaveFile(blob,name){try{const f=new File([blob],name,{type:blob.type});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:name});return}}catch(e){if(e&&e.name==="AbortError")return}
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000)}
 /* ---------- Poster editor: pick the pictures, then frame each one (drag, pinch or slide to zoom, rotate) ---------- */
 function posterSave(k,off,slots){S.posterEdit=S.posterEdit||{};const key=posterKey(k,off);S.posterEdit[key]={...(S.posterEdit[key]||{}),slots,at:Date.now()};save()}
 async function thumbOf(id,video){const u=await mediaURL(id);if(!u)return null;const img=video?await videoFrame(u):await blobImg(u);return img}
@@ -1719,7 +1730,8 @@ async function shareFile(name,text){const b=bridge();
   if(b&&b.fileBegin){if(!b.fileBegin(name))return false;const CH=256*1024;
     for(let i=0;i<text.length;i+=CH){if(!b.fileAppend(text.slice(i,i+CH)))return false}
     return b.fileShare("Send "+name)}
-  window.__lastExport=text;return true}
+  try{const f=new File([text],name,{type:"application/json"});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:name});return true}}catch(e){if(e&&e.name==="AbortError")return false}
+  await webSaveFile(new Blob([text],{type:"application/json"}),name);return true}
 async function importKidFile(text){let d;try{d=JSON.parse(text)}catch(e){return toast("That file isn't a Tidy Quest file.")}
   if(!d||d.tq!=="kid"||!d.kid)return toast("That file isn't a Tidy Quest file.");
   if(d.from===S.device)return toast("That file came from this phone. Open it on the other phone.");
@@ -1804,6 +1816,7 @@ function unpackQR(text){const m=String(text||"").replace(/\s+/g,"").match(/TQ1:(
 const bridge=()=>window.AndroidTTS||null;
 function showQR(text,title,sub,extra){const b=bridge();let img="";
   try{if(b&&b.makeQR)img=b.makeQR(text)}catch(e){}
+  if(!img&&window.QRLite){try{img=QRLite(text)||""}catch(e){}}
   const el=overlay(`<div class="stack" style="align-items:center;text-align:center"><h2 class="display">${esc(title)}</h2><p class="muted" style="margin:0">${esc(sub)}</p>
     ${img?`<img src="${img}" alt="QR code" style="width:min(320px,80vw);image-rendering:pixelated;background:#fff;padding:10px;border-radius:12px">`:""}
     <details style="width:100%"><summary class="muted">Can't scan? Use the text code</summary>
@@ -1813,10 +1826,18 @@ function showQR(text,title,sub,extra){const b=bridge();let img="";
   el.querySelector("[data-copy]").onclick=async()=>{toast(await copyText(text)?"Copied":"Press and hold the code to copy")};return el}
 function scanQR(cb){const b=bridge();
   if(b&&b.scanQR){window.__onScan=t=>{window.__onScan=null;if(t)cb(t)};try{b.scanQR();return}catch(e){}}
+  if(window.BarcodeDetector&&navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){webScan(cb);return}
   const el=overlay(`<div class="stack"><h2 class="display">Enter a code</h2><p class="muted" style="margin:0">Paste the text code from the other tablet.</p>
     <textarea id="qrin" rows="4" style="width:100%;font:12px/1.4 monospace;border:2px solid var(--line);border-radius:12px;padding:8px;background:var(--panel);color:var(--ink)"></textarea>
     <div class="row"><button class="btn" id="qrgo">Use code</button><button class="btn ghost" data-close>Cancel</button></div></div>`);
   el.querySelector("#qrgo").onclick=()=>{const t=el.querySelector("#qrin").value;overlayClose();cb(t)}}
+async function webScan(cb){let stream=null,stop=false;const el=overlay(`<div class="stack" style="align-items:center"><h2 class="display">Scan the code</h2><video id="sv" playsinline muted style="width:100%;max-width:360px;border-radius:14px;background:#000"></video>
+    <p class="muted" id="smsg" style="margin:0">Point the camera at the code on the other phone.</p><div class="row"><button class="btn ghost small" id="spaste">Type or paste it instead</button><button class="btn ghost small" id="sx">Cancel</button></div></div>`,()=>{stop=true;if(stream)stream.getTracks().forEach(t=>t.stop())});
+  const v=el.querySelector("#sv");el.querySelector("#sx").onclick=()=>overlayClose();
+  el.querySelector("#spaste").onclick=()=>{overlayClose();const e2=overlay(`<div class="stack"><h2 class="display">Enter a code</h2><textarea id="qrin" rows="4" style="width:100%;font:12px/1.4 monospace;border:2px solid var(--line);border-radius:12px;padding:8px;background:var(--panel);color:var(--ink)"></textarea>
+    <div class="row"><button class="btn" id="qrgo">Use code</button><button class="btn ghost" data-close>Cancel</button></div></div>`);e2.querySelector("#qrgo").onclick=()=>{const t=e2.querySelector("#qrin").value;overlayClose();cb(t)}};
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});v.srcObject=stream;await v.play()}catch(e){el.querySelector("#smsg").textContent="Camera not available. Paste the code instead.";return}
+  const det=new BarcodeDetector({formats:["qr_code"]});const tick=async()=>{if(stop)return;try{const codes=await det.detect(v);if(codes.length){const t=codes[0].rawValue;overlayClose();cb(t);return}}catch(e){}setTimeout(tick,250)};tick()}
 function findKidFor(id,name){return kid(id)||S.kids.find(k=>k.name.trim().toLowerCase()===String(name||"").trim().toLowerCase())}
 /* ---------- Live sync (Firebase). Each child is one text field in the family's online record; phones merge it the same way as files, so nothing doubles or goes missing. Photos stay on the phone. ---------- */
 const FB_CFG={apiKey:"AIzaSyAvK_SjvIwoEfUYMc-fAehF3sFyYOqmmZg",authDomain:"project-tidy-quest.firebaseapp.com",projectId:"project-tidy-quest",storageBucket:"project-tidy-quest.firebasestorage.app",messagingSenderId:"952684727287",appId:"1:952684727287:web:cb6ebd04598f519fb27cf2"};
@@ -1951,7 +1972,7 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
   function showCode(){const el=showQR(code(),"Family code","On the other phone or tablet: Grown-ups → Link → Join a family, then scan this. Anyone with this code can see your family's Tidy Quest, so only share it with family.",
       `<button class="btn ghost" id="famshare">Send as a message instead</button>`);
     el.querySelector("#famshare").onclick=()=>{const t="Join our family on Tidy Quest: open Tidy Quest → Grown-ups → Link → Join a family → Paste a code, and paste this:\n\n"+code();const b=bridge();
-      if(b&&b.share)b.share(t);else if(b&&b.copy){b.copy(t);toast("Copied")}else{try{navigator.clipboard.writeText(t);toast("Copied")}catch(e){}}}}
+      if(b&&b.share)b.share(t);else if(navigator.share){navigator.share({text:t}).catch(()=>{})}else if(b&&b.copy){b.copy(t);toast("Copied")}else{try{navigator.clipboard.writeText(t);toast("Copied")}catch(e){}}}}
   function joinPrompt(d){if(!d.f||d.f.length<20)return toast("That family code isn't complete.");if(d.f===S.family)return toast("This phone is already in that family.");
     confirmSheet("Join this family?","This phone's children, points, stars, shop and history are merged with the family's. Nothing is lost or counted twice, and from now on both stay in step.",()=>{
       S.family=d.f;Object.keys(last).forEach(k=>delete last[k]);save();if(unsub){unsub();unsub=null}start();toast("Joining…");render()},"Join","Cancel")}
@@ -2003,8 +2024,12 @@ const Upd=(()=>{let bar=null,info=null;
     else if(step==="install")el(`<span class="grow"><b>Tap Update on the next screen.</b> Tidy Quest restarts with everything kept.</span><button class="iconbtn" id="updx" aria-label="Close">✕</button>`).querySelector("#updx").onclick=hide;
     else if(step==="fail")el(`<span class="grow"><b>The update didn't download.</b> Check the internet and try again.</span><button class="btn small" id="updgo">Try again</button>`).querySelector("#updgo").onclick=go};
   function check(){const b=bridge();if(b&&b.checkUpdate)try{b.checkUpdate()}catch(e){}}
+  /* on the web there is nothing to install: a reload picks up the newest version */
   return {check}})();
-setTimeout(Upd.check,2500);setInterval(Upd.check,3*60*60*1000);
+setTimeout(Upd.check,2500);
+(function(){const ios=/iPhone|iPad|iPod/.test(navigator.userAgent),standalone=window.navigator.standalone===true||matchMedia("(display-mode: standalone)").matches;
+  if(ios&&!standalone&&!bridge()&&!localStorage.getItem("tq_a2hs")){setTimeout(()=>{const t=document.createElement("div");t.className="updbar";t.innerHTML=`<span class="grow"><b>Put Tidy Quest on your home screen</b><br><span style="opacity:.85">Tap the Share button <span style="display:inline-block;border:1.5px solid #fff;border-radius:4px;padding:0 5px;font-size:12px">⇧</span> below, then <b>Add to Home Screen</b>. It then opens full-screen like an app.</span></span><button class="iconbtn" aria-label="Close">✕</button>`;
+    t.querySelector("button").onclick=()=>{t.remove();try{localStorage.setItem("tq_a2hs","1")}catch(e){}};document.body.appendChild(t)},4000)}})();setInterval(Upd.check,3*60*60*1000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)Upd.check()});
 function handleCode(text){const d=unpackQR(text);
   if(!d){toast("That isn't a Tidy Quest code.");return}
@@ -2092,6 +2117,7 @@ document.addEventListener("change",e=>{const t=e.target;
 document.addEventListener("keydown",e=>{if(e.key==="Escape")back()});
 window.addEventListener("popstate",()=>{});
 
+if("serviceWorker" in navigator&&!window.AndroidTTS&&location.protocol==="https:"){navigator.serviceWorker.register("sw.js").catch(()=>{})}
 load();home();if(S.family)Sync.start();setTimeout(()=>Sync.rollCall(),8000);
 </script>
 </body>
