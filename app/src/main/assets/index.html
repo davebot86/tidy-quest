@@ -162,6 +162,9 @@ body[data-theme="karate"] .meter i{border-radius:2px;background:var(--belt,#f4f4
 .tile .num{font-size:44px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums}
 .tile .what{font-weight:700;color:var(--muted)}
 .tile .go{margin-top:auto;font-weight:900;color:var(--accent)}
+.tile.jar{border-color:var(--accent2)}.tile.jar .nbar i{background:var(--accent)}.tile.jar.full{animation:jarglow 1.4s ease-in-out infinite alternate}@keyframes jarglow{from{box-shadow:var(--card-shadow)}to{box-shadow:0 0 0 4px var(--accent2),var(--card-shadow)}}
+.jarbig{width:min(240px,70vw);height:12px;border-radius:999px;background:rgba(127,127,127,.22);overflow:hidden}.jarbig i{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .3s}
+.stepper{display:flex;align-items:center;gap:14px;justify-content:center}.stepper button{width:54px;height:54px;border-radius:50%;background:var(--panel);border:2px solid var(--line);font-size:28px;font-weight:900;color:var(--ink)}.stepper b{font-size:40px;min-width:60px;text-align:center;font-variant-numeric:tabular-nums}
 .nudge{display:flex;flex-direction:column;gap:5px;margin-top:2px}.nudge .nl{font-size:14px;font-weight:700;color:var(--muted);line-height:1.25}.nudge .nl b{color:var(--ink)}.nbar{display:block;height:8px;border-radius:999px;background:rgba(127,127,127,.22);overflow:hidden}.nbar i{display:block;height:100%;background:var(--accent2);border-radius:999px}
 .weekstrip{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:2px 12px 0;font-size:14px;font-weight:800}.weekstrip .wl{opacity:.7;font-weight:700}.weekstrip span:not(.wl){background:rgba(0,0,0,.22);color:#fff;border-radius:999px;padding:3px 10px;backdrop-filter:blur(4px)}
 .stars{display:flex;flex-wrap:wrap;gap:3px}
@@ -887,11 +890,14 @@ VIEWS.hq=({kid:id})=>{const k=kid(id);if(!k){home();return""}setBodyTheme(k);con
       <div class="rankline">${k.face?badgeSVG(k).replace('class="badge"','class="badge sm"'):""}${esc(th.ranks[r])}</div>
       <div class="meter" role="progressbar" aria-label="Progress to next rank" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" style="--belt:${th.belts?th.belts[Math.min(r+1,6)]:""}"><i style="width:${pct}%"></i></div>
       <span style="font-weight:700;font-size:15px;opacity:.85">${next?`${next-k.earned} ${esc(th.cur.toLowerCase())} to ${esc(th.ranks[r+1])}`:"Top rank reached"}</span></div></div>
-  ${(()=>{const w=weekOf(k);if(!w.wins&&!w.stars&&!w.treats)return "";return `<div class="weekstrip on-world"><span class="wl">This week</span>${w.wins?`<span>✅ ${w.wins} win${w.wins===1?"":"s"}</span>`:""}${w.stars?`<span>★ ${w.stars} star${w.stars===1?"":"s"}</span>`:""}${w.treats?`<span>🛍️ ${w.treats} treat${w.treats===1?"":"s"}</span>`:""}</div>`})()}
+  ${(()=>{const w=weekOf(k);if(!w.wins&&!w.stars&&!w.treats)return "";return `<div class="weekstrip on-world"><span class="wl">This week</span>${w.wins?`<span>✅ ${w.wins} win${w.wins===1?"":"s"}</span>`:""}${w.stars?`<span>★ ${w.stars} star${w.stars===1?"":"s"}</span>`:""}${w.treats?`<span>🛍️ ${w.treats} treat${w.treats===1?"":"s"}</span>`:""}${w.saved?`<span>🫙 ${w.saved} saved</span>`:""}</div>`})()}
   <div class="tiles">
     <button class="panel tile" data-act="shop" data-id="${k.id}"><span class="what">${esc(th.cur)}</span><span class="num">${coinSVG()}<span data-count="${k.credits}">${k.credits}</span></span>
-      ${(()=>{const n=nextTreat(k);if(!n)return "";const pct=Math.min(100,Math.round(k.credits/n.r.cost*100));return `<span class="nudge"><span class="nl">${n.have?`You can get <b>${esc(n.r.name)}</b>! ${esc(n.r.icon||"")}`:`<b>${n.need}</b> more for ${esc(n.r.name)} ${esc(n.r.icon||"")}`}</span><span class="nbar"><i style="width:${pct}%"></i></span></span>`})()}
+      ${(()=>{if(k.jar)return "";const n=nextTreat(k);if(!n)return "";const pct=Math.min(100,Math.round(k.credits/n.r.cost*100));return `<span class="nudge"><span class="nl">${n.have?`You can get <b>${esc(n.r.name)}</b>! ${esc(n.r.icon||"")}`:`<b>${n.need}</b> more for ${esc(n.r.name)} ${esc(n.r.icon||"")}`}</span><span class="nbar"><i style="width:${pct}%"></i></span></span>`})()}
       <span class="go">${esc(th.shop)} →</span></button>
+    ${k.jar?(()=>{const J=k.jar,pct=Math.min(100,Math.round(J.saved/J.cost*100)),full=J.saved>=J.cost;return `<button class="panel tile jar ${full?"full":""}" data-act="jarOpen" data-id="${k.id}"><span class="what">🫙 Saving for</span><b style="font-size:19px;line-height:1.2">${esc(J.icon||"")} ${esc(J.name)}</b>
+      <span class="nudge"><span class="nl">${full?`<b>Full!</b> Tap to get it 🎉`:`<b>${J.saved}</b> of ${J.cost} saved · ${J.cost-J.saved} to go`}</span><span class="nbar"><i style="width:${pct}%"></i></span></span>
+      <span class="go">${full?"Get it! →":"Add points →"}</span></button>`})():""}
     ${g?`<div class="panel tile"><span class="what">Big goal · ${gn}/${g.target}</span><b style="font-size:19px;line-height:1.2">${esc(g.name)}</b>
       <div class="stars" aria-label="${gn} of ${g.target} stars">${Array.from({length:g.target},(_,i)=>`<i class="${i<gn?"on":""}">★</i>`).join("")}</div>
       ${(g.backers||[]).length?`<span class="backers">Backed by ${g.backers.map(x=>`<b>${esc(x.name)}</b>${x.gift?` (${esc(x.gift)})`:""}`).join(", ")}</span>`:""}</div>`
@@ -981,7 +987,7 @@ function historyHTML(k){const th=T(k);const L=(k.ledger||[]).filter(e=>e.why!=="
   const start=(k.ledger||[]).filter(e=>e.why==="start");
   if(!L.length&&!start.length)return"";
   const label=e=>{const w=e.why||"";if(w.startsWith("job "))return["✅",w.slice(4)||th.job];if(w.startsWith("star"))return["★",w.slice(5)||"A star"];if(w.startsWith("buy "))return["🛍️","Bought "+w.slice(4)];
-    if(w==="refund")return["↩️","Points returned"];if(w.includes("set stars"))return["★","Stars set by a grown-up"];if(w==="grown-up")return["🎁","From a grown-up"];if(w.startsWith("moved"))return["🔁","Moved between phones"];if(w==="old file")return["🔁","From the other phone"];return["•",w]};
+    if(w==="refund")return["↩️","Points returned"];if(w.startsWith("jar back "))return["🫙","Took some back from the jar"];if(w.startsWith("jar done "))return["🎉","Saved up for "+w.slice(9)+"!"];if(w.startsWith("jar "))return["🫙","Saved towards "+w.slice(4)];if(w.includes("set stars"))return["★","Stars set by a grown-up"];if(w==="grown-up")return["🎁","From a grown-up"];if(w.startsWith("moved"))return["🔁","Moved between phones"];if(w==="old file")return["🔁","From the other phone"];return["•",w]};
   let lastDay="";const rows=L.map(e=>{const day=new Date(e.t).toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});const head=day!==lastDay?`<div class="hday">${day}</div>`:"";lastDay=day;
     const [ic,txt]=label(e);const amt=[e.d?`${e.d>0?"+":""}${e.d}`:"",e.s?`${e.s>0?"+":""}${e.s}★`:""].filter(Boolean).join(" ");
     return head+`<div class="hrow"><span class="hic">${ic}</span><span class="grow">${esc(txt)}</span><b>${amt}</b></div>`}).join("");
@@ -992,12 +998,12 @@ VIEWS.shop=({kid:id})=>{const k=kid(id);setBodyTheme(k);const th=T(k);
   return `
   <div class="topbar"><button class="iconbtn" data-act="back" aria-label="Back">${IC.back}</button><h1 class="display grow on-world">${esc(th.shop)}</h1>
     <span class="panel" style="padding:6px 14px;font-weight:900;font-size:22px;display:flex;align-items:center">${coinSVG()}${k.credits}</span></div>
-  ${stageHTML(k,say(k,"shop"))}
+  ${stageHTML(k,k.jar?`${say(k,"shop")} Your jar for ${k.jar.name} has ${k.jar.saved} in it. Saving takes patience.`:say(k,"shop"))}
   ${(()=>{const w=S.wishes.filter(x=>x.kid===k.id);return `<button class="panel wishbtn" data-act="addWish" data-id="${k.id}"><span class="wplus">+</span><span><b style="font-size:19px">Add a wish</b><br><span class="muted" style="font-weight:700">Something you'd like in the ${esc(th.shop)}? Snap it and ask.</span></span></button>
   ${w.length?`<div class="panel stack"><b>Your wishes</b>${w.map(x=>`<div class="spread"><span class="row" style="gap:10px">${x.photo?`<img class="tthumb" data-media="${x.photo}" alt="">`:`<span style="font-size:30px">${esc(x.icon)}</span>`}<b>${esc(x.name||"My wish")}</b></span><span class="chip wait">Waiting for a grown-up</span></div>`).join("")}</div>`:""}`})()}
   ${mine.length?`<div class="panel stack"><b>On its way</b>${mine.map(r=>`<div class="spread"><span>${esc(r.icon)} ${esc(r.name)}</span><span class="chip wait">Ask a grown-up</span></div>`).join("")}</div>`:""}
   <div class="shopgrid">${S.rewards.map(r=>`<div class="reward">${r.photo?`<img class="rphoto" data-media="${r.photo}" alt="">`:`<span class="ico">${esc(r.icon)}</span>`}<span class="n">${esc(r.name)}${r.by===k.id?`<br><span class="chip">Your idea</span>`:""}</span>
-    <button class="btn small" data-act="buy" data-kid="${k.id}" data-id="${r.id}" ${k.credits<r.cost?"disabled":""}>${r.cost} ${esc(th.cur.toLowerCase())}</button></div>`).join("")}</div>`};
+    ${k.jar&&k.jar.rid===r.id?`<button class="btn small" data-act="jarOpen" data-id="${k.id}">🫙 ${k.jar.saved}/${k.jar.cost} saved</button>`:k.credits>=r.cost?`<button class="btn small" data-act="buy" data-kid="${k.id}" data-id="${r.id}">${r.cost} ${esc(th.cur.toLowerCase())}</button>`:`<button class="btn ghost small" data-act="jarStart" data-kid="${k.id}" data-id="${r.id}">🫙 Save for this · ${r.cost}</button>`}</div>`).join("")}</div>`};
 
 /* ---------- Parent area ---------- */
 const PTABS=[["jobs","Jobs"],["check","To check"],["rewards","Rewards"],["kids","Children"],["link","Link & sync"],["settings","Settings"]];
@@ -1010,7 +1016,7 @@ const PARENT={
   jobs(){const list=[...S.jobs].sort((a,b)=>(b.created||0)-(a.created||0));return `
     ${S.kids.map(k=>{const w=weekOf(k),th=T(k),live=S.jobs.filter(j=>j.kid===k.id&&j.status==="todo").length,chk=S.jobs.filter(j=>j.kid===k.id&&j.status==="pending").length+S.requests.filter(r=>r.kid===k.id).length;
       return `<div class="panel today">${avatarSVG(k,null,"avatar av")||badgeSVG(k).replace('class="badge"','class="badge av"')}<div><div class="nm">${esc(k.name)} <span class="muted" style="font-weight:700;font-size:14px">· ${esc(th.ranks[rankOf(k.earned||0)])}</span></div>
-        <div class="facts"><span>${coinSVG()} ${k.credits} ${esc(th.cur.toLowerCase())}</span>${k.goal?`<span>★ ${Math.min(k.goal.count||0,k.goal.target)}/${k.goal.target} ${esc(k.goal.name)}</span>`:""}<span>${live} job${live===1?"":"s"} live</span>${chk?`<span class="hot">${chk} to check</span>`:""}${w.wins?`<span>${w.wins} win${w.wins===1?"":"s"} this week</span>`:""}</div></div></div>`}).join("")}
+        <div class="facts"><span>${coinSVG()} ${k.credits} ${esc(th.cur.toLowerCase())}</span>${k.goal?`<span>★ ${Math.min(k.goal.count||0,k.goal.target)}/${k.goal.target} ${esc(k.goal.name)}</span>`:""}${k.jar?`<span>🫙 ${k.jar.saved}/${k.jar.cost} for ${esc(k.jar.name)}</span>`:""}<span>${live} job${live===1?"":"s"} live</span>${chk?`<span class="hot">${chk} to check</span>`:""}${w.wins?`<span>${w.wins} win${w.wins===1?"":"s"} this week</span>`:""}</div></div></div>`}).join("")}
     <div class="row"><button class="btn big" style="flex:1;min-width:220px" data-act="newJob" ${S.kids.length?"":"disabled"}>${IC.cam} New job</button>
     <button class="btn ghost big" style="flex:1;min-width:220px" data-act="quickLog" ${S.kids.length?"":"disabled"}>★ They just did something!</button></div>
     ${list.length?`<div class="stack">${list.map(j=>{const k=kid(j.kid);return `<button class="jobcard" data-act="editJob" data-id="${j.id}">
@@ -1226,6 +1232,33 @@ const ACT={
     overlay(`<div class="stack" style="text-align:center;align-items:center">${r.photo?`<img class="rphoto" data-media="${r.photo}" alt="" style="max-width:280px">`:`<span style="font-size:64px">${esc(r.icon)}</span>`}<h2 class="display">${esc(r.name)}</h2><p>Spend ${r.cost} ${esc(th.cur.toLowerCase())}?</p>
       <div class="row"><button class="btn" id="yesbuy">Yes please</button><button class="btn ghost" data-close>Not yet</button></div></div>`).querySelector("#yesbuy").onclick=()=>{
       post(k,{d:-r.cost,why:"buy "+r.name});S.requests.push({id:uid(),kid:k.id,name:r.name,icon:r.icon,cost:r.cost,status:"asked",at:Date.now()});save();overlayClose();sfxFanfare(k);confetti(k);render();toast("Ask a grown-up for your "+r.name)}},
+  jarStart(b){const k=kid(b.dataset.kid);const r=S.rewards.find(x=>x.id===b.dataset.id);if(!k||!r)return;
+    const go=()=>{const old=k.jar;k.jar={id:"jar"+uid(),rid:r.id,name:r.name,icon:r.icon||"",cost:r.cost,saved:0,at:Date.now()};k.jarAt=Date.now();
+      if(old&&old.saved>0){/* the points come with you: move them from the old jar to the new one, no points are made or lost */
+        post(k,{d:old.saved,why:"jar back "+old.name,j:old.id});post(k,{d:-old.saved,why:"jar "+r.name,j:k.jar.id})}
+      recalc(k);save();overlayClose();sfxTick(k);ACT.jarOpen({dataset:{id:k.id}})};
+    if(k.jar&&k.jar.rid!==r.id)confirmSheet(`Save for ${r.name} instead?`,`Your ${k.jar.saved} saved points move over to ${r.name}. Nothing is lost.`,go,"Yes, switch","Keep saving for "+k.jar.name);else go()},
+  jarOpen(b){const k=kid(b.dataset.id);const J=k&&k.jar;if(!J)return;const th=T(k);const full=J.saved>=J.cost;const room=J.cost-J.saved;const r=S.rewards.find(x=>x.id===J.rid);
+    let n=Math.min(k.credits,room,Math.max(1,Math.min(k.credits,room)));if(n<0)n=0;
+    const el=overlay(`<div class="stack" style="text-align:center;align-items:center">${r&&r.photo?`<img class="rphoto" data-media="${r.photo}" alt="" style="max-width:220px">`:`<span style="font-size:64px">${esc(J.icon||"🫙")}</span>`}
+      <h2 class="display" style="margin:0">${full?"You saved up!":"Saving for "+esc(J.name)}</h2>
+      <div class="jarbig"><i style="width:${Math.min(100,Math.round(J.saved/J.cost*100))}%"></i></div>
+      <p style="margin:0;font-weight:800">${J.saved} of ${J.cost} ${esc(th.cur.toLowerCase())} in the jar${full?"":` · ${room} to go`}</p>
+      ${full?`<p class="muted" style="margin:0">You waited and saved. That's what grown-ups do with money.</p><button class="btn big" id="jarget">🎉 Get my ${esc(J.name)}</button>`
+        :k.credits>0?`<p class="muted" style="margin:0">You have ${k.credits} to spend. How many go in the jar?</p><div class="stepper"><button id="jm" aria-label="Fewer">−</button><b id="jn">${n}</b><button id="jp" aria-label="More">+</button></div><button class="btn big" id="jarput">Put <span id="jn2">${n}</span> in the jar</button>`
+        :`<p class="muted" style="margin:0">No spare ${esc(th.cur.toLowerCase())} right now. Do a job, then come back.</p>`}
+      <div class="row">${J.saved>0&&!full?`<button class="btn ghost small" id="jarback">Take some back</button>`:""}<button class="btn ghost small" id="jarstop">Stop saving</button><button class="btn ghost small" data-close>Close</button></div></div>`);
+    const q=x=>el.querySelector(x);const show=()=>{q("#jn").textContent=n;q("#jn2").textContent=n};
+    if(q("#jm"))q("#jm").onclick=()=>{n=Math.max(1,n-1);show()};if(q("#jp"))q("#jp").onclick=()=>{n=Math.min(k.credits,room,n+1);show()};
+    if(q("#jarput"))q("#jarput").onclick=()=>{if(n<1||n>k.credits)return;post(k,{d:-n,why:"jar "+J.name,j:J.id});save();overlayClose();sfxTick(k);render();
+      if(k.jar.saved>=k.jar.cost){sfxFanfare(k);confetti(k);setTimeout(()=>ACT.jarOpen({dataset:{id:k.id}}),500)}else toast(`${n} saved. ${k.jar.cost-k.jar.saved} to go!`)};
+    if(q("#jarget"))q("#jarget").onclick=()=>{post(k,{d:0,why:"jar done "+J.name,j:J.id});S.requests.push({id:uid(),kid:k.id,name:J.name,icon:J.icon,cost:J.cost,status:"asked",at:Date.now()});k.jar=null;k.jarAt=Date.now();
+      k.treatsSaved=(k.treatsSaved||0)+1;save();overlayClose();sfxFanfare(k);confetti(k);render();toast("Ask a grown-up for your "+J.name)};
+    if(q("#jarback"))q("#jarback").onclick=()=>{overlayClose();let m=1;const e2=overlay(`<div class="stack" style="text-align:center;align-items:center"><h2 class="display">Take some back?</h2><p class="muted" style="margin:0">It's OK to change your mind, but the jar fills slower.</p>
+        <div class="stepper"><button id="bm">−</button><b id="bn">1</b><button id="bp">+</button></div><button class="btn" id="bgo">Take <span id="bn2">1</span> back</button><button class="btn ghost small" data-close>Leave it in</button></div>`);
+      const sh=()=>{e2.querySelector("#bn").textContent=m;e2.querySelector("#bn2").textContent=m};e2.querySelector("#bm").onclick=()=>{m=Math.max(1,m-1);sh()};e2.querySelector("#bp").onclick=()=>{m=Math.min(J.saved,m+1);sh()};
+      e2.querySelector("#bgo").onclick=()=>{post(k,{d:m,why:"jar back "+J.name,j:J.id});save();overlayClose();render()}};
+    if(q("#jarstop"))q("#jarstop").onclick=()=>{overlayClose();confirmSheet("Stop saving?",J.saved?`Your ${J.saved} points go back to spend.`:"You can start again any time.",()=>{if(J.saved)post(k,{d:J.saved,why:"jar back "+J.name,j:J.id});k.jar=null;k.jarAt=Date.now();save();render()},"Stop saving","Keep saving")}},
   parent(){pinPad("Grown-ups only","Enter your PIN",p=>{if(p!==S.pin)return false;overlayClose();go("parent",{tab:pendingCount()?"check":"jobs"})})},
   exitParent(){home()},
   ptab(b){view.args.tab=b.dataset.tab;render()},
@@ -1296,10 +1329,10 @@ const ACT={
 };
 /* ---------- Points and stars are a log of entries, so phones can merge without losing or doubling anything ---------- */
 function recalc(k,quiet){const L=k.ledger||[];let d=0,e=0,st=0;const gid=k.goal&&k.goal.id;
-  let openE=0;for(const x of L){d+=x.d||0;if(x.why==="start")openE=Math.max(openE,x.e||0);else e+=x.e||0;if(gid&&x.g===gid)st+=x.s||0}
-  k.credits=d;k.earned=Math.max(0,openE+e);
+  let openE=0,jar=0;const jid=k.jar&&k.jar.id;for(const x of L){d+=x.d||0;if(x.why==="start")openE=Math.max(openE,x.e||0);else e+=x.e||0;if(gid&&x.g===gid)st+=x.s||0;if(jid&&x.j===jid)jar-=x.d||0}
+  k.credits=d;k.earned=Math.max(0,openE+e);if(k.jar)k.jar.saved=Math.max(0,jar);
   if(k.goal){k.goal.count=Math.max(0,st);const hit=k.goal.count>=k.goal.target;if(hit&&!k.goal.done){k.goal.done=true;if(!quiet)k.goalHit=true}else if(!hit)k.goal.done=false}}
-function post(k,{d=0,e=0,s=0,why="",id=null}){k.ledger=k.ledger||[];if(id&&k.ledger.some(x=>x.id===id))return;k.ledger.push({id:id||"e"+uid(),t:Date.now(),d,e,s,g:s&&k.goal?k.goal.id:null,why,by:S.device});recalc(k)}
+function post(k,{d=0,e=0,s=0,why="",id=null,j=null}){k.ledger=k.ledger||[];if(id&&k.ledger.some(x=>x.id===id))return;const en={id:id||"e"+uid(),t:Date.now(),d,e,s,g:s&&k.goal?k.goal.id:null,why,by:S.device};if(j)en.j=j;k.ledger.push(en);recalc(k)}
 /* Wall of Fame wins rebuilt from the history (ids come from the history entry, so every phone makes the same ones and nothing doubles) */
 function fixTrophies(k){k.trophies=k.trophies||[];k.tGone=k.tGone||[];const gone=new Set(k.tGone);
   const near=(t,title,at)=>t.title===title&&Math.abs((t.at||0)-(at||0))<15*60000;
@@ -1311,7 +1344,7 @@ function fixTrophies(k){k.trophies=k.trophies||[];k.tGone=k.tGone||[];const gone
     k.trophies.push({id,title,type:job?"tidy":null,media:null,kind:null,at:e.t||0,amt:e.d||0,star:star})}
   k.trophies.sort((a,b)=>(b.at||0)-(a.at||0))}
 /* what happened in the last 7 days, and the treat within reach */
-function weekOf(k){const since=Date.now()-7*86400000;let wins=0,stars=0,treats=0;for(const e of (k.ledger||[])){if((e.t||0)<since)continue;const w=String(e.why||"");if(w.startsWith("job "))wins++;if(w.startsWith("star "))stars+=e.s||0;if(w.startsWith("buy "))treats++}return {wins,stars,treats}}
+function weekOf(k){const since=Date.now()-7*86400000;let wins=0,stars=0,treats=0,saved=0;for(const e of (k.ledger||[])){if((e.t||0)<since)continue;const w=String(e.why||"");if(w.startsWith("job "))wins++;if(w.startsWith("star "))stars+=e.s||0;if(w.startsWith("buy "))treats++;if(w.startsWith("jar ")&&!w.startsWith("jar done"))saved-=e.d||0}return {wins,stars,treats,saved:Math.max(0,saved)}}
 function nextTreat(k){const rs=S.rewards.filter(r=>r.cost>0);if(!rs.length)return null;const can=rs.filter(r=>r.cost<=k.credits).sort((a,b)=>b.cost-a.cost)[0];
   if(can)return {r:can,have:true};const nx=rs.filter(r=>r.cost>k.credits).sort((a,b)=>a.cost-b.cost)[0];return nx?{r:nx,have:false,need:nx.cost-k.credits}:null}
 /* ---------- Monthly poster: one A4 picture of the month, in the child's world, to save and pin on the wall ---------- */
@@ -1552,7 +1585,7 @@ async function buildKidFile(k){const trophies=[];
   const g=k.goal?{...k.goal,photo:await packMedia(k.goal.photo)}:null;
   return JSON.stringify({tq:"kid",v:2,id:"x"+uid(),from:S.device,at:Date.now(),
     ledger:k.ledger||[],
-    tGone:k.tGone||[],kid:{id:k.id,name:k.name,theme:k.theme,earned:k.earned||0,credits:k.credits||0},face:await packMedia(k.face),goal:g,trophies,treats,
+    tGone:k.tGone||[],jar:k.jar?{id:k.jar.id,rid:k.jar.rid,name:k.jar.name,icon:k.jar.icon,cost:k.jar.cost,at:k.jar.at}:null,jarAt:k.jarAt||0,kid:{id:k.id,name:k.name,theme:k.theme,earned:k.earned||0,credits:k.credits||0},face:await packMedia(k.face),goal:g,trophies,treats,
     library:await Promise.all([...S.library,...S.jobs.filter(j=>j.kid===k.id).map(j=>({...j,id:"t"+j.id,at:j.created||0}))].filter((t,i,arr)=>arr.findIndex(x=>tplKey(x)===tplKey(t))===i).map(async t=>({id:t.id,title:t.title,type:t.type,credits:t.credits,timer:t.timer,proof:t.proof,repeat:!!t.repeat,at:t.at||0,
       photo:await packMedia(t.photo),steps:await Promise.all((t.steps||[]).map(async x=>({text:x.text,audio:await packMedia(x.audio)})))}))),
     shopAt:S.shopAt||0,shopGone:S.shopGone||[],shop:await Promise.all(S.rewards.map(async r=>({id:r.id,at:r.at||0,icon:r.icon,name:r.name,cost:r.cost,by:r.by||null,photo:await packMedia(r.photo)})))})}
@@ -1587,6 +1620,7 @@ async function mergeKid(d,live){const x=d.kid;const seenL=new Set();let k=findKi
       if(g.photo&&!mine.photo)mine.photo=await put(g.photo)}}
   if(d.ledger){const ids=new Set(k.ledger.map(e=>e.id));ids.forEach(i=>seenL.add(i));for(const e of d.ledger){if(!ids.has(e.id)){k.ledger.push(e);continue}const i=k.ledger.findIndex(x=>x.id===e.id);if(canon(e)<canon(k.ledger[i]))k.ledger[i]=e}}
   else{const gid=k.goal&&k.goal.id;k.ledger.push({id:"f"+d.id,t:d.at||Date.now(),d:x.credits||0,e:Math.max(0,(x.earned||0)-(k.earned||0)),s:d.goal?(d.goal.count||0):0,g:gid,why:"old file"})}
+  if(d.jarAt!=null&&(d.jarAt||0)>(k.jarAt||0)){k.jar=d.jar?{...d.jar,saved:0}:null;k.jarAt=d.jarAt}
   k.ledger.sort((p,q)=>(p.t||0)-(q.t||0));recalc(k);
   k.trophies=k.trophies||[];const have=new Set(k.trophies.map(t=>t.id));let added=0;
   for(const t of (d.trophies||[])){if(have.has(t.id)){const m=k.trophies.find(y=>y.id===t.id);if(m){const strip=o=>canon({...o,media:null,album:null});if(strip(t)<strip(m)){const keepM=m.media,keepA=m.album;Object.assign(m,t,{media:keepM,album:keepA})}}if(m&&!m.media&&t.media)m.media=await put(t.media);if(m&&!m.album&&t.album)m.album={before:await put(t.album.before),progress:(await Promise.all((t.album.progress||[]).map(put))).filter(Boolean)};continue}const al=t.album?{before:await put(t.album.before),progress:(await Promise.all((t.album.progress||[]).map(put))).filter(Boolean)}:null;
@@ -1671,12 +1705,12 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
   function liteObj(k){stamp();const tpls=[...S.library,...S.jobs.filter(j=>j.kid===k.id).map(j=>({...j,id:"t"+j.id,at:j.created||0}))].filter((t,i,arr)=>arr.findIndex(y=>tplKey(y)===tplKey(t))===i)
       .map(t=>({id:t.id,title:t.title,type:t.type,credits:t.credits,timer:t.timer,proof:t.proof,repeat:!!t.repeat,at:t.at||0,photo:u(t.photo),steps:(t.steps||[]).map(x=>({text:x.text,audio:u(x.audio)}))}));
     const g=k.goal?{id:k.goal.id,name:k.goal.name,target:k.goal.target,backers:srt(k.goal.backers),setAt:k.goal.setAt||0,editAt:k.goal.editAt||0,photo:u(k.goal.photo)}:null;
-    return ({tq:"kid",v:2,live:1,kid:{id:k.id,name:k.name,theme:k.theme},face:u(k.face),ledger:srt(k.ledger),goal:g,says:k.says||null,
+    return ({tq:"kid",v:2,live:1,kid:{id:k.id,name:k.name,theme:k.theme},face:u(k.face),jar:k.jar?{id:k.jar.id,rid:k.jar.rid,name:k.jar.name,icon:k.jar.icon,cost:k.jar.cost,at:k.jar.at}:null,jarAt:k.jarAt||0,ledger:srt(k.ledger),goal:g,says:k.says||null,
       trophies:srt(k.trophies).map(t=>({...t,media:u(t.media),album:ua(t.album)})),tGone:[...(k.tGone||[])].sort(),treats:srt(k.treats).map(t=>({...t,photo:u(t.photo)})),
       library:srt(tpls,tplKey),shopGone:srt(S.shopGone),shop:srt(S.rewards).map(r=>({id:r.id,at:r.at||0,icon:r.icon,name:r.name,cost:r.cost,by:r.by||null,photo:u(r.photo)})),
       requests:srt(S.requests.filter(r=>r.kid===k.id)),reqDone:[...S.reqDone].sort(),wishes:srt(S.wishes.filter(w=>w.kid===k.id)).map(w=>({...w,photo:u(w.photo)})),wishDone:[...S.wishDone].sort(),jobs:srt(S.jobs.filter(j=>j.kid===k.id)).map(j=>({...jlite(j),at:j.at||0})),jobGone:[...S.jobGone].sort()})}
   let lastSig="";
-  function viewSig(){return JSON.stringify([S.kids.map(k=>[k.id,k.name,k.theme,k.credits,k.earned,k.says&&k.says.at,k.goal&&[k.goal.id,k.goal.count,k.goal.name,k.goal.target,k.goal.photo,(k.goal.backers||[]).length],k.face,(k.trophies||[]).map(t=>t.id+":"+(t.media||"")+":"+(t.album?1:0)),(k.treats||[]).map(t=>t.id+":"+(t.photo||""))]),
+  function viewSig(){return JSON.stringify([S.kids.map(k=>[k.id,k.name,k.theme,k.credits,k.earned,k.jar&&[k.jar.id,k.jar.saved],k.says&&k.says.at,k.goal&&[k.goal.id,k.goal.count,k.goal.name,k.goal.target,k.goal.photo,(k.goal.backers||[]).length],k.face,(k.trophies||[]).map(t=>t.id+":"+(t.media||"")+":"+(t.album?1:0)),(k.treats||[]).map(t=>t.id+":"+(t.photo||""))]),
     S.jobs.map(j=>[j.id,j.status,j.photo,j.after,j.title,j.credits,(j.steps||[]).map(x=>x.text+":"+(x.audio||"")),j.from]),S.rewards.map(r=>[r.id,r.name,r.cost,r.icon,r.photo]),S.requests.map(r=>r.id),S.wishes.map(w=>w.id+":"+(w.photo||"")),S.library.map(t=>t.id+":"+(t.photo||"")+":"+(t.at||0))])}
   function setState(s,err){st.state=s;st.err=err||"";if(s==="on")st.at=Date.now();if(view&&view.name==="parent"&&view.args&&view.args.tab==="link"){const a=document.activeElement;if(a&&a.id==="devname")return;const el=$("#syncpanel");if(el)el.outerHTML=panel()}}
   async function start(){if(!S.family)return;if(!has()){setState("nosdk");return}clearTimeout(retry);setState("connecting");
@@ -1695,6 +1729,7 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
     first=true;if(!lastSig)lastSig=viewSig();push();media();if(!repAt)report(true)}
   function alerts(news){if(!news.length)return;const say=({k,e})=>{const w=String(e.why||"");
       if(w.startsWith("buy "))return `🛍️ ${k.name} just bought ${w.slice(4)}!`;
+      if(w.startsWith("jar done "))return `🎉 ${k.name} saved up for ${w.slice(9)}!`;if(w.startsWith("jar back "))return `🫙 ${k.name} took ${e.d} points back out of the jar`;if(w.startsWith("jar "))return `🫙 ${k.name} put ${-e.d} points in the jar for ${w.slice(4)}`;
       if(w.startsWith("done "))return `✅ ${k.name} finished "${w.slice(5)}". Check it in Grown-ups → To check`;
       if(w.startsWith("job "))return `${T(k).call||"🥋"} ${k.name} earned ${e.d} ${e.d===1?"point":"points"}: ${w.slice(4)}`;
       if(w.startsWith("star "))return `⭐ ${k.name} earned a star: ${w.slice(5)}`;
