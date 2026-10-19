@@ -1865,7 +1865,7 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
     try{if(!firebase.apps.length){firebase.initializeApp(FB_CFG);try{firebase.firestore().settings({experimentalAutoDetectLongPolling:true})}catch(e){}}
       const auth=firebase.auth();if(!auth.currentUser)await auth.signInAnonymously();
       db=firebase.firestore();ref=db.collection("families").doc(S.family);first=false;if(unsub)unsub();
-      unsub=ref.onSnapshot({includeMetadataChanges:false},snap=>{q=q.then(()=>onSnap(snap)).catch(e=>console.log(e))},e=>{setState("error",e.message);unsub=null;retry=setTimeout(start,30000)});
+      unsub=ref.onSnapshot({includeMetadataChanges:false},snap=>{if(snap.metadata.hasPendingWrites)return;q=q.then(()=>onSnap(snap)).catch(e=>console.log(e))},e=>{setState("error",e.message);unsub=null;retry=setTimeout(start,30000)});
     }catch(e){setState("error",e.message||String(e));retry=setTimeout(start,30000)}}
   async function onSnap(snap){const data=snap.data()||{};lastData=data;{const mine=data["nick_"+S.device];if(mine&&mine!==S.devName){S.devName=mine;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}}let changed=false;const news=[];
     for(const id of (data.gone||[]))if(!S.kidGone.includes(id)){S.kidGone.push(id);const k=kid(id);if(k){S.kids=S.kids.filter(x=>x!==k);changed=true}}
@@ -1947,19 +1947,22 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
         <br><span class="muted">Photos &amp; videos: ${bits.join(" · ")}${d.now?" · "+esc(d.now):""}</span>${d.err?`<br><span class="muted" style="font-size:13px">${esc(d.err)}</span>`:""}</div>`}).join("")}</div>`}
   function mline(){const m=mst;const bits=[`${m.sent} sent`,`${m.recv} received`];if(m.wait)bits.push(`${m.wait} still to go`);if(m.big)bits.push(`${m.big} too long to send`);if(m.fail)bits.push(`${m.fail} didn't work`);
     return `<b>Photos &amp; videos:</b> ${bits.join(" · ")}${m.now?`<br><span class="muted">${esc(m.now)}</span>`:""}${m.err?`<br><span class="muted" style="font-size:13px">${esc(m.err).slice(0,120)}</span>`:""}`}
-  async function media(){if(!ref||!first)return;if(mBusy){mAgain=true;return}mBusy=true;let got=false;
+  let lastMediaSig="";function mediaSig(){return slots().map(sl=>sl.key+":"+(sl.get()||"")+":"+((lastData[sl.key]||{}).id||"")).join("|")+"|"+S.up.length}
+  async function media(force){if(!ref||!first)return;if(mBusy){mAgain=true;return}if(!force&&mediaSig()===lastMediaSig)return;mBusy=true;let got=false;
     const list=[];for(const sl of slots()){const L=sl.get(),cur=lastData[sl.key];const hasL=L?!!(await DB.get(L).catch(()=>null)):false;
       const good=cur&&cur.v===MV;
       if(good&&cur.id&&cur.id!==L&&(!hasL||(cur.at||0)>born(L)))list.push({sl,dir:"down",cur});
       else if(hasL&&(!good||(cur.id!==L&&born(L)>(cur.at||0))||(cur.id===L&&!S.up.includes(L))))list.push({sl,dir:"up",L,size:(await DB.get(L)).size||0})}
     list.sort((a,b)=>(a.dir==="down"?0:1)-(b.dir==="down"?0:1)||(a.size||0)-(b.size||0));
-    const counted=new Set();mst.wait=list.length;mst.fail=0;mst.err="";mst.big=S.noUp.length;
+    const counted=new Set(),pending={};mst.wait=list.length;mst.fail=0;mst.err="";mst.big=S.noUp.length;
+    if(!list.length){mBusy=false;lastMediaSig=mediaSig();return}
     let i=0;for(const it of list){i++;mst.now=(it.dir==="up"?"Sending ":"Getting ")+i+" of "+list.length+"…";showM();
       try{if(it.dir==="down"){if(await download(it.cur.id)){it.sl.set(it.cur.id);got=true;mst.recv++}else mst.fail++}
-        else{const blob=await DB.get(it.L);if(await upload(it.L,blob)){const v={id:it.L,at:born(it.L),v:MV};lastData[it.sl.key]=v;await ref.set({[it.sl.key]:v},{merge:true});if(!counted.has(it.L)){counted.add(it.L);mst.sent++}}else mst.big=S.noUp.length}}
+        else{const blob=await DB.get(it.L);if(await upload(it.L,blob)){const v={id:it.L,at:born(it.L),v:MV};lastData[it.sl.key]=v;pending[it.sl.key]=v;if(!counted.has(it.L)){counted.add(it.L);mst.sent++}}else mst.big=S.noUp.length}}
       catch(e){mst.fail++;mst.err=e&&e.message||String(e);console.log("media",e)}
       mst.wait=list.length-i;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
-    mst.now=list.length?(mst.fail?"Some didn't send. Tap Sync photos now to try again.":"All done."):"";showM();
+    if(Object.keys(pending).length){try{await ref.set(pending,{merge:true})}catch(e){mst.err=e&&e.message||String(e)}}
+    lastMediaSig=mediaSig();mst.now=list.length?(mst.fail?"Some didn't send. Tap Sync photos now to try again.":"All done."):"";showM();
     mBusy=false;if(got){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}liveRender()}else{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}if(mAgain){mAgain=false;media()}}
   function push(){if(!ref||!first)return;clearTimeout(mT);mT=setTimeout(media,400);const up={};
     for(const k of S.kids){const txt=lite(k);if(last[k.id]!==txt){up["k_"+k.id]=txt;last[k.id]=txt}}
@@ -1995,7 +1998,7 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
       :`<p class="muted" style="margin:0">Link phones over the internet so points, stars, the shop and the history stay the same everywhere. Start the family on one phone, then join on the others.</p>
         <div class="row" style="gap:8px"><button class="btn small" data-act="famNew">Start a family</button><button class="btn ghost small" data-act="famJoin">Join a family</button></div>`}</div>`}
   function setName(n){S.devName=n;save();if(ref)ref.set({["nick_"+S.device]:n},{merge:true}).catch(()=>{});lastData["nick_"+S.device]=n;report(true)}
-  function retryMedia(){tried.clear();mst.sent=0;mst.recv=0;mst.now="Checking…";showM();media()}
+  function retryMedia(){tried.clear();mst.sent=0;mst.recv=0;mst.now="Checking…";showM();media(true)}
   function nick(id,n){n=String(n||"").trim().slice(0,24);lastData["nick_"+id]=n;if(id===S.device){S.devName=n;save()}
     if(ref)ref.set({["nick_"+id]:n},{merge:true}).catch(()=>{});report(true);const el=$("#syncpanel");if(el)el.outerHTML=panel()}
   return {start,soon,push,forget,panel,joinPrompt,create,showCode,joinMenu,leave,status:st,retryMedia,mline,setName,nick,rollCall,devList}})();
