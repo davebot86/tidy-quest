@@ -1114,14 +1114,15 @@ const PARENT={
     <div class="panel stack"><b>Move credits to this tablet</b><p class="muted" style="margin:0">Use this tablet's code, then scan the code the other tablet shows back. Each transfer works once only.</p>
       <div class="row">${S.kids.map(k=>`<button class="btn ghost small" data-act="receiveCredits" data-id="${k.id}">Receive for ${esc(k.name)}</button>`).join("")}</div></div>
     ${S.sent.length?`<div class="panel stack"><span class="label">Sent from this tablet</span>${S.sent.slice(-5).reverse().map(x=>`<div class="spread"><span>${x.amt} credits for ${esc(x.name)}</span><span class="muted">${new Date(x.at).toLocaleDateString("en-GB")}</span></div>`).join("")}</div>`:""}`},
-  settings(){const cur=S.alertSound||"world";const b=bridge();let vi="";try{vi=b&&b.voiceInfo?b.voiceInfo():""}catch(e){}return `<div class="panel stack"><b>Voice</b><p class="muted" style="margin:0">The masters use the best English (UK) voice installed on this phone${vi?`: <b>${esc(vi)}</b>`:""}. For a much nicer voice, open the phone's <b>Settings → System → Languages → Text-to-speech</b> (or search "text-to-speech"), choose Google Speech Services, and install the <b>English (United Kingdom)</b> high-quality voice. Tidy Quest picks it up next time it opens.</p></div>
+  settings(){const cur=S.alertSound||"world";const devPanel=S.isDev?`<div class="panel stack"><b>Who's running Tidy Quest</b><p class="muted" style="margin:0">Every phone with the app checks in anonymously: which family, version, how many jobs and wins. No names or photos. Only you see this.</p><button class="btn small" data-act="devWho">Show the list</button></div>`:"";const b=bridge();let vi="";try{vi=b&&b.voiceInfo?b.voiceInfo():""}catch(e){}return `<div class="panel stack"><b>Voice</b><p class="muted" style="margin:0">The masters use the best English (UK) voice installed on this phone${vi?`: <b>${esc(vi)}</b>`:""}. For a much nicer voice, open the phone's <b>Settings → System → Languages → Text-to-speech</b> (or search "text-to-speech"), choose Google Speech Services, and install the <b>English (United Kingdom)</b> high-quality voice. Tidy Quest picks it up next time it opens.</p></div>
+    ${devPanel}
     <div class="panel stack"><b>Alert sound on this phone</b>
       <p class="muted" style="margin:0">Plays when something happens on another linked phone: a job finished, points or a star earned, something bought from the shop. "Each child's world" gives every child their own sound — a gong for the Dojo, a bugle for the Army, a whistle for Football — so you know who it is without looking. Purchases always ring the till.</p>
       <div class="seg">${Object.entries(SOUND_NAMES).map(([key,l])=>`<button class="${cur===key?"on":""}" data-act="alertPick" data-v="${key}">${esc(l)}</button>`).join("")}</div>
       <div class="row" style="gap:8px">${cur==="world"?S.kids.map(k=>`<button class="btn ghost small" data-act="alertTest" data-v="${WORLD_SOUND[k.theme]||"bell"}">▶ ${esc(k.name)} (${esc(SOUND_NAMES[WORLD_SOUND[k.theme]]||"Doorbell")})</button>`).join(""):cur!=="off"?`<button class="btn ghost small" data-act="alertTest" data-v="${cur}">▶ Play it</button>`:""}<button class="btn ghost small" data-act="alertTest" data-v="till">▶ Shop till</button></div>
       <p class="muted" style="margin:0;font-size:14px">Alerts only sound while Tidy Quest is open. Turn the phone's media volume up.</p></div>
     <div class="panel stack"><b>Grown-up PIN</b><p class="muted" style="margin:0">Keeps children out of this area.</p><button class="btn ghost" data-act="changePin">Change PIN</button></div>
-    <div class="panel stack"><b>Trial notes</b><p class="muted" style="margin:0">Everything is saved on this device. With live sync on, points, stars, the shop and history are also kept online for your family; photos, videos and voice notes are copied to the other linked phones too. Uninstalling deletes what is on this phone.</p></div>
+    <div class="panel stack"><b data-act="devTap" style="cursor:default">Trial notes</b><p class="muted" style="margin:0">Everything is saved on this device. With live sync on, points, stars, the shop and history are also kept online for your family; photos, videos and voice notes are copied to the other linked phones too. Uninstalling deletes what is on this phone.</p></div>
     <div class="panel stack"><b>Start again</b><p class="muted" style="margin:0">Deletes all children, jobs, photos and credits.</p><button class="btn bad" data-act="resetAll">Delete everything</button></div>`}
 };
 
@@ -1903,6 +1904,14 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
   /* each phone posts a small status card to the family record, so everyone can see who is on which version and what is sending */
   let repT=null,repLast="",repAt=0;
   function myVer(){try{const b=bridge();return b&&b.appVersion?b.appVersion():0}catch(e){return 0}}
+  /* developer roll call: one anonymous line per phone in a "devices" collection, so the app's maker can see how many families are running it. No names, photos or jobs. */
+  let rcAt=0;
+  async function rollCall(){try{if(!has())return;if(Date.now()-rcAt<6*3600000)return;rcAt=Date.now();
+      if(!firebase.apps.length){firebase.initializeApp(FB_CFG)}const auth=firebase.auth();if(!auth.currentUser)await auth.signInAnonymously();
+      const d=firebase.firestore();const k=S.kids[0];const inst=S.installAt||(S.installAt=Date.now());save();
+      await d.collection("devices").doc(S.device).set({fam:S.family?S.family.slice(-6):"",name:S.devName||"",ver:myVer(),kids:S.kids.length,theme:k?k.theme:"",jobs:S.jobs.length,wins:S.kids.reduce((a,x)=>a+(x.trophies||[]).length,0),
+        installed:inst,seen:Date.now(),dev:S.isDev?1:0},{merge:true})}catch(e){console.log("rollcall",e)}}
+  async function devList(){const d=firebase.firestore();const snap=await d.collection("devices").orderBy("seen","desc").limit(200).get();return snap.docs.map(x=>({id:x.id,...x.data()}))}
   function report(force){if(!ref)return;clearTimeout(repT);repT=setTimeout(()=>{const m=mst;
       const card={name:S.devName||"",ver:myVer(),sent:m.sent,recv:m.recv,wait:m.wait,big:m.big,fail:m.fail,err:(m.err||"").slice(0,120),now:(m.now||"").slice(0,60)};
       const sig=JSON.stringify(card);if(!force&&sig===repLast&&Date.now()-repAt<10*60000)return;repLast=sig;repAt=Date.now();card.at=Date.now();
@@ -1968,9 +1977,18 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
   function retryMedia(){tried.clear();mst.sent=0;mst.recv=0;mst.now="Checking…";showM();media()}
   function nick(id,n){n=String(n||"").trim().slice(0,24);lastData["nick_"+id]=n;if(id===S.device){S.devName=n;save()}
     if(ref)ref.set({["nick_"+id]:n},{merge:true}).catch(()=>{});report(true);const el=$("#syncpanel");if(el)el.outerHTML=panel()}
-  return {start,soon,push,forget,panel,joinPrompt,create,showCode,joinMenu,leave,status:st,retryMedia,mline,setName,nick}})();
+  return {start,soon,push,forget,panel,joinPrompt,create,showCode,joinMenu,leave,status:st,retryMedia,mline,setName,nick,rollCall,devList}})();
 window.Sync=Sync;
-Object.assign(ACT,{famNew(){Sync.create()},famJoin(){Sync.joinMenu()},famCode(){Sync.showCode()},famLeave(){Sync.leave()},famPics(){Sync.retryMedia()}});
+Object.assign(ACT,{famNew(){Sync.create()},famJoin(){Sync.joinMenu()},famCode(){Sync.showCode()},famLeave(){Sync.leave()},famPics(){Sync.retryMedia()},
+  devTap(){S._dt=(S._dt||0)+1;if(S._dt>=7){S.isDev=!S.isDev;S._dt=0;save();toast(S.isDev?"Developer view on":"Developer view off");render()}},
+  async devWho(){const el=overlay(`<div class="stack"><h2 class="display">Who's running Tidy Quest</h2><div id="dvl" class="muted">Loading…</div><button class="btn ghost" data-close>Close</button></div>`);
+    try{const list=await Sync.devList();const fams=new Map();for(const d of list){const f=d.fam||("solo-"+d.id.slice(-4));if(!fams.has(f))fams.set(f,[]);fams.get(f).push(d)}
+      const ago=t=>{const m=(Date.now()-t)/60000;return m<60?Math.round(m)+" min ago":m<1440?Math.round(m/60)+" h ago":Math.round(m/1440)+" d ago"};
+      const active=list.filter(d=>Date.now()-d.seen<7*86400000).length;
+      el.querySelector("#dvl").outerHTML=`<p style="margin:0"><b>${fams.size} famil${fams.size===1?"y":"ies"}</b> · ${list.length} phone${list.length===1?"":"s"} · ${active} active this week</p>
+        <div class="stack" style="gap:8px;max-height:55vh;overflow:auto">${[...fams.entries()].map(([f,ds])=>`<div class="panel stack" style="gap:4px;padding:10px 12px"><b>${f.startsWith("solo-")?"Not in a family":"Family …"+esc(f)}</b>
+          ${ds.map(d=>`<div style="font-size:14px"><b>${esc(d.name||"Unnamed phone")}</b> <span class="muted">· v0.${(d.ver||1000)-1000} · ${d.kids||0} child${d.kids===1?"":"ren"} (${esc(d.theme||"")}) · ${d.jobs||0} jobs · ${d.wins||0} wins · installed ${new Date(d.installed||d.seen).toLocaleDateString("en-GB",{day:"numeric",month:"short"})} · last open ${ago(d.seen)}</span></div>`).join("")}</div>`).join("")}</div>`}
+    catch(e){el.querySelector("#dvl").textContent="Couldn't load: "+(e.message||e)}}});
 /* ---------- Updates: the app checks for a newer trial build and installs it from inside the app ---------- */
 const Upd=(()=>{let bar=null,info=null;
   function el(html){if(!bar){bar=document.createElement("div");bar.className="updbar";document.body.appendChild(bar)}bar.innerHTML=html;return bar}
@@ -2074,7 +2092,7 @@ document.addEventListener("change",e=>{const t=e.target;
 document.addEventListener("keydown",e=>{if(e.key==="Escape")back()});
 window.addEventListener("popstate",()=>{});
 
-load();home();if(S.family)Sync.start();
+load();home();if(S.family)Sync.start();setTimeout(()=>Sync.rollCall(),8000);
 </script>
 </body>
 </html>
