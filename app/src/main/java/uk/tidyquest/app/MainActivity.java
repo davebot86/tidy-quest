@@ -59,6 +59,21 @@ public class MainActivity extends Activity {
     private static final int REQ_FILE = 2;
     private static final String UPDATE_BASE = "https://github.com/davebot86/tidy-quest/releases/download/trial/";
 
+    private String voiceName = "";
+    /** Prefer an installed, offline English (UK) voice of the highest quality the phone offers. */
+    private void pickBestVoice() {
+        try {
+            android.speech.tts.Voice best = null; int bestScore = -1;
+            for (android.speech.tts.Voice v : tts.getVoices()) {
+                Locale l = v.getLocale(); if (l == null || !"en".equals(l.getLanguage())) continue;
+                if (v.getFeatures() != null && v.getFeatures().contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED)) continue;
+                int score = v.getQuality() * 10 + ("GB".equals(l.getCountry()) ? 500 : 0) + (v.isNetworkConnectionRequired() ? -300 : 0) - v.getLatency();
+                if (score > bestScore) { bestScore = score; best = v; }
+            }
+            if (best != null) { tts.setVoice(best); voiceName = best.getName() + " (quality " + best.getQuality() + ")"; }
+        } catch (Exception e) { }
+    }
+
     private int myVersion() {
         try { return (int) PackageInfoCompat.getLongVersionCode(getPackageManager().getPackageInfo(getPackageName(), 0)); }
         catch (Exception e) { return 0; }
@@ -93,6 +108,7 @@ public class MainActivity extends Activity {
             if (status == TextToSpeech.SUCCESS) {
                 tts.setLanguage(Locale.UK);
                 tts.setSpeechRate(0.95f);
+                pickBestVoice();
             }
         });
 
@@ -158,6 +174,16 @@ public class MainActivity extends Activity {
             public void speak(String text) {
                 if (tts != null) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "tq");
             }
+
+            @JavascriptInterface
+            public void speakAs(String text, float rate, float pitch) {
+                if (tts == null) return;
+                try { tts.setSpeechRate(rate); tts.setPitch(pitch); } catch (Exception e) { }
+                tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "tq");
+            }
+
+            @JavascriptInterface
+            public String voiceInfo() { return voiceName; }
 
             @JavascriptInterface
             public void share(String text) {

@@ -213,6 +213,15 @@ body[data-theme="karate"] .stamp{border-radius:6px}
 .hai:disabled{opacity:.35;box-shadow:none}
 .move.done .hai{background:transparent;color:var(--muted);box-shadow:none;border:1.5px solid var(--line);font-size:15px;min-height:40px}
 .clock{font-size:40px;font-weight:900;font-variant-numeric:tabular-nums;text-align:center}
+.tbar{position:sticky;top:8px;z-index:5;display:grid;grid-template-columns:auto auto 1fr;grid-template-rows:auto auto;gap:2px 12px;align-items:center;background:var(--panel);color:var(--ink);border:2px solid var(--card-edge);border-radius:16px;padding:10px 14px;box-shadow:0 5px 0 var(--card-edge),0 12px 24px -12px rgba(0,0,0,.5)}
+.tbar .tl{font-size:22px;grid-row:1/3}.tbar .clock{font-size:34px;text-align:left;line-height:1;grid-row:1/3}.tbar .tnote{font-size:13.5px;font-weight:700;color:var(--muted);line-height:1.2}
+.tbar .tfill{grid-column:3;height:8px;border-radius:999px;background:rgba(127,127,127,.22);overflow:hidden}.tbar .tfill i{display:block;height:100%;background:var(--good);border-radius:999px;transition:width .5s linear}
+.tbar.warn .tfill i{background:var(--warn)}.tbar.warn .clock{color:var(--warn)}
+.tbar.urgent .tfill i{background:var(--bad)}.tbar.urgent .clock{color:var(--bad)}.tbar.urgent{animation:tpulse .5s ease-in-out infinite alternate}@keyframes tpulse{from{transform:scale(1)}to{transform:scale(1.025)}}
+.tbar.over{background:var(--stage);color:var(--stage-ink);border-color:transparent}.tbar.over .clock,.tbar.over .tnote{color:inherit}.tbar.over .tfill i{width:0!important}
+.moves.live .move.done{grid-template-columns:44px 1fr;padding:8px 12px;opacity:.55}.moves.live .move.done .fig{width:44px;height:52px;grid-row:1/3}.moves.live .move.done .name{font-size:18px}.moves.live .move.done .what{display:none}.moves.live .move.done .act{grid-column:2;justify-content:flex-start}.moves.live .move.done .stamp{display:none}
+.move.now{outline:3px solid var(--accent2);outline-offset:2px;box-shadow:0 0 0 6px color-mix(in srgb,var(--accent2) 25%,transparent),var(--card-shadow)}
+.readybox{border-color:var(--accent2)}
 .notice{display:flex;gap:12px;align-items:center;font-weight:700}
 .notice svg{width:26px;height:26px;flex:none}
 
@@ -750,9 +759,11 @@ function stageHTML(k,line,sub){const th=T(k);return `<div class="stage">${sceneS
   <div class="who">${esc(th.m.name)}</div><div class="bubble">${sub?`<small>${esc(sub)}</small>`:""}${esc(line)}</div></div>`}
 
 /* ---------- Speech + sound ---------- */
-function speak(text){if(!text)return;
-  if(window.AndroidTTS){try{AndroidTTS.speak(text);return}catch(e){}}
-  if("speechSynthesis" in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang="en-GB";u.rate=.95;speechSynthesis.speak(u)}}
+/* each master has his own pace and pitch on the phone's best English voice */
+const VOICE={karate:[0.86,0.82],army:[1.02,0.74],hero:[1.04,1.08],pop:[1.1,1.16],space:[0.94,0.9],football:[1.0,0.96]};
+function speak(text){if(!text)return;const v=VOICE[document.body.dataset.theme]||[0.95,1];
+  if(window.AndroidTTS){try{if(AndroidTTS.speakAs)AndroidTTS.speakAs(text,v[0],v[1]);else AndroidTTS.speak(text);return}catch(e){}}
+  if("speechSynthesis" in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang="en-GB";u.rate=v[0];u.pitch=v[1];speechSynthesis.speak(u)}}
 let actx;let curAudio;
 function tone(freq,dur,type,when=0,vol=.18){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();
   const o=actx.createOscillator(),g=actx.createGain();o.type=type;o.frequency.value=freq;const t=actx.currentTime+when;
@@ -949,9 +960,11 @@ VIEWS.job=({id})=>{const j=S.jobs.find(x=>x.id===id);const k=kid(j.kid);setBodyT
   return `${head}
   ${stageHTML(k,line,proofNote)}
   ${j.photo?`<img class="hero-photo" data-media="${j.photo}" alt="What to tidy">`:""}
-  ${j.timer?`<div class="panel"><div class="clock" id="clock">${fmt(j.timer*60)}</div><p class="muted" style="text-align:center;margin:0">Finish in time for +${bonus(j)} bonus ${esc(th.cur.toLowerCase())}</p></div>`:""}
-  ${!started?`<button class="btn big" data-act="startJob" data-id="${j.id}">${esc(th.start)}</button>`:""}
-  ${j.steps.length?`<div class="moves">${j.steps.map((s,i)=>{const mv=moveFor(k,i,j),d=done(s.id);return `<div class="move ${d?"done":""} ${i===cur?"now":""}">
+  ${j.timer&&started?`<div class="tbar" id="tbar"><span class="tl">⏱</span><span class="clock" id="clock">${fmt(j.timer*60)}</span><span class="tnote" id="tnote">Beat the clock for +${bonus(j)} bonus</span><span class="tfill"><i id="tfill" style="width:100%"></i></span></div>`:""}
+  ${!started?`<div class="panel stack readybox"><div class="spread"><b style="font-size:18px">${j.steps.length?`${j.steps.length} ${esc(th.stepWord.toLowerCase())}${j.steps.length===1?"":"s"}`:isChallenge(j)?"One challenge":"One job"}</b>${j.timer?`<span class="chip">⏱ ${j.timer} min · +${bonus(j)} bonus</span>`:""}</div>
+      ${j.steps.length?`<p class="muted" style="margin:0">Listen to each ${esc(th.stepWord.toLowerCase())}, do it, then tap <b>${esc(th.call)}</b>${j.timer?" The clock starts when you tap Start.":""}</p>`:""}
+      <button class="btn big" data-act="startJob" data-id="${j.id}">${esc(th.start)}</button></div>`:""}
+  ${j.steps.length?`<div class="moves ${started?"live":""}">${j.steps.map((s,i)=>{const mv=moveFor(k,i,j),d=done(s.id);return `<div class="move ${d?"done":""} ${i===cur?"now":""}" id="mv-${s.id}">
       <span class="fig">${poseSVG(mv[1])}</span>
       <span class="n">${esc(th.stepWord)} ${i+1}</span>
       <span class="name">${esc(mv[0])}</span>
@@ -961,10 +974,29 @@ VIEWS.job=({id})=>{const j=S.jobs.find(x=>x.id===id);const k=kid(j.kid);setBodyT
   ${started?`<div class="panel stack" style="gap:10px"><div class="spread"><b>Progress shots</b><button class="btn ghost small" data-act="progressShot" data-id="${j.id}">${IC.cam} Snap progress</button></div>
     ${(j.run.progress||[]).length?`<div class="pstrip">${j.run.progress.map((id,i)=>`<img data-media="${id}" alt="Progress photo ${i+1}">`).join("")}</div>`:`<span class="muted" style="font-weight:700">Big job? Snap a photo as you go to show how it's coming on.</span>`}</div>`:""}
   ${started?`<button class="btn big" data-act="finishJob" data-id="${j.id}" ${allDone?"":"disabled"}>${{photo:IC.cam+" Take your proof photo",video:IC.cam+" Film your proof",seen:"Show a grown-up",none:esc(th.done.replace(/!.*$/,"!"))}[j.proof||"none"]}</button>`:""}`};
-VIEWS.job.after=({id})=>{const j=S.jobs.find(x=>x.id===id);if(j&&j.run&&j.timer)runClock(j)};
+VIEWS.job.after=({id})=>{const j=S.jobs.find(x=>x.id===id);if(!j)return;if(j.run&&j.timer)runClock(j);
+  if(j.run){const nxt=j.steps.find(s=>!j.run.done.includes(s.id));const el=nxt&&document.getElementById("mv-"+nxt.id);if(el&&view.args.focus){delete view.args.focus;setTimeout(()=>el.scrollIntoView({behavior:"smooth",block:"center"}),150)}}};
 function fmt(sec){sec=Math.max(0,Math.round(sec));return Math.floor(sec/60)+":"+String(sec%60).padStart(2,"0")}
 function bonus(j){return Math.max(1,Math.ceil(j.credits/2))}
-function runClock(j){const end=j.run.start+j.timer*60000;const c=$("#clock");const tick=()=>{const left=(end-Date.now())/1000;if(c){c.textContent=left>0?fmt(left):"Time's up!"}};tick();timerInt=setInterval(tick,500)}
+const TIMER_SAY={
+  karate:{half:"Halfway, {name}. Breathe, and keep going.",minute:"One minute left. Focus.",ten:"Ten seconds!",up:"Time's up, {name}. Finish calmly. The bonus is gone, but the belt still counts."},
+  army:{half:"Halfway there, soldier! Pick up the pace!",minute:"One minute! Move, move, move!",ten:"Ten seconds!",up:"Time's up! Finish the job anyway, that's an order."},
+  hero:{half:"Halfway, {name}! The city's counting on you!",minute:"One minute left, hero!",ten:"Ten seconds!",up:"Time's up! A true hero finishes what they started."},
+  pop:{half:"Halfway through the set, {name}! Keep the energy up!",minute:"One minute! Big finish!",ten:"Ten seconds!",up:"That's the end of the set! Finish up, superstar."},
+  space:{half:"Halfway, {name}. Systems nominal.",minute:"One minute to landing.",ten:"Ten seconds!",up:"Time's up. Complete the mission, Navigator."},
+  football:{half:"Half time, {name}! Great first half!",minute:"One minute of added time!",ten:"Ten seconds!",up:"Full time! Finish the drill, well played."}};
+function runClock(j){const total=j.timer*60;const k=kid(j.kid);const L=TIMER_SAY[k&&k.theme]||TIMER_SAY.karate;const name=k?k.name:"";
+  j.run.said=j.run.said||[];const once=key=>{if(j.run.said.includes(key))return false;j.run.said.push(key);save();return true};
+  const tick=()=>{if(!j.run){stopTimer();return}const left=(j.run.start+j.timer*60000-Date.now())/1000;const c=$("#clock"),bar=$("#tbar"),fill=$("#tfill"),note=$("#tnote");
+    if(c)c.textContent=left>0?fmt(left):"Time's up";if(fill)fill.style.width=Math.max(0,Math.min(100,left/total*100))+"%";
+    if(bar){bar.classList.toggle("warn",left<=60&&left>10);bar.classList.toggle("urgent",left<=10&&left>0);bar.classList.toggle("over",left<=0)}
+    if(note)note.textContent=left>0?(left<=60?"Last minute! Bonus +"+bonus(j)+" if you make it":"Beat the clock for +"+bonus(j)+" bonus"):"No bonus now, but your "+T(k).cur.toLowerCase()+" still count. Keep going!";
+    if(left>0&&left<=total/2&&total>=120&&once("half"))speak(L.half.replace("{name}",name));
+    if(left>0&&left<=60&&total>120&&once("minute"))speak(L.minute);
+    if(left>0&&left<=10&&once("ten")){speak(L.ten)}
+    if(left<=10&&left>0){const sec=Math.ceil(left);if(j.run.lastTick!==sec){j.run.lastTick=sec;try{tone(880,.06,"square",0,.12)}catch(e){}}}
+    if(left<=0&&once("up")){speak(L.up.replace("{name}",name));try{tone(220,.5,"sawtooth",0,.15)}catch(e){}}};
+  tick();timerInt=setInterval(tick,500)}
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 async function playStep(j,s,call=true){const k=kid(j.kid);const i=j.steps.indexOf(s);
   if(call&&!isChallenge(j)&&i>=0){const mv=moveFor(k,i,j);speak(mv[0]+"!");await wait(900+mv[0].length*55)}
@@ -1079,7 +1111,8 @@ const PARENT={
     <div class="panel stack"><b>Move credits to this tablet</b><p class="muted" style="margin:0">Use this tablet's code, then scan the code the other tablet shows back. Each transfer works once only.</p>
       <div class="row">${S.kids.map(k=>`<button class="btn ghost small" data-act="receiveCredits" data-id="${k.id}">Receive for ${esc(k.name)}</button>`).join("")}</div></div>
     ${S.sent.length?`<div class="panel stack"><span class="label">Sent from this tablet</span>${S.sent.slice(-5).reverse().map(x=>`<div class="spread"><span>${x.amt} credits for ${esc(x.name)}</span><span class="muted">${new Date(x.at).toLocaleDateString("en-GB")}</span></div>`).join("")}</div>`:""}`},
-  settings(){const cur=S.alertSound||"world";return `<div class="panel stack"><b>Alert sound on this phone</b>
+  settings(){const cur=S.alertSound||"world";const b=bridge();let vi="";try{vi=b&&b.voiceInfo?b.voiceInfo():""}catch(e){}return `<div class="panel stack"><b>Voice</b><p class="muted" style="margin:0">The masters use the best English (UK) voice installed on this phone${vi?`: <b>${esc(vi)}</b>`:""}. For a much nicer voice, open the phone's <b>Settings → System → Languages → Text-to-speech</b> (or search "text-to-speech"), choose Google Speech Services, and install the <b>English (United Kingdom)</b> high-quality voice. Tidy Quest picks it up next time it opens.</p></div>
+    <div class="panel stack"><b>Alert sound on this phone</b>
       <p class="muted" style="margin:0">Plays when something happens on another linked phone: a job finished, points or a star earned, something bought from the shop. "Each child's world" gives every child their own sound — a gong for the Dojo, a bugle for the Army, a whistle for Football — so you know who it is without looking. Purchases always ring the till.</p>
       <div class="seg">${Object.entries(SOUND_NAMES).map(([key,l])=>`<button class="${cur===key?"on":""}" data-act="alertPick" data-v="${key}">${esc(l)}</button>`).join("")}</div>
       <div class="row" style="gap:8px">${cur==="world"?S.kids.map(k=>`<button class="btn ghost small" data-act="alertTest" data-v="${WORLD_SOUND[k.theme]||"bell"}">▶ ${esc(k.name)} (${esc(SOUND_NAMES[WORLD_SOUND[k.theme]]||"Doorbell")})</button>`).join(""):cur!=="off"?`<button class="btn ghost small" data-act="alertTest" data-v="${cur}">▶ Play it</button>`:""}<button class="btn ghost small" data-act="alertTest" data-v="till">▶ Shop till</button></div>
@@ -1211,7 +1244,7 @@ const ACT={
   selfie(b){const k=kid(b.dataset.id);capture({mode:"photo",facing:"user",title:"Smile, "+k.name+"!"},id=>faceEditor(k,id))},
   noFace(b){const k=kid(b.dataset.id);delMedia(k.face);k.face=null;save();render()},
   job(b){go("job",{id:b.dataset.id})},
-  startJob(b){const j=S.jobs.find(x=>x.id===b.dataset.id);j.run={start:Date.now(),done:[]};save();const k=kid(j.kid);if(WORLD_SOUND[k.theme])playSound(WORLD_SOUND[k.theme]);else sfxTick(k);
+  startJob(b){const j=S.jobs.find(x=>x.id===b.dataset.id);j.run={start:Date.now(),done:[]};save();view.args.focus=true;const k=kid(j.kid);if(WORLD_SOUND[k.theme])playSound(WORLD_SOUND[k.theme]);else sfxTick(k);
     render().then(async()=>{if(j.steps[0])playStep(j,j.steps[0]);else speak(T(k).m.type[j.type||"tidy"])})},
   mentorSay(b){speak(b.dataset.line)},
   playStep(b){const j=S.jobs.find(x=>x.id===b.dataset.job);const s=j.steps.find(x=>x.id===b.dataset.step);playStep(j,s)},
@@ -1219,7 +1252,7 @@ const ACT={
     if(j.run.done.includes(sid)){j.run.done=j.run.done.filter(x=>x!==sid)}else{j.run.done.push(sid);sfxTick(k);
       const nextStep=j.steps.find(s=>!j.run.done.includes(s.id));const cheer=say(k,"step");speak(cheer);
       if(nextStep)setTimeout(()=>playStep(j,nextStep),1300+cheer.length*45);else setTimeout(()=>speak(say(k,"finish")),1300+cheer.length*45)}
-    save();const y=scrollY;render().then(()=>scrollTo(0,y))},
+    save();view.args.focus=true;render()},
   finishJob(b){const j=S.jobs.find(x=>x.id===b.dataset.id);const k=kid(j.kid);const th=T(k);
     const done=(after,kind)=>{j.beat=!!(j.timer&&Date.now()<=j.run.start+j.timer*60000);j.after=after||null;j.afterKind=kind||null;j.status="pending";j.doneAt=Date.now();save();sfxFanfare(k);confetti(k);
       const cheer=th.cheers[Math.floor(Math.random()*th.cheers.length)];speak(cheer);
