@@ -121,6 +121,14 @@ jobs:
       - name: Publish to Firebase Hosting
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
-          if [ -z "$FIREBASE_TOKEN" ]; then echo "::warning::No FIREBASE_TOKEN secret yet, so the web version was built but not published."; exit 0; fi
-          npx --yes firebase-tools@13 deploy --only hosting --project project-tidy-quest --non-interactive --token "$FIREBASE_TOKEN"
+          if [ -n "$FIREBASE_SA" ]; then
+            echo "$FIREBASE_SA" > /tmp/sa.json
+            export GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json
+            npx --yes firebase-tools@13 deploy --only hosting --project project-tidy-quest --non-interactive
+          elif [ -n "$FIREBASE_TOKEN" ]; then
+            npx --yes firebase-tools@13 deploy --only hosting --project project-tidy-quest --non-interactive --token "$FIREBASE_TOKEN"
+          else
+            echo "::warning::No FIREBASE_SERVICE_ACCOUNT or FIREBASE_TOKEN secret yet, so the web version was built but not published."
+          fi
