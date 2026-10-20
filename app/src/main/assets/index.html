@@ -171,6 +171,7 @@ body[data-theme="karate"] .meter i{border-radius:2px;background:var(--belt,#f4f4
 .gstrip{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:rgba(0,0,0,.35);color:#fff;border:1.5px solid rgba(255,255,255,.25);border-radius:14px;padding:10px 14px;font-weight:700;font-size:15px;backdrop-filter:blur(4px)}.gstrip .grow{flex:1}
 .tile.jar{border-color:var(--accent2)}.tile.jar .nbar i{background:var(--accent)}.tile.jar.full{animation:jarglow 1.4s ease-in-out infinite alternate}@keyframes jarglow{from{box-shadow:var(--card-shadow)}to{box-shadow:0 0 0 4px var(--accent2),var(--card-shadow)}}
 .jarbig{width:min(240px,70vw);height:12px;border-radius:999px;background:rgba(127,127,127,.22);overflow:hidden}.jarbig i{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .3s}
+.stepper.sm button{width:36px;height:36px;font-size:20px}.stepper.sm b{font-size:22px;min-width:30px}.stepper.sm{gap:6px}
 .stepper{display:flex;align-items:center;gap:14px;justify-content:center}.stepper button{width:54px;height:54px;border-radius:50%;background:var(--panel);border:2px solid var(--line);font-size:28px;font-weight:900;color:var(--ink)}.stepper b{font-size:40px;min-width:60px;text-align:center;font-variant-numeric:tabular-nums}
 .nudge{display:flex;flex-direction:column;gap:5px;margin-top:2px}.nudge .nl{font-size:14px;font-weight:700;color:var(--muted);line-height:1.25}.nudge .nl b{color:var(--ink)}.nbar{display:block;height:8px;border-radius:999px;background:rgba(127,127,127,.22);overflow:hidden}.nbar i{display:block;height:100%;background:var(--accent2);border-radius:999px}
 .weekstrip{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:2px 12px 0;font-size:14px;font-weight:800}.weekstrip .wl{opacity:.7;font-weight:700}.weekstrip span:not(.wl){background:rgba(0,0,0,.22);color:#fff;border-radius:999px;padding:3px 10px;backdrop-filter:blur(4px)}
@@ -1055,14 +1056,16 @@ VIEWS.shop=({kid:id})=>{const k=kid(id);setBodyTheme(k);const th=T(k);
     ${k.jar&&k.jar.rid===r.id?`<button class="btn small" data-act="jarOpen" data-id="${k.id}">🫙 ${k.jar.saved}/${k.jar.cost} saved</button>`:k.credits>=r.cost?`<button class="btn small" data-act="buy" data-kid="${k.id}" data-id="${r.id}">${r.cost} ${esc(th.cur.toLowerCase())}</button>`:`<button class="btn ghost small" data-act="jarStart" data-kid="${k.id}" data-id="${r.id}">🫙 Save for this · ${r.cost}</button>`}</div>`).join("")}</div>`};
 
 /* one finished job, with its photos and Approve / Not done yet; used by the To check tab and the quick sheet on the child's screen */
-function checkCard(j){const k=kid(j.kid);const th=T(k);const earned=j.credits+(j.beat?bonus(j):0);return `<div class="panel stack">
-      <div class="spread"><b>${esc(k.name)}: ${esc(j.title||"Job")}</b>${j.beat?`<span class="chip prize">⏱ Beat the clock · +${bonus(j)} bonus</span>`:""}</div>
-      ${!isChallenge(j)?`<span class="muted" style="font-weight:700">${j.credits} ${esc(th.cur.toLowerCase())} for the job${j.beat?` + ${bonus(j)} bonus for beating the ${j.timer}-minute clock = ${earned}`:""}</span>`:""}
+function checkCard(j){const k=kid(j.kid);const th=T(k);const earned=j.credits+(j.bonus!=null?j.bonus:(j.beat?bonus(j):0));return `<div class="panel stack">
+      <div class="spread"><b>${esc(k.name)}: ${esc(j.title||"Job")}</b>${j.beat?`<span class="chip prize">⏱ Beat the clock</span>`:""}</div>
+      ${!isChallenge(j)?`<div class="row" style="align-items:center;gap:10px"><span style="font-weight:800">${j.credits} ${esc(th.cur.toLowerCase())}</span><span class="muted">+ bonus</span>
+        <span class="stepper sm"><button data-act="bonusAdj" data-id="${j.id}" data-d="-1" aria-label="Less bonus">−</button><b id="bn-${j.id}">${j.bonus!=null?j.bonus:(j.beat?bonus(j):0)}</b><button data-act="bonusAdj" data-id="${j.id}" data-d="1" aria-label="More bonus">+</button></span>
+        <span class="muted" style="font-size:13px">${j.beat?"beat the clock":"for a great job"}</span></div>`:""}
       <div class="pair">${j.photo?`<figure style="margin:0"><img data-media="${j.photo}" alt="Before"><figcaption class="label">Before</figcaption></figure>`:""}${j.after&&j.afterKind!=="video"?`<figure style="margin:0"><img data-media="${j.after}" alt="Proof"><figcaption class="label">Proof</figcaption></figure>`:""}</div>
       ${j.run&&(j.run.progress||[]).length?`<div class="stack" style="gap:6px"><span class="label">Progress</span><div class="pstrip">${j.run.progress.map(id=>`<img data-media="${id}" alt="Progress photo">`).join("")}</div></div>`:""}
       ${j.after&&j.afterKind==="video"?`<video class="media-box" controls playsinline data-media="${j.after}"></video>`:""}
       ${j.proof==="seen"?`<span class="chip">Did you see it happen?</span>`:""}
-      <div class="row"><button class="btn good" data-act="approve" data-id="${j.id}">${isChallenge(j)?"Approve ★":j.beat?`Approve +${j.credits} +${bonus(j)} bonus`:`Approve +${earned} ${esc(th.cur)}`}</button><button class="btn bad" data-act="sendBack" data-id="${j.id}">Not done yet</button></div></div>`}
+      <div class="row"><button class="btn good" data-act="approve" data-id="${j.id}" id="ap-${j.id}">${isChallenge(j)?"Approve ★":`Approve +${j.credits+(j.bonus!=null?j.bonus:(j.beat?bonus(j):0))} ${esc(th.cur)}`}</button><button class="btn bad" data-act="sendBack" data-id="${j.id}">Not done yet</button></div></div>`}
 function reqCard(r){const k=kid(r.kid);return `<div class="panel spread"><span><b>${esc(k?k.name:"?")}</b> bought ${esc(r.icon)} ${esc(r.name)}</span>
       <span class="row"><button class="btn good small" data-act="given" data-id="${r.id}">Given</button><button class="btn bad small" data-act="refund" data-id="${r.id}">Refund</button></span></div>`}
 /* quick grown-up sheet from the child's screen: PIN, then just the things waiting for this child */
@@ -1283,6 +1286,8 @@ const ACT={
   noFace(b){const k=kid(b.dataset.id);delMedia(k.face);k.face=null;save();render()},
   job(b){go("job",{id:b.dataset.id})},
   quickCheck(b){const k=kid(b.dataset.kid);if(k)quickCheck(k,b.dataset.job||null)},
+  bonusAdj(b){const j=S.jobs.find(x=>x.id===b.dataset.id);if(!j)return;const cur=j.bonus!=null?j.bonus:(j.beat?bonus(j):0);j.bonus=Math.max(0,Math.min(20,cur+ +b.dataset.d));save();
+    const n=document.getElementById("bn-"+j.id),ap=document.getElementById("ap-"+j.id);if(n)n.textContent=j.bonus;if(ap)ap.textContent=`Approve +${j.credits+j.bonus} ${T(kid(j.kid)).cur}`},
   startJob(b){const j=S.jobs.find(x=>x.id===b.dataset.id);j.run={start:Date.now(),done:[]};save();view.args.focus=true;const k=kid(j.kid);if(WORLD_SOUND[k.theme])playSound(WORLD_SOUND[k.theme]);else sfxTick(k);
     render().then(async()=>{if(j.steps[0])playStep(j,j.steps[0]);else speak(T(k).m.type[j.type||"tidy"])})},
   mentorSay(b){speak(b.dataset.line)},
@@ -1358,17 +1363,17 @@ const ACT={
   async approve(b){const j=S.jobs.find(x=>x.id===b.dataset.id);if(!j)return;const k=kid(j.kid);const before=rankOf(k.earned||0);const aid="a"+j.id+"_"+(j.doneAt||0);
     const prog=(j.run&&j.run.progress)||[];const album=(prog.length||(j.photo&&j.after))?{before:j.photo?await copyMedia(j.photo):null,progress:prog.slice()}:null;
     if(isChallenge(j)){logAchievement(k,{type:j.type,title:j.title,media:j.after,kind:j.afterKind,album,id:aid});j.after=null;j.run=null;j.beat=false;
-      if(j.repeat){j.status="todo";j.from=tomorrow();j.doneAt=null}else{delMedia(j.photo);j.steps.forEach(s=>delMedia(s.audio));S.jobs=S.jobs.filter(x=>x!==j);S.jobGone.push(j.id)}
+      if(j.repeat){j.status="todo";j.from=tomorrow();j.doneAt=null;j.bonus=null}else{delMedia(j.photo);j.steps.forEach(s=>delMedia(s.audio));S.jobs=S.jobs.filter(x=>x!==j);S.jobGone.push(j.id)}
       save();toast(`★ for ${k.name}`);render();if(quickOpen)quickOpen();return}
-    const amt=j.credits+(j.beat?bonus(j):0);
-    post(k,{d:amt,e:amt,why:"job "+(j.title||"")+(j.beat?" ⏱ +"+bonus(j)+" bonus":""),id:aid});if(rankOf(k.earned)>before)k.rankUp=true;
+    const bon=j.bonus!=null?j.bonus:(j.beat?bonus(j):0);const amt=j.credits+bon;
+    post(k,{d:amt,e:amt,why:"job "+(j.title||"")+(bon?" +"+bon+" bonus":""),id:aid});if(rankOf(k.earned)>before)k.rankUp=true;
     if(!(k.trophies||[]).some(t=>t.id===aid)){k.trophies=k.trophies||[];k.trophies.unshift({id:aid,title:j.title||T(k).job,type:j.type||"tidy",media:j.after||null,kind:j.after?(j.afterKind||"photo"):null,at:Date.now(),amt,album});if(j.after||album)k.newTrophy=true}
     j.after=null;j.run=null;j.beat=false;
-    if(j.repeat){j.status="todo";j.from=tomorrow();j.doneAt=null}else{delMedia(j.photo);j.steps.forEach(s=>delMedia(s.audio));S.jobs=S.jobs.filter(x=>x!==j);S.jobGone.push(j.id)}
+    if(j.repeat){j.status="todo";j.from=tomorrow();j.doneAt=null;j.bonus=null}else{delMedia(j.photo);j.steps.forEach(s=>delMedia(s.audio));S.jobs=S.jobs.filter(x=>x!==j);S.jobGone.push(j.id)}
     save();toast(`${k.name} got +${amt}`);render();if(quickOpen)quickOpen()},
   progressShot(b){const j=S.jobs.find(x=>x.id===b.dataset.id);const k=kid(j.kid);
     capture({mode:"photo",title:"Progress shot"},id=>{j.run.progress=(j.run.progress||[]).concat(id);save();sfxTick(k);speak(say(k,"step"));const y=scrollY;render().then(()=>scrollTo(0,y))})},
-  sendBack(b){const j=S.jobs.find(x=>x.id===b.dataset.id);((j.run&&j.run.progress)||[]).forEach(delMedia);delMedia(j.after);j.after=null;j.run=null;j.beat=false;j.status="todo";save();toast("Sent back to have another go");render();if(quickOpen)quickOpen()},
+  sendBack(b){const j=S.jobs.find(x=>x.id===b.dataset.id);((j.run&&j.run.progress)||[]).forEach(delMedia);delMedia(j.after);j.after=null;j.run=null;j.beat=false;j.status="todo";j.bonus=null;save();toast("Sent back to have another go");render();if(quickOpen)quickOpen()},
   given(b){const r=S.requests.find(x=>x.id===b.dataset.id);const k=kid(r.kid);const reopen=quickOpen;overlayClose();quickOpen=reopen;
     const finish=photo=>{if(k){k.treats=k.treats||[];k.treats.unshift({id:uid(),name:r.name,icon:r.icon,cost:r.cost,at:Date.now(),photo:photo||null});k.newTreat=true}
       S.requests=S.requests.filter(x=>x!==r);S.reqDone.push(r.id);save();overlayClose();render();toast("Enjoy!");if(quickOpen)quickOpen()};
