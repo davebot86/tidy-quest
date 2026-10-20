@@ -1056,12 +1056,13 @@ VIEWS.shop=({kid:id})=>{const k=kid(id);setBodyTheme(k);const th=T(k);
 
 /* one finished job, with its photos and Approve / Not done yet; used by the To check tab and the quick sheet on the child's screen */
 function checkCard(j){const k=kid(j.kid);const th=T(k);const earned=j.credits+(j.beat?bonus(j):0);return `<div class="panel stack">
-      <div class="spread"><b>${esc(k.name)}: ${esc(j.title||"Job")}</b>${j.beat?`<span class="chip prize">Beat the clock</span>`:""}</div>
+      <div class="spread"><b>${esc(k.name)}: ${esc(j.title||"Job")}</b>${j.beat?`<span class="chip prize">⏱ Beat the clock · +${bonus(j)} bonus</span>`:""}</div>
+      ${!isChallenge(j)?`<span class="muted" style="font-weight:700">${j.credits} ${esc(th.cur.toLowerCase())} for the job${j.beat?` + ${bonus(j)} bonus for beating the ${j.timer}-minute clock = ${earned}`:""}</span>`:""}
       <div class="pair">${j.photo?`<figure style="margin:0"><img data-media="${j.photo}" alt="Before"><figcaption class="label">Before</figcaption></figure>`:""}${j.after&&j.afterKind!=="video"?`<figure style="margin:0"><img data-media="${j.after}" alt="Proof"><figcaption class="label">Proof</figcaption></figure>`:""}</div>
       ${j.run&&(j.run.progress||[]).length?`<div class="stack" style="gap:6px"><span class="label">Progress</span><div class="pstrip">${j.run.progress.map(id=>`<img data-media="${id}" alt="Progress photo">`).join("")}</div></div>`:""}
       ${j.after&&j.afterKind==="video"?`<video class="media-box" controls playsinline data-media="${j.after}"></video>`:""}
       ${j.proof==="seen"?`<span class="chip">Did you see it happen?</span>`:""}
-      <div class="row"><button class="btn good" data-act="approve" data-id="${j.id}">${isChallenge(j)?"Approve ★":`Approve +${earned} ${esc(th.cur)}`}</button><button class="btn bad" data-act="sendBack" data-id="${j.id}">Not done yet</button></div></div>`}
+      <div class="row"><button class="btn good" data-act="approve" data-id="${j.id}">${isChallenge(j)?"Approve ★":j.beat?`Approve +${j.credits} +${bonus(j)} bonus`:`Approve +${earned} ${esc(th.cur)}`}</button><button class="btn bad" data-act="sendBack" data-id="${j.id}">Not done yet</button></div></div>`}
 function reqCard(r){const k=kid(r.kid);return `<div class="panel spread"><span><b>${esc(k?k.name:"?")}</b> bought ${esc(r.icon)} ${esc(r.name)}</span>
       <span class="row"><button class="btn good small" data-act="given" data-id="${r.id}">Given</button><button class="btn bad small" data-act="refund" data-id="${r.id}">Refund</button></span></div>`}
 /* quick grown-up sheet from the child's screen: PIN, then just the things waiting for this child */
@@ -1360,7 +1361,7 @@ const ACT={
       if(j.repeat){j.status="todo";j.from=tomorrow();j.doneAt=null}else{delMedia(j.photo);j.steps.forEach(s=>delMedia(s.audio));S.jobs=S.jobs.filter(x=>x!==j);S.jobGone.push(j.id)}
       save();toast(`★ for ${k.name}`);render();if(quickOpen)quickOpen();return}
     const amt=j.credits+(j.beat?bonus(j):0);
-    post(k,{d:amt,e:amt,why:"job "+(j.title||""),id:aid});if(rankOf(k.earned)>before)k.rankUp=true;
+    post(k,{d:amt,e:amt,why:"job "+(j.title||"")+(j.beat?" ⏱ +"+bonus(j)+" bonus":""),id:aid});if(rankOf(k.earned)>before)k.rankUp=true;
     if(!(k.trophies||[]).some(t=>t.id===aid)){k.trophies=k.trophies||[];k.trophies.unshift({id:aid,title:j.title||T(k).job,type:j.type||"tidy",media:j.after||null,kind:j.after?(j.afterKind||"photo"):null,at:Date.now(),amt,album});if(j.after||album)k.newTrophy=true}
     j.after=null;j.run=null;j.beat=false;
     if(j.repeat){j.status="todo";j.from=tomorrow();j.doneAt=null}else{delMedia(j.photo);j.steps.forEach(s=>delMedia(s.audio));S.jobs=S.jobs.filter(x=>x!==j);S.jobGone.push(j.id)}
