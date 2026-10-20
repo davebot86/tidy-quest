@@ -168,6 +168,7 @@ body[data-theme="karate"] .meter i{border-radius:2px;background:var(--belt,#f4f4
 .tile .num{font-size:44px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums}
 .tile .what{font-weight:700;color:var(--muted)}
 .tile .go{margin-top:auto;font-weight:900;color:var(--accent)}
+.gstrip{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:rgba(0,0,0,.35);color:#fff;border:1.5px solid rgba(255,255,255,.25);border-radius:14px;padding:10px 14px;font-weight:700;font-size:15px;backdrop-filter:blur(4px)}.gstrip .grow{flex:1}
 .tile.jar{border-color:var(--accent2)}.tile.jar .nbar i{background:var(--accent)}.tile.jar.full{animation:jarglow 1.4s ease-in-out infinite alternate}@keyframes jarglow{from{box-shadow:var(--card-shadow)}to{box-shadow:0 0 0 4px var(--accent2),var(--card-shadow)}}
 .jarbig{width:min(240px,70vw);height:12px;border-radius:999px;background:rgba(127,127,127,.22);overflow:hidden}.jarbig i{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .3s}
 .stepper{display:flex;align-items:center;gap:14px;justify-content:center}.stepper button{width:54px;height:54px;border-radius:50%;background:var(--panel);border:2px solid var(--line);font-size:28px;font-weight:900;color:var(--ink)}.stepper b{font-size:40px;min-width:60px;text-align:center;font-variant-numeric:tabular-nums}
@@ -924,6 +925,9 @@ VIEWS.hq=({kid:id})=>{const k=kid(id);if(!k){home();return""}setBodyTheme(k);con
       ${(g.backers||[]).length?`<span class="backers">Backed by ${g.backers.map(x=>`<b>${esc(x.name)}</b>${x.gift?` (${esc(x.gift)})`:""}`).join(", ")}</span>`:""}</div>`
       :`<div class="panel tile"><span class="what">Big goal</span><span class="muted" style="font-weight:700">Ask a grown-up to set one. Brave, kind and active things earn stars.</span></div>`}
   </div>
+  ${(()=>{const nChk=S.jobs.filter(j=>j.kid===k.id&&j.status==="pending").length,nReq=S.requests.filter(r=>r.kid===k.id&&r.status==="asked").length;if(!nChk&&!nReq)return "";
+    const bits=[nChk?`${nChk} to check`:"",nReq?`${nReq} reward${nReq===1?"":"s"} to hand over`:""].filter(Boolean).join(" · ");
+    return `<button class="gstrip" data-act="quickCheck" data-kid="${k.id}"><span>🔒</span><span class="grow"><b>Grown-ups:</b> ${bits}</span><span>Check →</span></button>`})()}
   <div class="section-title on-world"><h2 class="display">${esc(th.jobs)}</h2>${todo.length?`<span class="count">${todo.length}</span>`:""}</div>
   <div class="quests">${jobs.length?jobs.map(j=>`<button class="quest ${j.status==="pending"?"waiting":""}" data-act="job" data-id="${j.id}">
       ${questThumb(k,j)}
@@ -964,7 +968,8 @@ VIEWS.job=({id})=>{const j=S.jobs.find(x=>x.id===id);const k=kid(j.kid);setBodyT
   const started=!!j.run;const done=id=>started&&j.run.done.includes(id);const allDone=j.steps.length===0||j.steps.every(s=>done(s.id));
   const cur=started?j.steps.findIndex(s=>!done(s.id)):-1;
   const head=`<div class="topbar"><button class="iconbtn" data-act="back" aria-label="Back">${IC.back}</button><div class="grow on-world"><span style="font-weight:700;opacity:.8">${esc(isChallenge(j)?TYPES[j.type].label:th.job)} · ${isChallenge(j)?"★ towards your big goal":"+"+j.credits+" "+esc(th.cur.toLowerCase())}</span><h1 class="display">${esc(j.title||th.job)}</h1></div></div>`;
-  if(j.status==="pending")return head+stageHTML(k,"Well done. A grown-up will check it, then your "+(isChallenge(j)?"star":th.cur.toLowerCase())+" arrive"+(isChallenge(j)?"s":"")+".");
+  if(j.status==="pending")return head+stageHTML(k,"Well done. A grown-up will check it, then your "+(isChallenge(j)?"star":th.cur.toLowerCase())+" arrive"+(isChallenge(j)?"s":"")+".")+
+    `<div class="panel stack" style="align-items:center;text-align:center"><span class="muted">Grown-up here?</span><button class="btn" data-act="quickCheck" data-kid="${k.id}" data-job="${j.id}">🔒 Check it now</button></div>`;
   const line=!started?(j.steps.length&&!isChallenge(j)?say(k,"start"):T(k).m.type[j.type||"tidy"]):allDone?say(k,"finish"):say(k,"step");
   const proofNote=j.proof==="photo"?"When you finish, take a photo to show it.":j.proof==="video"?"When you finish, film a short video of it.":j.proof==="seen"?"A grown-up needs to see you do this one.":"";
   return `${head}
@@ -1047,6 +1052,25 @@ VIEWS.shop=({kid:id})=>{const k=kid(id);setBodyTheme(k);const th=T(k);
   <div class="shopgrid">${S.rewards.map(r=>`<div class="reward">${r.photo?`<img class="rphoto" data-media="${r.photo}" alt="">`:`<span class="ico">${esc(r.icon)}</span>`}<span class="n">${esc(r.name)}${r.by===k.id?`<br><span class="chip">Your idea</span>`:""}</span>
     ${k.jar&&k.jar.rid===r.id?`<button class="btn small" data-act="jarOpen" data-id="${k.id}">🫙 ${k.jar.saved}/${k.jar.cost} saved</button>`:k.credits>=r.cost?`<button class="btn small" data-act="buy" data-kid="${k.id}" data-id="${r.id}">${r.cost} ${esc(th.cur.toLowerCase())}</button>`:`<button class="btn ghost small" data-act="jarStart" data-kid="${k.id}" data-id="${r.id}">🫙 Save for this · ${r.cost}</button>`}</div>`).join("")}</div>`};
 
+/* one finished job, with its photos and Approve / Not done yet; used by the To check tab and the quick sheet on the child's screen */
+function checkCard(j){const k=kid(j.kid);const th=T(k);const earned=j.credits+(j.beat?bonus(j):0);return `<div class="panel stack">
+      <div class="spread"><b>${esc(k.name)}: ${esc(j.title||"Job")}</b>${j.beat?`<span class="chip prize">Beat the clock</span>`:""}</div>
+      <div class="pair">${j.photo?`<figure style="margin:0"><img data-media="${j.photo}" alt="Before"><figcaption class="label">Before</figcaption></figure>`:""}${j.after&&j.afterKind!=="video"?`<figure style="margin:0"><img data-media="${j.after}" alt="Proof"><figcaption class="label">Proof</figcaption></figure>`:""}</div>
+      ${j.run&&(j.run.progress||[]).length?`<div class="stack" style="gap:6px"><span class="label">Progress</span><div class="pstrip">${j.run.progress.map(id=>`<img data-media="${id}" alt="Progress photo">`).join("")}</div></div>`:""}
+      ${j.after&&j.afterKind==="video"?`<video class="media-box" controls playsinline data-media="${j.after}"></video>`:""}
+      ${j.proof==="seen"?`<span class="chip">Did you see it happen?</span>`:""}
+      <div class="row"><button class="btn good" data-act="approve" data-id="${j.id}">${isChallenge(j)?"Approve ★":`Approve +${earned} ${esc(th.cur)}`}</button><button class="btn bad" data-act="sendBack" data-id="${j.id}">Not done yet</button></div></div>`}
+function reqCard(r){const k=kid(r.kid);return `<div class="panel spread"><span><b>${esc(k?k.name:"?")}</b> bought ${esc(r.icon)} ${esc(r.name)}</span>
+      <span class="row"><button class="btn good small" data-act="given" data-id="${r.id}">Given</button><button class="btn bad small" data-act="refund" data-id="${r.id}">Refund</button></span></div>`}
+/* quick grown-up sheet from the child's screen: PIN, then just the things waiting for this child */
+function quickCheck(k,focusJob){pinPad("Grown-ups only","Enter your PIN to check "+k.name+"'s work",p=>{if(p!==S.pin)return false;overlayClose();
+  const draw=()=>{const jobs=S.jobs.filter(j=>j.kid===k.id&&j.status==="pending").sort((a,b)=>(a.id===focusJob?-1:b.id===focusJob?1:0));const reqs=S.requests.filter(r=>r.kid===k.id&&r.status==="asked");
+    if(!jobs.length&&!reqs.length){overlayClose();toast("All checked");render();return}
+    const el=overlay(`<div class="stack"><div class="spread"><h2 class="display" style="margin:0">Check ${esc(k.name)}'s work</h2><button class="btn ghost small" data-act="parent">All grown-up tools</button></div>
+      <div class="stack" style="max-height:70vh;overflow:auto">${jobs.map(checkCard).join("")}${reqs.map(reqCard).join("")}</div><button class="btn ghost" data-close>Back to ${esc(k.name)}</button></div>`,()=>{quickOpen=null});
+    quickOpen=draw};
+  draw()})}
+let quickOpen=null;
 /* ---------- Parent area ---------- */
 const PTABS=[["jobs","Jobs"],["check","To check"],["rewards","Rewards"],["kids","Children"],["link","Link & sync"],["settings","Settings"]];
 function pendingCount(){return S.jobs.filter(j=>j.status==="pending").length+S.requests.filter(r=>r.status==="asked").length+(S.wishes||[]).length}
@@ -1075,15 +1099,8 @@ const PARENT={
         <div class="stack" style="gap:6px;flex:1;min-width:160px"><label class="label" for="wn-${w.id}">Name in the shop</label><input id="wn-${w.id}" value="${esc(w.name)}" maxlength="40" placeholder="e.g. Lego minifigure">
         <label class="label" for="wc-${w.id}">Price in ${esc(T(k).cur.toLowerCase())}</label><input id="wc-${w.id}" type="number" min="1" max="999" value="${w.suggest||10}" style="width:120px"></div></div>
       <div class="row"><button class="btn good" data-act="wishYes" data-id="${w.id}">Add to shop</button><button class="btn bad" data-act="wishNo" data-id="${w.id}">Not this time</button></div></div>`}).join("")}
-      ${jobs.map(j=>{const k=kid(j.kid);const th=T(k);const earned=j.credits+(j.beat?bonus(j):0);return `<div class="panel stack">
-      <div class="spread"><b>${esc(k.name)}: ${esc(j.title||"Job")}</b>${j.beat?`<span class="chip prize">Beat the clock</span>`:""}</div>
-      <div class="pair">${j.photo?`<figure style="margin:0"><img data-media="${j.photo}" alt="Before"><figcaption class="label">Before</figcaption></figure>`:""}${j.after&&j.afterKind!=="video"?`<figure style="margin:0"><img data-media="${j.after}" alt="Proof"><figcaption class="label">Proof</figcaption></figure>`:""}</div>
-      ${j.run&&(j.run.progress||[]).length?`<div class="stack" style="gap:6px"><span class="label">Progress</span><div class="pstrip">${j.run.progress.map(id=>`<img data-media="${id}" alt="Progress photo">`).join("")}</div></div>`:""}
-      ${j.after&&j.afterKind==="video"?`<video class="media-box" controls playsinline data-media="${j.after}"></video>`:""}
-      ${j.proof==="seen"?`<span class="chip">Did you see it happen?</span>`:""}
-      <div class="row"><button class="btn good" data-act="approve" data-id="${j.id}">${isChallenge(j)?"Approve ★":`Approve +${earned} ${esc(th.cur)}`}</button><button class="btn bad" data-act="sendBack" data-id="${j.id}">Not done yet</button></div></div>`}).join("")}
-      ${reqs.map(r=>{const k=kid(r.kid);return `<div class="panel spread"><span><b>${esc(k?k.name:"?")}</b> bought ${esc(r.icon)} ${esc(r.name)}</span>
-      <span class="row"><button class="btn good small" data-act="given" data-id="${r.id}">Given</button><button class="btn bad small" data-act="refund" data-id="${r.id}">Refund</button></span></div>`}).join("")}</div>`},
+      ${jobs.map(j=>checkCard(j)).join("")}
+      ${reqs.map(r=>reqCard(r)).join("")}</div>`},
   rewards(){return `<p class="muted" style="margin:0">Family credits can buy anything you decide: treats, time, privileges or pocket money.</p>
     <div class="stack">${S.rewards.map(r=>`<div class="panel row" style="gap:8px">
       <input aria-label="Icon" value="${esc(r.icon)}" data-rw="icon" data-id="${r.id}" style="width:64px;text-align:center;font-size:24px" maxlength="4">
@@ -1256,6 +1273,7 @@ const ACT={
   selfie(b){const k=kid(b.dataset.id);capture({mode:"photo",facing:"user",title:"Smile, "+k.name+"!"},id=>faceEditor(k,id))},
   noFace(b){const k=kid(b.dataset.id);delMedia(k.face);k.face=null;save();render()},
   job(b){go("job",{id:b.dataset.id})},
+  quickCheck(b){const k=kid(b.dataset.kid);if(k)quickCheck(k,b.dataset.job||null)},
   startJob(b){const j=S.jobs.find(x=>x.id===b.dataset.id);j.run={start:Date.now(),done:[]};save();view.args.focus=true;const k=kid(j.kid);if(WORLD_SOUND[k.theme])playSound(WORLD_SOUND[k.theme]);else sfxTick(k);
     render().then(async()=>{if(j.steps[0])playStep(j,j.steps[0]);else speak(T(k).m.type[j.type||"tidy"])})},
   mentorSay(b){speak(b.dataset.line)},
@@ -1332,25 +1350,25 @@ const ACT={
     const prog=(j.run&&j.run.progress)||[];const album=(prog.length||(j.photo&&j.after))?{before:j.photo?await copyMedia(j.photo):null,progress:prog.slice()}:null;
     if(isChallenge(j)){logAchievement(k,{type:j.type,title:j.title,media:j.after,kind:j.afterKind,album,id:aid});j.after=null;j.run=null;j.beat=false;
       if(j.repeat){j.status="todo";j.from=tomorrow();j.doneAt=null}else{delMedia(j.photo);j.steps.forEach(s=>delMedia(s.audio));S.jobs=S.jobs.filter(x=>x!==j);S.jobGone.push(j.id)}
-      save();toast(`★ for ${k.name}`);render();return}
+      save();toast(`★ for ${k.name}`);render();if(quickOpen)quickOpen();return}
     const amt=j.credits+(j.beat?bonus(j):0);
     post(k,{d:amt,e:amt,why:"job "+(j.title||""),id:aid});if(rankOf(k.earned)>before)k.rankUp=true;
     if(!(k.trophies||[]).some(t=>t.id===aid)){k.trophies=k.trophies||[];k.trophies.unshift({id:aid,title:j.title||T(k).job,type:j.type||"tidy",media:j.after||null,kind:j.after?(j.afterKind||"photo"):null,at:Date.now(),amt,album});if(j.after||album)k.newTrophy=true}
     j.after=null;j.run=null;j.beat=false;
     if(j.repeat){j.status="todo";j.from=tomorrow();j.doneAt=null}else{delMedia(j.photo);j.steps.forEach(s=>delMedia(s.audio));S.jobs=S.jobs.filter(x=>x!==j);S.jobGone.push(j.id)}
-    save();toast(`${k.name} got +${amt}`);render()},
+    save();toast(`${k.name} got +${amt}`);render();if(quickOpen)quickOpen()},
   progressShot(b){const j=S.jobs.find(x=>x.id===b.dataset.id);const k=kid(j.kid);
     capture({mode:"photo",title:"Progress shot"},id=>{j.run.progress=(j.run.progress||[]).concat(id);save();sfxTick(k);speak(say(k,"step"));const y=scrollY;render().then(()=>scrollTo(0,y))})},
-  sendBack(b){const j=S.jobs.find(x=>x.id===b.dataset.id);((j.run&&j.run.progress)||[]).forEach(delMedia);delMedia(j.after);j.after=null;j.run=null;j.beat=false;j.status="todo";save();toast("Sent back to have another go");render()},
-  given(b){const r=S.requests.find(x=>x.id===b.dataset.id);const k=kid(r.kid);
+  sendBack(b){const j=S.jobs.find(x=>x.id===b.dataset.id);((j.run&&j.run.progress)||[]).forEach(delMedia);delMedia(j.after);j.after=null;j.run=null;j.beat=false;j.status="todo";save();toast("Sent back to have another go");render();if(quickOpen)quickOpen()},
+  given(b){const r=S.requests.find(x=>x.id===b.dataset.id);const k=kid(r.kid);const reopen=quickOpen;overlayClose();quickOpen=reopen;
     const finish=photo=>{if(k){k.treats=k.treats||[];k.treats.unshift({id:uid(),name:r.name,icon:r.icon,cost:r.cost,at:Date.now(),photo:photo||null});k.newTreat=true}
-      S.requests=S.requests.filter(x=>x!==r);S.reqDone.push(r.id);save();overlayClose();render();toast("Enjoy!")};
+      S.requests=S.requests.filter(x=>x!==r);S.reqDone.push(r.id);save();overlayClose();render();toast("Enjoy!");if(quickOpen)quickOpen()};
     const el=overlay(`<div class="stack" style="text-align:center;align-items:center"><span style="font-size:56px">${esc(r.icon)}</span><h2 class="display">${esc(k?k.name:"")} gets ${esc(r.name)}</h2>
       <p class="muted" style="margin:0">Take a photo of them with it? It goes in their collection of rewards they've earned.</p>
       <div class="row"><button class="btn" id="gphoto">${IC.cam} Take a photo</button><button class="btn ghost" id="gskip">Skip</button></div></div>`);
     el.querySelector("#gskip").onclick=()=>finish(null);
     el.querySelector("#gphoto").onclick=()=>capture({mode:"photo",title:"Enjoying "+r.name},id=>finish(id))},
-  refund(b){const r=S.requests.find(x=>x.id===b.dataset.id);const k=kid(r.kid);if(k)post(k,{d:r.cost,why:"refund"});S.requests=S.requests.filter(x=>x!==r);S.reqDone.push(r.id);save();toast("Credits returned");render()},
+  refund(b){const r=S.requests.find(x=>x.id===b.dataset.id);const k=kid(r.kid);if(k)post(k,{d:r.cost,why:"refund"});S.requests=S.requests.filter(x=>x!==r);S.reqDone.push(r.id);save();toast("Credits returned");render();if(quickOpen)quickOpen()},
   addReward(){S.rewards.push({id:uid(),icon:"⭐",name:"New reward",cost:5,at:Date.now()});S.shopAt=Date.now();save();render()},
   delReward(b){const r=S.rewards.find(x=>x.id===b.dataset.id);if(r){delMedia(r.photo);S.shopGone.push({id:r.id,name:r.name,at:Date.now()})}S.rewards=S.rewards.filter(x=>x!==r);S.shopAt=Date.now();save();render()},
   rPhoto(b){const r=S.rewards.find(x=>x.id===b.dataset.id);capture({mode:"photo",title:"Photo of: "+r.name},id=>{if(r.photo)delMedia(r.photo);r.photo=id;r.at=Date.now();S.shopAt=Date.now();save();render()})},
@@ -1496,9 +1514,11 @@ async function makePoster(k,off){const P=POSTER[k.theme]||POSTER.army,th=T(k),M=
   return {canvas:c,M}}
 async function posterSheet(k,off=0){const el=overlay(`<div class="stack"><h2 class="display">${esc(k.name)}'s monthly poster</h2>
     <div class="seg"><button class="${off===0?"on":""}" id="pm0">This month</button><button class="${off===-1?"on":""}" id="pm1">Last month</button></div>
+    <div class="seg" id="pls"><button data-s="grid" class="${posterStyle(k,off)==="grid"?"on":""}">Grid of six</button><button data-s="wins" class="${posterStyle(k,off)==="wins"?"on":""}">Three + the month's wins</button></div>
     <div id="pbox" class="muted" style="text-align:center;padding:30px 0">Making the poster…</div>
     <div class="row" id="pact" hidden><button class="btn" id="psave">Save to the gallery</button><button class="btn ghost" id="pedit">Edit pictures</button><button class="btn ghost" data-close>Close</button></div></div>`);
   el.querySelector("#pm0").onclick=()=>posterSheet(k,0);el.querySelector("#pm1").onclick=()=>posterSheet(k,-1);el.querySelector("#pedit").onclick=()=>posterEditor(k,off);
+  el.querySelectorAll("#pls button").forEach(b=>b.onclick=()=>{S.posterEdit=S.posterEdit||{};const key=posterKey(k,off);const ed=S.posterEdit[key]||{};S.posterEdit[key]={...ed,slots:ed.slots||posterSlots(k,off,monthOf(k,off)),style:b.dataset.s,at:Date.now()};save();posterSheet(k,off)});
   let res;try{res=await makePoster(k,off)}catch(e){el.querySelector("#pbox").textContent="Couldn't make the poster. Try again.";return}
   if(overlayEl!==el)return;const url=res.canvas.toDataURL("image/jpeg",.92);
   el.querySelector("#pbox").outerHTML=`<img src="${url}" alt="${esc(k.name)}'s poster for ${esc(res.M.R.label)}" style="width:100%;border-radius:12px;box-shadow:0 8px 24px -12px rgba(0,0,0,.5)"><p class="muted" style="margin:0;font-size:14px">A4 size. Print it from the gallery, or send it to family.</p>`;
