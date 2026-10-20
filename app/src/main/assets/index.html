@@ -531,7 +531,7 @@ function load(){
   try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}
   if(!S){S={pin:null,kids:[],jobs:[],rewards:DEFAULT_REWARDS.map(r=>({...r,id:uid()})),requests:[]}}
   S.device=S.device||("d"+uid());S.wishes=S.wishes||[];S.library=S.library||[];S.shopGone=S.shopGone||[];S.rewards.forEach(r=>{if(r.at==null)r.at=0});delete S.lastSend;
-  S.kids.forEach(k=>{if(k.goal&&!k.goal.id)k.goal.id="g:"+String(k.goal.name||"").trim().toLowerCase();
+  S.kids.forEach(k=>{if(!k.createdAt)k.createdAt=S.installAt||Date.now();if(k.goal&&!k.goal.id)k.goal.id="g:"+String(k.goal.name||"").trim().toLowerCase();
     if(!k.ledger){k.ledger=[{id:"o"+uid(),t:Date.now(),d:k.credits||0,e:k.earned||0,s:k.goal?(k.goal.count||0):0,g:k.goal?k.goal.id:null,why:"start"}]}recalc(k,true);try{fixTrophies(k)}catch(e){}});S.pendingIn=S.pendingIn||{};S.reqDone=S.reqDone||[];S.jobGone=S.jobGone||[];if(S.upV!==2){S.up=[];S.noUp=[];S.upV=2}S.up=S.up||[];S.noUp=S.noUp||[];S.wishDone=S.wishDone||[];S.kidGone=S.kidGone||[];S.usedIn=S.usedIn||[];S.sent=S.sent||[];
   S.jobs.forEach(j=>{if(!j.type)j.type="tidy";if(!j.proof)j.proof=j.afterReq?"photo":"none"});
 }
@@ -898,7 +898,9 @@ function questThumb(k,j){if(j.photo)return `<img class="thumb" data-media="${j.p
 VIEWS.hq=({kid:id})=>{const k=kid(id);if(!k){home();return""}setBodyTheme(k);const th=T(k);
   const r=rankOf(k.earned||0),next=RANK_AT[r+1];const pct=next?Math.round(((k.earned-RANK_AT[r])/(next-RANK_AT[r]))*100):100;
   const jobs=kidJobs(k),todo=jobs.filter(j=>j.status==="todo");
-  const line=dayLine(k).line,sub=todo.length?say(k,"today",{n:todo.length+" "+th.unit[todo.length===1?0:1]}):say(k,"none");
+  const never=!(k.ledger||[]).some(e=>String(e.why||"").startsWith("job ")),old=Date.now()-(k.createdAt||S.installAt||0)>20*3600000;
+  const nudge=!jobs.length?"No "+th.unit[1]+" yet. Ask a grown-up to tap the padlock and set one up for you.":never&&old?"You haven't finished your first "+th.unit[0]+" yet, "+k.name+". Pick one below and show me what you can do.":null;
+  const line=nudge||dayLine(k).line,sub=nudge?"":todo.length?say(k,"today",{n:todo.length+" "+th.unit[todo.length===1?0:1]}):say(k,"none");
   const g=k.goal,gn=g?Math.min(g.count||0,g.target):0;
   return `
   <div class="spread">
@@ -1071,6 +1073,12 @@ function quickCheck(k,focusJob){pinPad("Grown-ups only","Enter your PIN to check
     quickOpen=draw};
   draw()})}
 let quickOpen=null;
+/* ---------- Starter jobs: three ready-made jobs so a child can play in the first ten minutes, before a grown-up has recorded anything ---------- */
+const STARTERS=[
+  {title:"Toys back in their places",type:"tidy",credits:4,proof:"photo",repeat:false,steps:["Pick up everything on the floor","Put each toy where it lives","Last look round: anything left?"]},
+  {title:"Pyjamas on, clothes in the basket",type:"tidy",credits:3,proof:"photo",repeat:true,steps:["Today's clothes in the washing basket","Pyjamas on","Tomorrow's clothes out ready"]},
+  {title:"Brush your teeth for 2 minutes",type:"tidy",credits:2,timer:3,proof:"seen",repeat:true,steps:["Toothpaste on","Brush top, bottom, front, back","Rinse and put the brush back"]}];
+function addStarters(k){if(S.jobs.some(j=>j.kid===k.id))return;for(const t of STARTERS){S.jobs.push({id:uid(),kid:k.id,title:t.title,type:t.type,credits:t.credits,timer:t.timer||0,proof:t.proof,repeat:t.repeat,status:"todo",created:Date.now(),starter:true,photo:null,steps:t.steps.map(x=>({id:uid(),text:x,audio:null}))})}}
 /* ---------- Parent area ---------- */
 const PTABS=[["jobs","Jobs"],["check","To check"],["rewards","Rewards"],["kids","Children"],["link","Link & sync"],["settings","Settings"]];
 function pendingCount(){return S.jobs.filter(j=>j.status==="pending").length+S.requests.filter(r=>r.status==="asked").length+(S.wishes||[]).length}
@@ -1087,7 +1095,7 @@ const PARENT={
     <button class="btn ghost big" style="flex:1;min-width:220px" data-act="quickLog" ${S.kids.length?"":"disabled"}>★ They just did something!</button></div>
     ${list.length?`<div class="stack">${list.map(j=>{const k=kid(j.kid);return `<button class="jobcard" data-act="editJob" data-id="${j.id}">
       ${j.photo?`<img class="thumb" data-media="${j.photo}" alt="">`:`<span class="thumb"></span>`}
-      <span class="stack" style="gap:4px;min-width:0"><span class="t">${esc(j.title||"Untitled job")}</span><span class="muted">${esc(k?k.name:"?")} · ${j.steps.length} steps${j.repeat?" · daily":""}</span>
+      <span class="stack" style="gap:4px;min-width:0"><span class="t">${esc(j.title||"Untitled job")}</span><span class="muted">${esc(k?k.name:"?")} · ${j.steps.length} steps${j.repeat?" · daily":""}${j.starter?" · starter, edit or delete it":""}</span>
       <span>${j.status==="pending"?`<span class="chip wait">To check</span>`:j.status==="todo"&&j.from&&j.from>today()?`<span class="chip">Back tomorrow</span>`:`<span class="chip">Live</span>`}</span></span>
       <span class="chip prize">${isChallenge(j)?"★":"+"+j.credits}</span></button>`}).join("")}</div>`:`<div class="panel empty"><b>No jobs yet.</b><p class="muted">Tap New job, photograph the mess, then record one voice note per step: "Lego in the red box", "pants in the washing basket". Clear steps get better results.</p></div>`}
     ${libraryHTML()}`},
@@ -1245,7 +1253,7 @@ const ACT={
   back(){back()},
   setupPin(){const n=$("#kidname").value.trim();if(!n){toast("Add your child's name");$("#kidname").focus();return}
     pinPad("Choose a 4-digit PIN","Only grown-ups should know it",p1=>{overlayClose();setTimeout(()=>pinPad("Type it again","To make sure",p2=>{if(p1!==p2){toast("PINs didn't match. Try again.");overlayClose();return}
-      S.pin=p2;const k={id:uid(),name:n,theme:"army",credits:0,earned:0};S.kids.push(k);save();overlayClose();stack=[];view={name:"style",args:{kid:k.id,first:true}};render()}),200)})},
+      S.pin=p2;const k={id:uid(),name:n,theme:"army",credits:0,earned:0};S.kids.push(k);addStarters(k);save();overlayClose();stack=[];view={name:"style",args:{kid:k.id,first:true}};render()}),200)})},
   setupJoin(){if(S.pin){Sync.joinMenu();return}
     pinPad("Choose a 4-digit PIN","Only grown-ups should know it",p1=>{overlayClose();setTimeout(()=>pinPad("Type it again","To make sure",p2=>{if(p1!==p2){toast("PINs didn't match. Try again.");overlayClose();return}
       S.pin=p2;save();overlayClose();setTimeout(()=>Sync.joinMenu(),150)}),200)})},
@@ -1372,7 +1380,7 @@ const ACT={
   addReward(){S.rewards.push({id:uid(),icon:"⭐",name:"New reward",cost:5,at:Date.now()});S.shopAt=Date.now();save();render()},
   delReward(b){const r=S.rewards.find(x=>x.id===b.dataset.id);if(r){delMedia(r.photo);S.shopGone.push({id:r.id,name:r.name,at:Date.now()})}S.rewards=S.rewards.filter(x=>x!==r);S.shopAt=Date.now();save();render()},
   rPhoto(b){const r=S.rewards.find(x=>x.id===b.dataset.id);capture({mode:"photo",title:"Photo of: "+r.name},id=>{if(r.photo)delMedia(r.photo);r.photo=id;r.at=Date.now();S.shopAt=Date.now();save();render()})},
-  addKid(){const n=$("#newkid").value.trim();if(!n)return;const k={id:uid(),name:n,theme:"karate",credits:0,earned:0};S.kids.push(k);save();go("style",{kid:k.id,back:"parent"})},
+  addKid(){const n=$("#newkid").value.trim();if(!n)return;const k={id:uid(),name:n,theme:"karate",credits:0,earned:0};S.kids.push(k);addStarters(k);save();go("style",{kid:k.id,back:"parent"})},
   kidStyle(b){go("style",{kid:b.dataset.id,back:"parent"})},
   delKid(b){const k=kid(b.dataset.id);confirmSheet(`Remove ${k.name}?`,"This deletes their picture, jobs, credits, stars and every trophy video. It can't be undone.",()=>{S.jobs.filter(j=>j.kid===k.id).forEach(j=>{delMedia(j.photo);delMedia(j.after);j.steps.forEach(s=>delMedia(s.audio))});(k.trophies||[]).forEach(t=>{delMedia(t.media);albumDel(t.album)});(k.treats||[]).forEach(t=>delMedia(t.photo));delMedia(k.face);
     S.jobs=S.jobs.filter(j=>j.kid!==k.id);S.requests=S.requests.filter(r=>r.kid!==k.id);S.kids=S.kids.filter(x=>x!==k);S.kidGone.push(k.id);if(window.Sync)Sync.forget(k.id);save();render()})},
