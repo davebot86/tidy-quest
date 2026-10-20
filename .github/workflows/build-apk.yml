@@ -1,4 +1,4 @@
-name: Build Tidy Quest APK
+name: Build ProudQuest APK
 
 on:
   push:
@@ -89,7 +89,7 @@ jobs:
         run: |
           gh release delete trial --yes --cleanup-tag || true
           gh release create trial TidyQuest-trial.apk version.json \
-            --title "Tidy Quest trial build" \
+            --title "ProudQuest trial build" \
             --notes "Build ${{ github.run_number }}. Download TidyQuest-trial.apk on the Android tablet and open it to install."
 
   web:
@@ -126,6 +126,7 @@ jobs:
           if [ -n "$FIREBASE_SA" ]; then
             echo "$FIREBASE_SA" > /tmp/sa.json
             export GOOGLE_APPLICATION_CREDENTIALS=/tmp/sa.json
+            npx --yes firebase-tools@13 hosting:sites:create proudquest --project project-tidy-quest --non-interactive 2>/dev/null || true
             npx --yes firebase-tools@13 deploy --only hosting --project project-tidy-quest --non-interactive
           elif [ -n "$FIREBASE_TOKEN" ]; then
             npx --yes firebase-tools@13 deploy --only hosting --project project-tidy-quest --non-interactive --token "$FIREBASE_TOKEN"

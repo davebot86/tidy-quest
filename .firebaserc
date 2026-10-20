@@ -1,1 +1,11 @@
-{"projects":{"default":"project-tidy-quest"}}
+{
+  "projects": {"default": "project-tidy-quest"},
+  "targets": {
+    "project-tidy-quest": {
+      "hosting": {
+        "main": ["proudquest"],
+        "legacy": ["project-tidy-quest"]
+      }
+    }
+  }
+}

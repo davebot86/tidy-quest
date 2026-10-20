@@ -6,10 +6,10 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Tidy Quest">
+<meta name="apple-mobile-web-app-title" content="ProudQuest">
 <meta name="theme-color" content="#1C4B47">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>Tidy Quest</title>
+<title>ProudQuest</title>
 <style>
 /* Fonts are bundled into assets/fonts by the GitHub build; every face has a fallback stack. */
 @font-face{font-family:"Nunito";src:url(fonts/nunito-400.woff2) format("woff2");font-weight:400;font-display:swap}
@@ -854,13 +854,13 @@ function overlayClose(){if(!overlayEl)return false;overlayEl.remove();overlayEl=
 /* ---------- Welcome / setup ---------- */
 VIEWS.welcome=()=>{setBodyTheme(null,true);
   if(S.pin&&S.family&&!S.kids.length)return `<div class="stack" style="padding-top:12vh;text-align:center;align-items:center">
-    <span class="label">Joining your family</span><h1 class="display" style="font-size:40px">Tidy Quest</h1>
+    <span class="label">Joining your family</span><h1 class="display" style="font-size:40px">ProudQuest</h1>
     <p>Connecting… your family's children, points and goals will appear here in a few seconds. You need to be online.</p>
     <button class="btn ghost" data-act="setupJoin">Use a different family code</button></div>`;
   return `
   <div class="stack" style="padding-top:8vh">
     <span class="label">Set up</span>
-    <h1 class="display" style="font-size:44px">Tidy Quest</h1>
+    <h1 class="display" style="font-size:44px">ProudQuest</h1><p class="muted" style="margin:-8px 0 0;font-weight:700">Chores, challenges, and a child who's proud of themselves.</p>
     <p>You photograph the mess and record exactly where things go. Your child works through it as a game on this tablet and earns family credits to spend on treats you choose.</p>
     <div class="panel stack">
       <label class="label" for="kidname">Child's name</label>
@@ -869,7 +869,7 @@ VIEWS.welcome=()=>{setBodyTheme(null,true);
     </div>
     <button class="btn big" data-act="setupPin">Next: set a grown-up PIN</button>
     <div class="panel stack" style="margin-top:10px"><b>Joining someone else's family?</b>
-      <p class="muted" style="margin:0">For the other parent, grandparents, aunties and uncles. If someone already uses Tidy Quest for your child, they can send you a family code. Don't add the child again here.</p>
+      <p class="muted" style="margin:0">For the other parent, grandparents, aunties and uncles. If someone already uses ProudQuest for your child, they can send you a family code. Don't add the child again here.</p>
       <button class="btn ghost" data-act="setupJoin">Join a family with a code</button></div>
   </div>`};
 
@@ -1083,7 +1083,7 @@ function addStarters(k){if(S.jobs.some(j=>j.kid===k.id))return;for(const t of ST
 const PTABS=[["jobs","Jobs"],["check","To check"],["rewards","Rewards"],["kids","Children"],["link","Link & sync"],["settings","Settings"]];
 function pendingCount(){return S.jobs.filter(j=>j.status==="pending").length+S.requests.filter(r=>r.status==="asked").length+(S.wishes||[]).length}
 VIEWS.parent=({tab="jobs"})=>{setBodyTheme(null,true);const pc=pendingCount();
-  const head=`<div class="spread"><div class="stack" style="gap:2px"><span class="brandrow"><i></i>Tidy Quest</span><h1 class="display" style="font-size:34px">Grown-ups</h1></div><button class="btn ghost small" data-act="exitParent">Back to kids</button></div>
+  const head=`<div class="spread"><div class="stack" style="gap:2px"><span class="brandrow"><i></i>ProudQuest</span><h1 class="display" style="font-size:34px">Grown-ups</h1></div><button class="btn ghost small" data-act="exitParent">Back to kids</button></div>
   <div class="tabs" role="tablist">${PTABS.map(([k,l])=>`<button class="tab ${tab===k?"on":""}" role="tab" data-act="ptab" data-tab="${k}">${l}${k==="check"&&pc?`<span class="n">${pc}</span>`:""}</button>`).join("")}</div>`;
   return head+PARENT[tab]()};
 const PARENT={
@@ -1132,27 +1132,27 @@ const PARENT={
       <div class="row" style="gap:8px"><button class="btn small" data-act="poster" data-id="${k.id}">Monthly poster</button><button class="btn ghost small" data-act="kidStyle" data-id="${k.id}">Picture &amp; world</button><button class="btn bad small" data-act="delKid" data-id="${k.id}">Remove ${esc(k.name)}</button></div></div>`}).join("")}</div>
     <div class="panel row"><input id="newkid" placeholder="Add a child's name" maxlength="20" style="flex:1;min-width:160px"><button class="btn" data-act="addKid">Add</button></div>`},
   link(){return `${Sync.panel()}
-    <div class="panel stack"><b>Send a child to another phone</b><p class="muted" style="margin:0">Makes one file with their picture, rank, points, goal stars, trophies and the shop. Send it by WhatsApp; the other phone taps it and opens it in Tidy Quest. Both phones keep everything and nothing is counted twice, so send it whenever you want the other phone to catch up.</p>
+    <div class="panel stack"><b>Send a child to another phone</b><p class="muted" style="margin:0">Makes one file with their picture, rank, points, goal stars, trophies and the shop. Send it by WhatsApp; the other phone taps it and opens it in ProudQuest. Both phones keep everything and nothing is counted twice, so send it whenever you want the other phone to catch up.</p>
       <div class="row" style="gap:8px">${S.kids.map(k=>`<button class="btn small" data-act="sendKid" data-id="${k.id}">Share ${esc(k.name)}'s progress</button>`).join("")}</div></div>
     ${S.lastSend?`<div class="panel stack"><b>Last sent: ${esc(S.lastSend.name)}, ${new Date(S.lastSend.at).toLocaleString("en-GB",{weekday:"short",hour:"2-digit",minute:"2-digit"})}</b>
       <p class="muted" style="margin:0">Carrying ${S.lastSend.credits} points${S.lastSend.stars?` and ${S.lastSend.stars} stars`:""}.</p>
       <div class="row" style="gap:8px">${bridge()&&bridge().fileReshare?`<button class="btn ghost small" data-act="resend">Send it again</button>`:""}<button class="btn bad small" data-act="undoSend">It never arrived: put points back</button></div></div>`:""}
-    <div class="panel stack"><b>Receive from a file</b><p class="muted" style="margin:0">Open a Tidy Quest file someone sent you. Save it from WhatsApp first if it asks.</p>
+    <div class="panel stack"><b>Receive from a file</b><p class="muted" style="margin:0">Open a ProudQuest file someone sent you. Save it from WhatsApp first if it asks.</p>
       <button class="btn ghost" data-act="receiveFile">Choose the file</button></div>
-    <div class="panel stack"><b>Scan a code</b><p class="muted" style="margin:0">Scan a Tidy Quest code from another tablet: a family setup, a credits request or a credits transfer.</p>
+    <div class="panel stack"><b>Scan a code</b><p class="muted" style="margin:0">Scan a ProudQuest code from another tablet: a family setup, a credits request or a credits transfer.</p>
       <button class="btn" data-act="scanAny">${IC.cam} Scan a code</button></div>
     <div class="panel stack"><b>Copy this setup to another tablet</b><p class="muted" style="margin:0">Sends your children, their styles and the reward shop. Credits never copy, so nothing can double up. Jobs, photos and voice notes stay here.</p>
       <button class="btn ghost" data-act="showSetup">Show setup code</button></div>
     <div class="panel stack"><b>Move credits to this tablet</b><p class="muted" style="margin:0">Use this tablet's code, then scan the code the other tablet shows back. Each transfer works once only.</p>
       <div class="row">${S.kids.map(k=>`<button class="btn ghost small" data-act="receiveCredits" data-id="${k.id}">Receive for ${esc(k.name)}</button>`).join("")}</div></div>
     ${S.sent.length?`<div class="panel stack"><span class="label">Sent from this tablet</span>${S.sent.slice(-5).reverse().map(x=>`<div class="spread"><span>${x.amt} credits for ${esc(x.name)}</span><span class="muted">${new Date(x.at).toLocaleDateString("en-GB")}</span></div>`).join("")}</div>`:""}`},
-  settings(){const cur=S.alertSound||"world";const devPanel=S.isDev?`<div class="panel stack"><b>Who's running Tidy Quest</b><p class="muted" style="margin:0">Every phone with the app checks in anonymously: which family, version, how many jobs and wins. No names or photos. Only you see this.</p><button class="btn small" data-act="devWho">Show the list</button></div>`:"";const b=bridge();let vi="";try{vi=b&&b.voiceInfo?b.voiceInfo():""}catch(e){}return `<div class="panel stack"><b>Voice</b><p class="muted" style="margin:0">The masters use the best English (UK) voice installed on this phone${vi?`: <b>${esc(vi)}</b>`:""}. For a much nicer voice, open the phone's <b>Settings → System → Languages → Text-to-speech</b> (or search "text-to-speech"), choose Google Speech Services, and install the <b>English (United Kingdom)</b> high-quality voice. Tidy Quest picks it up next time it opens.</p></div>
+  settings(){const cur=S.alertSound||"world";const devPanel=S.isDev?`<div class="panel stack"><b>Who's running ProudQuest</b><p class="muted" style="margin:0">Every phone with the app checks in anonymously: which family, version, how many jobs and wins. No names or photos. Only you see this.</p><button class="btn small" data-act="devWho">Show the list</button></div>`:"";const b=bridge();let vi="";try{vi=b&&b.voiceInfo?b.voiceInfo():""}catch(e){}return `<div class="panel stack"><b>Voice</b><p class="muted" style="margin:0">The masters use the best English (UK) voice installed on this phone${vi?`: <b>${esc(vi)}</b>`:""}. For a much nicer voice, open the phone's <b>Settings → System → Languages → Text-to-speech</b> (or search "text-to-speech"), choose Google Speech Services, and install the <b>English (United Kingdom)</b> high-quality voice. ProudQuest picks it up next time it opens.</p></div>
     ${devPanel}
     <div class="panel stack"><b>Alert sound on this phone</b>
       <p class="muted" style="margin:0">Plays when something happens on another linked phone: a job finished, points or a star earned, something bought from the shop. "Each child's world" gives every child their own sound — a gong for the Dojo, a bugle for the Army, a whistle for Football — so you know who it is without looking. Purchases always ring the till.</p>
       <div class="seg">${Object.entries(SOUND_NAMES).map(([key,l])=>`<button class="${cur===key?"on":""}" data-act="alertPick" data-v="${key}">${esc(l)}</button>`).join("")}</div>
       <div class="row" style="gap:8px">${cur==="world"?S.kids.map(k=>`<button class="btn ghost small" data-act="alertTest" data-v="${WORLD_SOUND[k.theme]||"bell"}">▶ ${esc(k.name)} (${esc(SOUND_NAMES[WORLD_SOUND[k.theme]]||"Doorbell")})</button>`).join(""):cur!=="off"?`<button class="btn ghost small" data-act="alertTest" data-v="${cur}">▶ Play it</button>`:""}<button class="btn ghost small" data-act="alertTest" data-v="till">▶ Shop till</button></div>
-      <p class="muted" style="margin:0;font-size:14px">Alerts only sound while Tidy Quest is open. Turn the phone's media volume up.</p></div>
+      <p class="muted" style="margin:0;font-size:14px">Alerts only sound while ProudQuest is open. Turn the phone's media volume up.</p></div>
     <div class="panel stack"><b>Grown-up PIN</b><p class="muted" style="margin:0">Keeps children out of this area.</p><button class="btn ghost" data-act="changePin">Change PIN</button></div>
     <div class="panel stack"><b data-act="devTap" style="cursor:default">Trial notes</b><p class="muted" style="margin:0">Everything is saved on this device. With live sync on, points, stars, the shop and history are also kept online for your family; photos, videos and voice notes are copied to the other linked phones too. Uninstalling deletes what is on this phone.</p></div>
     <div class="panel stack"><b>Start again</b><p class="muted" style="margin:0">Deletes all children, jobs, photos and credits.</p><button class="btn bad" data-act="resetAll">Delete everything</button></div>`}
@@ -1273,9 +1273,9 @@ const ACT={
       ${albumHTML(t)}
       <div class="row">${canSave?`<button class="btn" id="tsave">Save to gallery</button>`:""}<button class="btn ghost" data-close>Close</button><button class="btn bad small" id="tdel">Remove</button></div></div>`);
     const sv=el.querySelector("#tsave");if(sv)sv.onclick=async()=>{const blob=await DB.get(t.media);if(!blob){toast("File not found");return}
-      if(!(bridge()&&bridge().saveMedia)){const ext=t.kind==="video"?(blob.type.includes("mp4")?"mp4":"webm"):"jpg";await webSaveFile(blob,("TidyQuest-"+k.name+"-"+t.title).replace(/[^\w-]+/g,"-").slice(0,60)+"."+ext);return}
+      if(!(bridge()&&bridge().saveMedia)){const ext=t.kind==="video"?(blob.type.includes("mp4")?"mp4":"webm"):"jpg";await webSaveFile(blob,("ProudQuest-"+k.name+"-"+t.title).replace(/[^\w-]+/g,"-").slice(0,60)+"."+ext);return}
       const fr=new FileReader();fr.onload=()=>{const b64=String(fr.result).split(",")[1];const ext=t.kind==="video"?(blob.type.includes("mp4")?"mp4":"webm"):"jpg";
-        try{const ok=bridge().saveMedia(b64,blob.type||(t.kind==="video"?"video/webm":"image/jpeg"),("TidyQuest-"+k.name+"-"+t.title).replace(/[^\w-]+/g,"-").slice(0,60)+"."+ext);toast(ok?"Saved to the gallery":"Couldn't save. Allow storage access and try again.")}catch(e){toast("Couldn't save to the gallery")}};fr.readAsDataURL(blob)};
+        try{const ok=bridge().saveMedia(b64,blob.type||(t.kind==="video"?"video/webm":"image/jpeg"),("ProudQuest-"+k.name+"-"+t.title).replace(/[^\w-]+/g,"-").slice(0,60)+"."+ext);toast(ok?"Saved to the gallery":"Couldn't save. Allow storage access and try again.")}catch(e){toast("Couldn't save to the gallery")}};fr.readAsDataURL(blob)};
     el.querySelector("#tdel").onclick=()=>{overlayClose();pinPad("Grown-ups only","Enter your PIN to remove it",p=>{if(p!==S.pin)return false;overlayClose();
       k.trophies=k.trophies.filter(x=>x!==t);k.tGone=k.tGone||[];k.tGone.push(t.id);delMedia(t.media);albumDel(t.album);save();render();toast("Removed")})}},
   selfie(b){const k=kid(b.dataset.id);capture({mode:"photo",facing:"user",title:"Smile, "+k.name+"!"},id=>faceEditor(k,id))},
@@ -1518,7 +1518,7 @@ async function makePoster(k,off){const P=POSTER[k.theme]||POSTER.army,th=T(k),M=
     if(M.wins.length&&avail-used-G>=150)winsPanel(60,top+used+G,W-120,Math.min(avail-used-G,90+Math.min(M.wins.length,st==="wins"?12:8)*46))}
   else winsPanel(60,top,W-120,Math.min(avail,90+Math.max(1,Math.min(M.wins.length,14))*46));
   /* footer */
-  x.fillStyle=P.title;x.globalAlpha=.75;x.font=bf(800,24);x.fillText("Tidy Quest",60,H-50);x.textAlign="right";x.fillText(`Made ${new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}`,W-60,H-50);x.textAlign="left";x.globalAlpha=1;
+  x.fillStyle=P.title;x.globalAlpha=.75;x.font=bf(800,24);x.fillText("ProudQuest",60,H-50);x.textAlign="right";x.fillText(`Made ${new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}`,W-60,H-50);x.textAlign="left";x.globalAlpha=1;
   return {canvas:c,M}}
 async function posterSheet(k,off=0){const el=overlay(`<div class="stack"><h2 class="display">${esc(k.name)}'s monthly poster</h2>
     <div class="seg"><button class="${off===0?"on":""}" id="pm0">This month</button><button class="${off===-1?"on":""}" id="pm1">Last month</button></div>
@@ -1530,7 +1530,7 @@ async function posterSheet(k,off=0){const el=overlay(`<div class="stack"><h2 cla
   let res;try{res=await makePoster(k,off)}catch(e){el.querySelector("#pbox").textContent="Couldn't make the poster. Try again.";return}
   if(overlayEl!==el)return;const url=res.canvas.toDataURL("image/jpeg",.92);
   el.querySelector("#pbox").outerHTML=`<img src="${url}" alt="${esc(k.name)}'s poster for ${esc(res.M.R.label)}" style="width:100%;border-radius:12px;box-shadow:0 8px 24px -12px rgba(0,0,0,.5)"><p class="muted" style="margin:0;font-size:14px">A4 size. Print it from the gallery, or send it to family.</p>`;
-  el.querySelector("#pact").hidden=false;const name=("TidyQuest-"+k.name+"-"+res.M.R.label).replace(/[^\w-]+/g,"-")+".jpg";
+  el.querySelector("#pact").hidden=false;const name=("ProudQuest-"+k.name+"-"+res.M.R.label).replace(/[^\w-]+/g,"-")+".jpg";
   el.querySelector("#psave").onclick=async()=>{const b=bridge();if(b&&b.saveMedia){try{toast(b.saveMedia(url.split(",")[1],"image/jpeg",name)?"Saved to the gallery":"Couldn't save. Allow storage access and try again.")}catch(e){toast("Couldn't save to the gallery")}}
     else{await webSaveFile(await (await fetch(url)).blob(),name)}}}
 /* on the web (iPhone, say) the share sheet lets you save to Photos; otherwise it downloads */
@@ -1716,7 +1716,7 @@ function encodeShop(){const list=S.rewards.map(r=>({i:r.icon,n:r.name,c:r.cost})
 function decodeShop(text){const m=String(text).replace(/\s+/g,"").match(/TQSHOP1:([A-Za-z0-9+/=]+)/);if(!m)return null;
   try{const list=JSON.parse(decodeURIComponent(escape(atob(m[1]))));if(!Array.isArray(list))return null;
     return list.filter(x=>x&&x.n).slice(0,60).map(x=>({id:uid(),icon:String(x.i||"⭐").slice(0,4),name:String(x.n).slice(0,60),cost:Math.max(1,Math.min(999,parseInt(x.c)||1))}))}catch(e){return null}}
-function shareMessage(){return "Tidy Quest reward shop ("+S.rewards.length+" rewards). To use it: open Tidy Quest → lock → Grown-ups → Rewards → Load a shop, then paste this whole message.\n\n"+encodeShop()}
+function shareMessage(){return "ProudQuest reward shop ("+S.rewards.length+" rewards). To use it: open ProudQuest → lock → Grown-ups → Rewards → Load a shop, then paste this whole message.\n\n"+encodeShop()}
 async function copyText(text){try{if(window.AndroidTTS&&AndroidTTS.copy){AndroidTTS.copy(text);return true}}catch(e){}
   try{await navigator.clipboard.writeText(text);return true}catch(e){return false}}
 Object.assign(ACT,{
@@ -1731,7 +1731,7 @@ Object.assign(ACT,{
     <textarea id="shopin" rows="5" placeholder="Paste here" style="width:100%;font:13px/1.4 monospace;border:2px solid var(--line);border-radius:12px;padding:10px;background:var(--panel);color:var(--ink)"></textarea>
     <div class="row"><button class="btn" id="readshop">Next</button><button class="btn ghost" data-close>Cancel</button></div></div>`);
     el.querySelector("#readshop").onclick=()=>{const list=decodeShop(el.querySelector("#shopin").value);
-      if(!list||!list.length){toast("That doesn't look like a Tidy Quest shop. Paste the whole message.");return}
+      if(!list||!list.length){toast("That doesn't look like a ProudQuest shop. Paste the whole message.");return}
       const sh=overlay(`<div class="stack"><h2 class="display">${list.length} rewards</h2>
         <div class="stack" style="gap:6px">${list.map(r=>`<div class="spread"><span>${esc(r.icon)} ${esc(r.name)}</span><b>${r.cost}</b></div>`).join("")}</div>
         <button class="btn" id="replshop">Replace my shop with these</button><button class="btn ghost" id="addshop">Add these to my shop</button><button class="btn ghost" data-close>Cancel</button></div>`);
@@ -1760,8 +1760,8 @@ async function shareFile(name,text){const b=bridge();
     return b.fileShare("Send "+name)}
   try{const f=new File([text],name,{type:"application/json"});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:name});return true}}catch(e){if(e&&e.name==="AbortError")return false}
   await webSaveFile(new Blob([text],{type:"application/json"}),name);return true}
-async function importKidFile(text){let d;try{d=JSON.parse(text)}catch(e){return toast("That file isn't a Tidy Quest file.")}
-  if(!d||d.tq!=="kid"||!d.kid)return toast("That file isn't a Tidy Quest file.");
+async function importKidFile(text){let d;try{d=JSON.parse(text)}catch(e){return toast("That file isn't a ProudQuest file.")}
+  if(!d||d.tq!=="kid"||!d.kid)return toast("That file isn't a ProudQuest file.");
   if(d.from===S.device)return toast("That file came from this phone. Open it on the other phone.");
   if(!d.ledger&&S.usedIn.includes(d.id))return toast("This file has already been added on this phone.");
   const r=await mergeKid(d,false);const k=r.k,isNew=r.isNew,added=r.added,shopAdded=r.shopAdded,libAdded=r.libAdded;
@@ -1832,8 +1832,8 @@ async function mergeKid(d,live){const x=d.kid;const seenL=new Set();let k=findKi
   return {k,isNew,added,shopAdded,libAdded,news,jobNews}}
 /* A file opened from WhatsApp or Files arrives here; it waits until the app is set up, then asks for the PIN. */
 window.__checkImport=()=>{const b=bridge();if(!b||!b.hasPendingImport||!b.hasPendingImport())return;
-  if(!S.pin){toast("Set up Tidy Quest first, then the file will load.");return}
-  pinPad("Load a Tidy Quest file","Grown-ups only: enter your PIN",p=>{if(p!==S.pin)return false;overlayClose();
+  if(!S.pin){toast("Set up ProudQuest first, then the file will load.");return}
+  pinPad("Load a ProudQuest file","Grown-ups only: enter your PIN",p=>{if(p!==S.pin)return false;overlayClose();
     const t=b.takePendingImport();if(t){toast("Opening the file…");importKidFile(t)}})};
 /* ---------- QR link between tablets (no internet needed) ---------- */
 const QR_TAG="TQ1:";
@@ -2000,9 +2000,9 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
   function newFamily(){const a=new Uint8Array(18);crypto.getRandomValues(a);return "fam"+Array.from(a,b=>b.toString(36).padStart(2,"0")).join("").slice(0,26)}
   function code(){return packQR({t:"fam",f:S.family,from:S.device})}
   function create(){S.family=newFamily();save();start();showCode()}
-  function showCode(){const el=showQR(code(),"Family code","On the other phone or tablet: Grown-ups → Link → Join a family, then scan this. Anyone with this code can see your family's Tidy Quest, so only share it with family.",
+  function showCode(){const el=showQR(code(),"Family code","On the other phone or tablet: Grown-ups → Link → Join a family, then scan this. Anyone with this code can see your family's ProudQuest, so only share it with family.",
       `<button class="btn ghost" id="famshare">Send as a message instead</button>`);
-    el.querySelector("#famshare").onclick=()=>{const t="Join our family on Tidy Quest: open Tidy Quest → Grown-ups → Link → Join a family → Paste a code, and paste this:\n\n"+code();const b=bridge();
+    el.querySelector("#famshare").onclick=()=>{const t="Join our family on ProudQuest: open ProudQuest → Grown-ups → Link → Join a family → Paste a code, and paste this:\n\n"+code();const b=bridge();
       if(b&&b.share)b.share(t);else if(navigator.share){navigator.share({text:t}).catch(()=>{})}else if(b&&b.copy){b.copy(t);toast("Copied")}else{try{navigator.clipboard.writeText(t);toast("Copied")}catch(e){}}}}
   function joinPrompt(d){if(!d.f||d.f.length<20)return toast("That family code isn't complete.");if(d.f===S.family)return toast("This phone is already in that family.");
     confirmSheet("Join this family?","This phone's children, points, stars, shop and history are merged with the family's. Nothing is lost or counted twice, and from now on both stay in step.",()=>{
@@ -2033,7 +2033,7 @@ const Sync=(()=>{let db=null,ref=null,unsub=null,first=false,timer=null,retry=nu
 window.Sync=Sync;
 Object.assign(ACT,{famNew(){Sync.create()},famJoin(){Sync.joinMenu()},famCode(){Sync.showCode()},famLeave(){Sync.leave()},famPics(){Sync.retryMedia()},
   devTap(){S._dt=(S._dt||0)+1;if(S._dt>=7){S.isDev=!S.isDev;S._dt=0;save();toast(S.isDev?"Developer view on":"Developer view off");render()}},
-  async devWho(){const el=overlay(`<div class="stack"><h2 class="display">Who's running Tidy Quest</h2><div id="dvl" class="muted">Loading…</div><button class="btn ghost" data-close>Close</button></div>`);
+  async devWho(){const el=overlay(`<div class="stack"><h2 class="display">Who's running ProudQuest</h2><div id="dvl" class="muted">Loading…</div><button class="btn ghost" data-close>Close</button></div>`);
     try{const list=await Sync.devList();const fams=new Map();for(const d of list){const f=d.fam||("solo-"+d.id.slice(-4));if(!fams.has(f))fams.set(f,[]);fams.get(f).push(d)}
       const ago=t=>{const m=(Date.now()-t)/60000;return m<60?Math.round(m)+" min ago":m<1440?Math.round(m/60)+" h ago":Math.round(m/1440)+" d ago"};
       const active=list.filter(d=>Date.now()-d.seen<7*86400000).length;
@@ -2046,31 +2046,32 @@ const Upd=(()=>{let bar=null,info=null;
   function el(html){if(!bar){bar=document.createElement("div");bar.className="updbar";document.body.appendChild(bar)}bar.innerHTML=html;return bar}
   function hide(){if(bar){bar.remove();bar=null}}
   window.__onUpdate=o=>{if(!o||!o.versionCode||!o.mine||o.versionCode<=o.mine)return;info=o;
-    el(`<span class="grow"><b>New update ready</b><br><span style="opacity:.85">Tidy Quest ${esc(String(o.name||""))}. Everything stays as it is.</span></span><button class="btn small" id="updgo">Update</button><button class="iconbtn" id="updx" aria-label="Later">✕</button>`);
+    el(`<span class="grow"><b>New update ready</b><br><span style="opacity:.85">ProudQuest ${esc(String(o.name||""))}. Everything stays as it is.</span></span><button class="btn small" id="updgo">Update</button><button class="iconbtn" id="updx" aria-label="Later">✕</button>`);
     bar.querySelector("#updgo").onclick=go;bar.querySelector("#updx").onclick=hide};
   function go(){const b=bridge();if(!b||!b.installUpdate)return;el(`<span class="grow"><b>Getting the update…</b></span>`);b.installUpdate()}
   window.__onUpdateStep=(step,pct)=>{
     if(step==="allow")el(`<span class="grow"><b>One-time step:</b> switch on <b>Allow from this source</b>, then come back and tap Update.</span><button class="btn small" id="updgo">Update</button>`).querySelector("#updgo").onclick=go;
     else if(step==="progress")el(`<span class="grow"><b>Downloading update… ${pct}%</b></span>`);
-    else if(step==="install")el(`<span class="grow"><b>Tap Update on the next screen.</b> Tidy Quest restarts with everything kept.</span><button class="iconbtn" id="updx" aria-label="Close">✕</button>`).querySelector("#updx").onclick=hide;
+    else if(step==="install")el(`<span class="grow"><b>Tap Update on the next screen.</b> ProudQuest restarts with everything kept.</span><button class="iconbtn" id="updx" aria-label="Close">✕</button>`).querySelector("#updx").onclick=hide;
     else if(step==="fail")el(`<span class="grow"><b>The update didn't download.</b> Check the internet and try again.</span><button class="btn small" id="updgo">Try again</button>`).querySelector("#updgo").onclick=go};
   function check(){const b=bridge();if(b&&b.checkUpdate)try{b.checkUpdate()}catch(e){}}
   /* on the web there is nothing to install: a reload picks up the newest version */
   return {check}})();
 setTimeout(Upd.check,2500);
+(function(){try{if(S.pin&&!localStorage.getItem("tq_renamed")){localStorage.setItem("tq_renamed","1");setTimeout(()=>{const t=document.createElement("div");t.className="updbar";t.innerHTML=`<span class="grow"><b>Tidy Quest is now ProudQuest.</b><br><span style="opacity:.85">Same app, same family, everything kept. Just a name that fits what it's really about.</span></span><button class="iconbtn" aria-label="Close">✕</button>`;t.querySelector("button").onclick=()=>t.remove();document.body.appendChild(t)},1500)}}catch(e){}})();
 (function(){const ios=/iPhone|iPad|iPod/.test(navigator.userAgent),standalone=window.navigator.standalone===true||matchMedia("(display-mode: standalone)").matches;
-  if(ios&&!standalone&&!bridge()&&!localStorage.getItem("tq_a2hs")){setTimeout(()=>{const t=document.createElement("div");t.className="updbar";t.innerHTML=`<span class="grow"><b>Put Tidy Quest on your home screen</b><br><span style="opacity:.85">Tap the Share button <span style="display:inline-block;border:1.5px solid #fff;border-radius:4px;padding:0 5px;font-size:12px">⇧</span> below, then <b>Add to Home Screen</b>. It then opens full-screen like an app.</span></span><button class="iconbtn" aria-label="Close">✕</button>`;
+  if(ios&&!standalone&&!bridge()&&!localStorage.getItem("tq_a2hs")){setTimeout(()=>{const t=document.createElement("div");t.className="updbar";t.innerHTML=`<span class="grow"><b>Put ProudQuest on your home screen</b><br><span style="opacity:.85">Tap the Share button <span style="display:inline-block;border:1.5px solid #fff;border-radius:4px;padding:0 5px;font-size:12px">⇧</span> below, then <b>Add to Home Screen</b>. It then opens full-screen like an app.</span></span><button class="iconbtn" aria-label="Close">✕</button>`;
     t.querySelector("button").onclick=()=>{t.remove();try{localStorage.setItem("tq_a2hs","1")}catch(e){}};document.body.appendChild(t)},4000)}})();setInterval(Upd.check,3*60*60*1000);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)Upd.check()});
 function handleCode(text){const d=unpackQR(text);
-  if(!d){toast("That isn't a Tidy Quest code.");return}
+  if(!d){toast("That isn't a ProudQuest code.");return}
   if(d.from&&d.from===S.device){toast("That code is from this tablet. Scan it on the other one.");return}
   if(d.t==="fam")return Sync.joinPrompt(d);
   if(d.t==="shop"){S.rewards=d.list;save();render();toast("Shop loaded");return}
   if(d.t==="setup")return applySetup(d);
   if(d.t==="req")return sendCredits(d);
   if(d.t==="give")return acceptCredits(d);
-  toast("This code needs a newer version of Tidy Quest.")}
+  toast("This code needs a newer version of ProudQuest.")}
 function applySetup(d){const added=[],matched=[];
   d.kids.forEach(x=>{let k=findKidFor(x.id,x.name);
     if(k){if(k.id!==x.id){S.jobs.forEach(j=>{if(j.kid===k.id)j.kid=x.id});S.requests.forEach(r=>{if(r.kid===k.id)r.kid=x.id});k.id=x.id}

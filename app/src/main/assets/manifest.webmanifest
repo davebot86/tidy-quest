@@ -1,6 +1,6 @@
 {
-  "name": "Tidy Quest",
-  "short_name": "Tidy Quest",
+  "name": "ProudQuest",
+  "short_name": "ProudQuest",
   "description": "Tidying, turned into training. A chore game for kids, designed by Eddie, age 7.",
   "start_url": "./index.html",
   "scope": "./",
